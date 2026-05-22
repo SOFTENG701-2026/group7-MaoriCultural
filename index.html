@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Māori Culture Learning — Two Versions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Nunito:wght@400;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet"/>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; font-family: 'Nunito', sans-serif; }
+    #root { height: 100%; }
+    iframe.proto { width:100%; height:100%; border:0; display:block; background:#F4EBD9; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+
+  <script type="text/babel" data-presets="env,react">
+    const { useState } = React;
+
+    function App() {
+      return (
+        <DesignCanvas>
+          <DCSection
+            id="intro"
+            title="Māori Culture for Year 1–3"
+            subtitle="Two hi-fi prototype directions, both audio-first, both built around cognitivist scaffolding (activate → present → process → consolidate). Click any artboard's expand icon for fullscreen.">
+
+            <DCArtboard
+              id="map"
+              label="A · NZ Map Explorer"
+              width={1280}
+              height={820}>
+              <iframe className="proto" src="map-explorer.html" title="Map Explorer"/>
+            </DCArtboard>
+
+            <DCArtboard
+              id="book"
+              label="B · Interactive Picture Book"
+              width={1280}
+              height={820}>
+              <iframe className="proto" src="picture-book.html" title="Picture Book"/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection
+            id="notes"
+            title="Design notes"
+            subtitle="How each version applies cognitivist principles.">
+
+            <DCArtboard
+              id="rationale-map"
+              label="A · Why a map?"
+              width={520}
+              height={620}>
+              <div style={{padding:'40px 36px', fontFamily:'Nunito', color:'#2A1F1A', background:'#FBF6EC', height:'100%', overflowY:'auto'}}>
+                <div style={{fontFamily:'Caveat', fontSize:32, color:'#B5341C', lineHeight:1}}>Version A</div>
+                <h2 style={{fontFamily:'Bricolage Grotesque', fontSize:32, margin:'4px 0 16px', lineHeight:1.1}}>Walking through Aotearoa</h2>
+                <p style={{fontSize:15, lineHeight:1.6}}>The map gives the experience a <b>spatial schema</b>. Each cultural taonga is anchored to a real place, so the child builds a mental map alongside cultural knowledge.</p>
+
+                <h3 style={{fontFamily:'Bricolage Grotesque', fontSize:18, marginTop:20, marginBottom:6}}>Cognitivist moves</h3>
+                <ul style={{paddingLeft:18, fontSize:14, lineHeight:1.6, margin:0}}>
+                  <li><b>Activation</b> — every module opens with a familiar question ("Do you sing with your whānau?")</li>
+                  <li><b>Chunking</b> — only one taonga per hotspot, 3–5 micro-steps each</li>
+                  <li><b>Dual coding</b> — every line of text has an audio + visual companion</li>
+                  <li><b>Active processing</b> — tap-to-sing, build-your-own-pepeha, order-the-marae-steps</li>
+                  <li><b>Feedback</b> — Manu the tūī gives positive reinforcement after each step</li>
+                  <li><b>Metacognition</b> — progress badges + completion recap tell kids what they can now do</li>
+                  <li><b>Self-paced</b> — no time limits, can revisit any hotspot</li>
+                </ul>
+
+                <h3 style={{fontFamily:'Bricolage Grotesque', fontSize:18, marginTop:20, marginBottom:6}}>Best for</h3>
+                <p style={{fontSize:14, lineHeight:1.6, margin:0}}>Open exploration, replay, classroom devices where kids pick what to learn first.</p>
+              </div>
+            </DCArtboard>
+
+            <DCArtboard
+              id="rationale-book"
+              label="B · Why a book?"
+              width={520}
+              height={620}>
+              <div style={{padding:'40px 36px', fontFamily:'Nunito', color:'#2A1F1A', background:'#FBF6EC', height:'100%', overflowY:'auto'}}>
+                <div style={{fontFamily:'Caveat', fontSize:32, color:'#B5341C', lineHeight:1}}>Version B</div>
+                <h2 style={{fontFamily:'Bricolage Grotesque', fontSize:32, margin:'4px 0 16px', lineHeight:1.1}}>Turning the pages</h2>
+                <p style={{fontSize:15, lineHeight:1.6}}>The book uses a <b>familiar schema</b> kids already know — picture books at home and at school. The linear sequence scaffolds a complete arc: cover → 4 chapters → recap.</p>
+
+                <h3 style={{fontFamily:'Bricolage Grotesque', fontSize:18, marginTop:20, marginBottom:6}}>Cognitivist moves</h3>
+                <ul style={{paddingLeft:18, fontSize:14, lineHeight:1.6, margin:0}}>
+                  <li><b>Activation</b> — every chapter opens with a relatable hook ("Have you noticed the sun moves slowly?")</li>
+                  <li><b>Dual coding</b> — illustration on the left page, interaction on the right</li>
+                  <li><b>Progressive disclosure</b> — tap to reveal each panel, controlling pace</li>
+                  <li><b>Generative tasks</b> — pepeha builder produces a personalised artefact</li>
+                  <li><b>Spaced retrieval</b> — back-cover "Ko tāku..." recap retrieves all four learnings</li>
+                  <li><b>Embodied cue</b> — page-turn gesture matches the physical metaphor of progression</li>
+                </ul>
+
+                <h3 style={{fontFamily:'Bricolage Grotesque', fontSize:18, marginTop:20, marginBottom:6}}>Best for</h3>
+                <p style={{fontSize:14, lineHeight:1.6, margin:0}}>Guided reading sessions, bedtime/home use with a parent, teachers who want a fixed sequence.</p>
+              </div>
+            </DCArtboard>
+
+            <DCArtboard
+              id="aesthetic"
+              label="Aesthetic & system"
+              width={420}
+              height={620}>
+              <div style={{padding:'40px 32px', fontFamily:'Nunito', color:'#2A1F1A', background:'#F4EBD9', height:'100%', overflowY:'auto'}}>
+                <h2 style={{fontFamily:'Bricolage Grotesque', fontSize:26, margin:'0 0 16px'}}>Design system</h2>
+
+                <div style={{fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'rgba(42,31,26,0.5)', marginBottom:8}}>Type</div>
+                <div style={{fontFamily:'Bricolage Grotesque', fontWeight:700, fontSize:24, lineHeight:1.1}}>Bricolage Grotesque</div>
+                <div style={{fontSize:12, color:'rgba(42,31,26,0.6)', marginBottom:8}}>display — friendly characterful sans</div>
+                <div style={{fontFamily:'Nunito', fontSize:16}}>Nunito · body — rounded, accessible</div>
+                <div style={{fontFamily:'Caveat', fontSize:24}}>Caveat · narrative warmth</div>
+
+                <div style={{fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'rgba(42,31,26,0.5)', marginTop:22, marginBottom:8}}>Palette</div>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+                  {[
+                    {name:'Parchment', hex:'#F4EBD9', dark:false},
+                    {name:'Bone', hex:'#FBF6EC', dark:false},
+                    {name:'Kura red', hex:'#B5341C', dark:true},
+                    {name:'Forest', hex:'#2D5F3F', dark:true},
+                    {name:'Ocean', hex:'#3A7CA5', dark:true},
+                    {name:'Gold', hex:'#D4A24C', dark:false},
+                    {name:'Charcoal', hex:'#2A1F1A', dark:true}
+                  ].map(c => (
+                    <div key={c.hex} style={{
+                      background:c.hex, color: c.dark ? '#FBF6EC' : '#2A1F1A',
+                      padding:'10px 12px', borderRadius:10, fontSize:11
+                    }}>
+                      <div style={{fontFamily:'Bricolage Grotesque', fontWeight:700, fontSize:13}}>{c.name}</div>
+                      <div style={{opacity:0.7, fontFamily:'JetBrains Mono, monospace'}}>{c.hex}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'rgba(42,31,26,0.5)', marginTop:22, marginBottom:8}}>Principles</div>
+                <ul style={{paddingLeft:18, fontSize:13, lineHeight:1.6, margin:0}}>
+                  <li>Min 64px tap targets</li>
+                  <li>Audio chip beside every Māori phrase</li>
+                  <li>Bricolage display + Nunito body (no Inter/Roboto)</li>
+                  <li>Placeholder cards mark where real illustration & audio assets are needed</li>
+                  <li>No reliance on emoji as final art — they stand in for commissioned glyphs</li>
+                </ul>
+              </div>
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
