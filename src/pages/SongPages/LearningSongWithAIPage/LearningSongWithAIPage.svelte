@@ -2,27 +2,47 @@
   Author: Ethan
   The Waiata sing-along page (FR3 - FR9). The child learns Ngā Tae one line at
   a time: a single lyric and matching colour swatch are shown on screen, the
-  Kiwi character replays just that line on click, Try singing accepts a
-  reasonable attempt via the browser Speech API, Need help offers escalating
-  AI-style hints, and every reasonable attempt slots one puzzle piece into the
-  picture. The Next button only enables after the current line has been
-  attempted. When all five lines are done the child moves on to the Word
-  check / Meaning check (the existing QuizPage, FR10-FR11).
+  Kiwi character replays just that line on click, Try singing records the
+  child via the microphone and asks Groq Whisper to transcribe it (Māori-
+  language model), Need help offers escalating AI-style hints, and every
+  reasonable attempt slots one puzzle piece into the picture. The Next button
+  only enables after the current line has been attempted. When all five
+  lines are done the child moves on to the Word check / Meaning check
+  (the existing QuizPage, FR10-FR11).
+
+  Output audio goes through `playClipOrSpeak()`: when a recorded mp3 exists
+  for the clip key it plays the file, otherwise it falls back to the shared
+  `speak()` helper so the page still works before the recordings land.
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
-  import { settings, speak, stopSpeaking } from '../../../lib/settings.svelte'
+  import { settings, stopSpeaking } from '../../../lib/settings.svelte'
   import { kiwiImg } from '../../NavPage/assets'
   import { SONG_LINES, type SongLine } from './lyrics'
   import {
-    SPEECH_RECOGNITION_SUPPORTED,
-    startListening,
+    hasGroqKey,
+    startRecording,
+    transcribeWithGroq,
     transcriptMatchesLine,
-  } from './speech'
+    type Recorder,
+  } from './groq-stt'
+  import { playClipOrSpeak, stopAllAudio, type ClipKey } from './audio'
   import background from '../../../assets/common/background.png'
   import kiwiYes from '../../../assets/quiz-page/kiwiyes.png'
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png'
   import kikiSays from '../../../assets/quiz-page/kikisays.png'
+
+  // Map line index → audio clip key. When the team drops an mp3 named
+  // `line-1.mp3` into src/assets/song-page/audio/, the audio helper picks it
+  // up automatically (see audio.ts). No code change needed.
+  const LINE_CLIPS: ClipKey[] = ['line-1', 'line-2', 'line-3', 'line-4', 'line-5']
+  const WORD_CLIPS: Record<string, ClipKey> = {
+    mā: 'word-ma',
+    whero: 'word-whero',
+    kākāriki: 'word-kakariki',
+    pango: 'word-pango',
+    mangu: 'word-mangu',
+  }
 
   let {
     onback = () => {},
@@ -43,15 +63,19 @@
   let kikiMessage = $state<string>('')
   // The most recent listen result, for the Yes!/Try again panel.
   let lastAttempt = $state<{ heard: string; matched: boolean } | null>(null)
-  // Whether the mic is currently capturing — drives the Try singing button.
-  let listening = $state(false)
-  let listeningStop: (() => void) | null = null
-  // Tracks whether the *current* listen was cancelled by tapping Try singing
-  // again (or by unmounting). Stops a manual cancel from registering as a
-  // failed attempt and showing a discouraging "Try again" message.
-  let listenCancelled = false
+  // Recording state: 'idle' before the child taps, 'recording' while the mic
+  // is open, 'transcribing' while Groq is processing the upload. Drives the
+  // Try singing button label so the child sees that something is happening.
+  let micState = $state<'idle' | 'recording' | 'transcribing'>('idle')
+  let recorder: Recorder | null = null
+  // Set when the child taps Try singing while a recording is in progress so
+  // the resulting transcript is discarded (manual cancel != failed attempt).
+  let recordingCancelled = false
   // Tiny transient announcement (e.g. "+1 puzzle piece"). Used for a11y too.
   let pieceFlash = $state(false)
+  // Surfaced when the Groq key is missing or transcription errored. Lets the
+  // child still move on so they aren't blocked by config issues.
+  let micError = $state<string>('')
 
   const line = $derived<SongLine>(SONG_LINES[idx])
   const total = SONG_LINES.length
@@ -82,92 +106,117 @@
     return [intro, lyric, feedback, next].filter(Boolean).join(' ')
   }
 
-  // --- Speech: Kiwi replay (FR4) -------------------------------------------
+  // --- Single source of truth for "stop everything that is making sound". --
+  function stopAllSound() {
+    stopAllAudio()
+    stopSpeaking()
+  }
+
+  // --- Kiwi replay (FR4) ---------------------------------------------------
   function playLine() {
     // Kiwi replays *only* the current lyric — distinct from Read to me, which
-    // reads the whole page (FR4 vs FR5).
-    stopSpeaking()
-    speak(line.lyric)
+    // reads the whole page (FR4 vs FR5). Plays the recorded line clip when
+    // available, falling back to TTS until the mp3 is added.
+    stopAllSound()
+    playClipOrSpeak(LINE_CLIPS[idx], line.lyric)
   }
 
   // --- Read to me (FR5) ----------------------------------------------------
   let speaking = $state(false)
   function readToMe() {
     if (speaking) {
-      stopSpeaking()
+      stopAllSound()
       speaking = false
       return
     }
-    const u = speak(pageReadout)
-    if (!u) return
+    stopAllSound()
+    // The page readout is composed dynamically (lyric + feedback + next), so
+    // there is no single mp3 for it. Pass an unused clip key so we fall
+    // straight to TTS for the spoken text.
+    const handle = playClipOrSpeak('click-kiki', pageReadout)
     speaking = true
-    u.onend = () => (speaking = false)
+    handle.onend = () => (speaking = false)
   }
 
-  // --- Try singing (FR6) ---------------------------------------------------
-  function startTrySinging() {
-    if (listening) {
-      stopListening()
+  // --- Try singing (FR6) — Groq Whisper ------------------------------------
+  async function startTrySinging() {
+    if (micState === 'recording') {
+      // Tap-to-cancel an in-flight recording.
+      recordingCancelled = true
+      recorder?.stop()
       return
     }
+    if (micState === 'transcribing') return // ignore taps while uploading
+
     // Clear any prior feedback so the new attempt feels fresh.
     lastAttempt = null
     kikiMessage = ''
-    stopSpeaking()
+    micError = ''
+    stopAllSound()
 
-    if (!SPEECH_RECOGNITION_SUPPORTED) {
-      // Graceful fallback: treat any pressed attempt as a reasonable one so
-      // the activity stays usable in Safari/Firefox where mic recognition
-      // isn't available. We still take a brief pause so it feels like an
-      // attempt was made.
-      listening = true
-      setTimeout(() => {
-        listening = false
-        acceptAttempt({ matched: true, heard: '' })
-      }, 900)
+    if (!hasGroqKey()) {
+      // No API key configured — keep the activity usable by treating the
+      // tap as a reasonable attempt, but tell the operator what's missing.
+      micError =
+        'Speech recognition is not configured (VITE_GROQ_API_KEY). Counting this as a reasonable try.'
+      acceptAttempt({ matched: true, heard: '' })
       return
     }
 
-    listening = true
-    listenCancelled = false
-    const { stop } = startListening({
-      timeoutMs: 5000,
-      onError: (err) => {
-        listening = false
-        if (err === 'not-allowed' || err === 'service-not-allowed') {
-          kikiMessage =
-            "I couldn't hear the mic. Don't worry — tap Try singing once more and Kiwi will move you on."
-          // Still accept the attempt so the child isn't stuck.
-          acceptAttempt({ matched: true, heard: '' })
-        } else if (err === 'no-speech') {
-          kikiMessage = `Have a go! Say "${line.maoriWord}" out loud.`
-        }
-      },
-      onEnd: (heard) => {
-        listening = false
-        if (listenCancelled) {
-          listenCancelled = false
-          return
-        }
-        const matched = transcriptMatchesLine(heard, line)
-        acceptAttempt({ matched, heard })
-      },
-    })
-    listeningStop = stop
+    try {
+      recorder = await startRecording({ maxMs: 5000 })
+      micState = 'recording'
+      recordingCancelled = false
+      const blob = await recorder.done
+      recorder = null
+      if (recordingCancelled) {
+        micState = 'idle'
+        return
+      }
+      micState = 'transcribing'
+      const text = await transcribeWithGroq(blob)
+      micState = 'idle'
+      const matched = transcriptMatchesLine(text, line)
+      acceptAttempt({ matched, heard: text })
+    } catch (err) {
+      micState = 'idle'
+      recorder = null
+      handleMicError(err)
+    }
   }
 
-  function stopListening() {
-    listenCancelled = true
-    listening = false
-    listeningStop?.()
-    listeningStop = null
+  function handleMicError(err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('NotAllowedError') || msg.includes('Permission') || msg.includes('denied')) {
+      micError =
+        "I couldn't open the microphone. Please allow mic access, then tap Try singing again."
+      // Don't auto-advance — the child should be able to retry once they
+      // grant permission.
+      return
+    }
+    if (msg === 'mic-unsupported') {
+      micError =
+        "This browser can't record audio. Try Chrome or Edge. Counting this as a reasonable try."
+      acceptAttempt({ matched: true, heard: '' })
+      return
+    }
+    if (msg === 'no-api-key') {
+      micError =
+        'Speech recognition is not configured (VITE_GROQ_API_KEY). Counting this as a reasonable try.'
+      acceptAttempt({ matched: true, heard: '' })
+      return
+    }
+    // Network / Groq HTTP error: don't block the child, fall back to
+    // accepting the attempt so the lesson keeps moving.
+    micError = "Couldn't reach the listener right now. Counting this as a reasonable try."
+    acceptAttempt({ matched: true, heard: '' })
   }
 
   function acceptAttempt(r: { matched: boolean; heard: string }) {
     lastAttempt = r
     if (r.matched) {
       // Positive feedback + puzzle piece (FR6 + FR7). Even an empty transcript
-      // counts as "tried" when speech rec isn't supported.
+      // counts as "tried" when STT isn't available.
       if (!attempted[idx]) {
         attempted[idx] = true
         pieces += 1
@@ -175,55 +224,63 @@
         setTimeout(() => (pieceFlash = false), 1400)
       }
       kikiMessage = `Ka pai! ${capitalise(line.maoriWord)} means ${line.english}.`
-      // Encourage out loud — short and warm. We honour Sound on/off here.
-      speak(`Ka pai! You tried ${line.maoriWord}.`)
+      // Encourage out loud — short and warm. Will play a recorded "Ka pai!"
+      // clip when one lands.
+      playClipOrSpeak('kapai', `Ka pai! You tried ${line.maoriWord}.`)
     } else {
       // Pronunciation nudge, never "you are wrong" (FR6/FR8).
       kikiMessage = `Almost! Try the word slowly: ${line.syllables.join(' - ')}.`
-      speak(`Try the word slowly. ${line.syllables.join(', ')}.`)
+      // Play the word clip on its own — a clean reference pronunciation.
+      const wordKey = WORD_CLIPS[line.maoriWord]
+      if (wordKey) {
+        playClipOrSpeak(wordKey, `${line.syllables.join(', ')}.`)
+      } else {
+        playClipOrSpeak('try-again', `Try the word slowly. ${line.syllables.join(', ')}.`)
+      }
     }
   }
 
   // --- Need help (FR8) -----------------------------------------------------
   function needHelp() {
     helpCount += 1
-    stopSpeaking()
+    stopAllSound()
     const w = line.maoriWord
     const breakdown = line.syllables.join(' - ')
     // FR8: hints escalate. Start with "click Kiwi", then break the word,
     // then offer a sing-with-Kiwi option, then loop the most concrete tip.
     let msg: string
+    let clip: ClipKey = 'click-kiki'
     if (helpCount === 1 && !lastAttempt) {
       msg = `Click Kiki to hear this line again, then try singing.`
+      clip = 'click-kiki'
     } else if (helpCount === 1 || helpCount === 2) {
       msg = `Say the word in small parts: ${breakdown}. Then try the whole line.`
+      clip = WORD_CLIPS[w] ?? 'click-kiki'
     } else if (helpCount === 3) {
       msg = `First just say "${w}". Then say the whole line: ${line.lyric}.`
+      clip = WORD_CLIPS[w] ?? LINE_CLIPS[idx]
     } else {
       msg = `Sing it with Kiki! Click Kiki, listen, then say "${w}" the same way.`
+      clip = LINE_CLIPS[idx]
     }
     kikiMessage = msg
-    speak(msg)
+    playClipOrSpeak(clip, msg)
   }
 
   // --- Navigation ----------------------------------------------------------
   function nextLine() {
     if (!canAdvance) return
-    stopListening()
-    stopSpeaking()
+    cancelMic()
+    stopAllSound()
     if (isLast) {
       onfinish()
       return
     }
     idx += 1
-    // Reset per-line transient UI; keep `attempted` and `pieces` intact.
-    helpCount = 0
-    kikiMessage = ''
-    lastAttempt = null
+    resetLineState()
     // Auto-read on entry if the child has chosen Out loud mode (FR5).
     if (settings.readMode === 'auto') {
-      // Defer slightly so the line transition animation finishes first.
-      setTimeout(() => speak(pageReadout), 250)
+      setTimeout(() => playClipOrSpeak('click-kiki', pageReadout), 250)
     }
   }
 
@@ -232,21 +289,35 @@
       onback()
       return
     }
-    stopListening()
-    stopSpeaking()
+    cancelMic()
+    stopAllSound()
     idx -= 1
+    resetLineState()
+  }
+
+  function resetLineState() {
     helpCount = 0
     kikiMessage = ''
     lastAttempt = null
+    micError = ''
+  }
+
+  function cancelMic() {
+    if (recorder) {
+      recordingCancelled = true
+      recorder.stop()
+      recorder = null
+    }
+    micState = 'idle'
   }
 
   // --- Lifecycle -----------------------------------------------------------
   onMount(() => {
-    if (settings.readMode === 'auto') speak(pageReadout)
+    if (settings.readMode === 'auto') playClipOrSpeak('click-kiki', pageReadout)
   })
   onDestroy(() => {
-    stopListening()
-    stopSpeaking()
+    cancelMic()
+    stopAllSound()
   })
 
   function capitalise(s: string): string {
@@ -340,13 +411,18 @@
         <div class="actions">
           <button
             class="cta try"
-            class:listening
+            class:listening={micState === 'recording'}
+            class:working={micState === 'transcribing'}
             onclick={startTrySinging}
-            aria-pressed={listening}
+            disabled={micState === 'transcribing'}
+            aria-pressed={micState === 'recording'}
           >
-            {#if listening}
-              <span class="mic mic-on" aria-hidden="true"></span>
+            {#if micState === 'recording'}
+              <span class="mic-on" aria-hidden="true"></span>
               Listening…
+            {:else if micState === 'transcribing'}
+              <span class="spinner" aria-hidden="true"></span>
+              Thinking…
             {:else}
               🎤 Try singing
             {/if}
@@ -354,11 +430,8 @@
           <button class="cta ghost" onclick={needHelp}>💡 Need help?</button>
         </div>
 
-        {#if !SPEECH_RECOGNITION_SUPPORTED}
-          <p class="hint-row" aria-live="polite">
-            Your browser can't listen with the microphone. Just tap
-            <em>Try singing</em> after you have had a go — Kiwi will move you on.
-          </p>
+        {#if micError}
+          <p class="hint-row" role="status" aria-live="polite">{micError}</p>
         {/if}
       </section>
     {/key}
@@ -686,6 +759,26 @@
   .cta.try.listening {
     background: linear-gradient(180deg, #e23b3b, #a82626);
     animation: pulse 1.2s ease-in-out infinite;
+  }
+  .cta.try.working {
+    background: linear-gradient(180deg, #8a8a8a, #5e5e5e);
+    cursor: progress;
+  }
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    vertical-align: middle;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
   .cta.ghost {
     background: #fff;
