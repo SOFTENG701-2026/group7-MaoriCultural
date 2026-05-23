@@ -16,7 +16,9 @@
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
+  import { push } from 'svelte-spa-router'
   import { settings, stopSpeaking } from '../../../lib/settings.svelte'
+  import { progress } from '../../../lib/progress.svelte'
   import { kiwiImg } from '../../NavPage/assets'
   import { SONG_LINES, type SongLine } from './lyrics'
   import {
@@ -32,6 +34,15 @@
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png'
   import kikiSays from '../../../assets/quiz-page/kikisays.png'
 
+  // Per-line progress flag in the shared `progress` store. NavPage reads
+  // `progress.isComplete('waiata')` to mark the map medal; we use a finer
+  // grain so a child can reload and see their puzzle pieces still in place.
+  const lineProgressId = (i: number) => `waiata-line-${i + 1}`
+  // Coarse flag: "the child has worked through every line of Ngā Tae".
+  // RewardPage still owns the final `'waiata'` badge flag — this one is a
+  // sub-milestone other pages (e.g. the map) can read.
+  const LEARN_COMPLETE_ID = 'waiata-learn'
+
   // Map line index → audio clip key. When the team drops an mp3 named
   // `line-1.mp3` into src/assets/song-page/audio/, the audio helper picks it
   // up automatically (see audio.ts). No code change needed.
@@ -45,16 +56,39 @@
   }
 
   let {
-    onback = () => {},
-    onfinish = () => {},
+    // Default to going back up the Waiata flow (intro → map) so the page
+    // still has sensible navigation when opened by deep link without a
+    // parent-supplied handler.
+    onback = () => push('/song'),
+    onfinish = () => push('/quiz'),
   }: { onback?: () => void; onfinish?: () => void } = $props()
 
+  // Always-available "back to the map" shortcut — matches the top-left
+  // pill on QuizPage / RewardPage so the navigation is consistent.
+  const goMap = () => {
+    cancelMic()
+    stopAllSound()
+    push('/')
+  }
+
   // --- Per-line state -------------------------------------------------------
-  let idx = $state(0) // current line, 0..SONG_LINES.length-1
-  // Puzzle pieces collected so far. One per successfully attempted line (FR7).
-  let pieces = $state(0)
-  // Each line's attempt status — used so re-visiting a line keeps its piece.
-  let attempted = $state<boolean[]>(SONG_LINES.map(() => false))
+  // Restore from the persistent progress store so a reload keeps the puzzle
+  // pieces the child already earned. Resume at the first unfinished line so
+  // a returning learner picks up roughly where they left off.
+  const initialAttempted = SONG_LINES.map((_, i) =>
+    progress.isComplete(lineProgressId(i)),
+  )
+  // Resume at the first unfinished line (typical case). When every line is
+  // already done we drop them on the last one so the Finish button is one
+  // tap away — they're clearly here to wrap up rather than redo.
+  const firstUnfinished = initialAttempted.findIndex((v) => !v)
+  let idx = $state(
+    firstUnfinished === -1 ? SONG_LINES.length - 1 : firstUnfinished,
+  )
+  let attempted = $state<boolean[]>(initialAttempted)
+  // Puzzle pieces collected so far. Always derived from `attempted` so the
+  // count stays consistent with what the puzzle grid is actually showing.
+  const pieces = $derived(attempted.filter(Boolean).length)
   // How many times Need help has been pressed *for this line* — drives the
   // escalating hint in FR8.
   let helpCount = $state(0)
@@ -72,6 +106,11 @@
   // Set when the child taps Try singing while a recording is in progress so
   // the resulting transcript is discarded (manual cancel != failed attempt).
   let recordingCancelled = false
+  // Timestamp the recording started. A tap within `CANCEL_WINDOW_MS` of that
+  // moment cancels (treats it as an accidental double-tap); a tap after that
+  // window finishes the recording and runs transcription.
+  let recordingStartedAt = 0
+  const CANCEL_WINDOW_MS = 500
   // Live mic RMS, [0..1]. Drives the on-screen level bars while recording.
   let micLevel = $state(0)
   // Tiny transient announcement (e.g. "+1 puzzle piece"). Used for a11y too.
@@ -86,15 +125,23 @@
   //   idle        → "🎤 Try Singing" (orange)
   //   listening   → mic level bars + "Listening" + sweeping bg lines
   //   recognizing → brief upload/transcribe wait
-  //   passed      → green button with ✓ — the child has passed this line
-  // We derive this from the recording state and `attempted[idx]` so the
-  // button visual stays in sync without juggling another flag.
+  //   passed      → green button with ✓ — the latest attempt was accepted
+  //
+  // We look at the *latest* attempt rather than the historic
+  // `attempted[idx]` flag, so retrying a passed line and getting an
+  // unrecognised result reverts the button to idle. The line stays
+  // unlocked for "Next" (FR9) because the puzzle piece was already
+  // earned — only the button's visual reflects this session's attempt.
   type ButtonState = 'idle' | 'listening' | 'recognizing' | 'passed'
   const buttonState = $derived<ButtonState>(
     micState === 'recording'
       ? 'listening'
       : micState === 'transcribing'
       ? 'recognizing'
+      : lastAttempt
+      ? lastAttempt.matched
+        ? 'passed'
+        : 'idle'
       : attempted[idx]
       ? 'passed'
       : 'idle',
@@ -164,8 +211,15 @@
   // --- Try singing (FR6) — Groq Whisper ------------------------------------
   async function startTrySinging() {
     if (micState === 'recording') {
-      // Tap-to-cancel an in-flight recording.
-      recordingCancelled = true
+      // Two-mode tap during recording, split by `CANCEL_WINDOW_MS`:
+      //   • Within 500 ms of start  → treat as an accidental double-tap and
+      //     cancel (transcript is discarded, button returns to idle).
+      //   • After 500 ms             → finish recording early and run
+      //     transcription on whatever was captured so far.
+      const elapsed = Date.now() - recordingStartedAt
+      if (elapsed < CANCEL_WINDOW_MS) {
+        recordingCancelled = true
+      }
       recorder?.stop()
       return
     }
@@ -197,6 +251,7 @@
         onLevel: (l) => (micLevel = l),
       })
       micState = 'recording'
+      recordingStartedAt = Date.now()
       recordingCancelled = false
       const blob = await recorder.done
       recorder = null
@@ -253,7 +308,9 @@
       // counts as "tried" when STT isn't available.
       if (!attempted[idx]) {
         attempted[idx] = true
-        pieces += 1
+        // Persist this line — survives reloads and is what NavPage/RewardPage
+        // can inspect to know how far the child has come.
+        progress.markComplete(lineProgressId(idx))
         pieceFlash = true
         setTimeout(() => (pieceFlash = false), 1400)
       }
@@ -307,6 +364,9 @@
     cancelMic()
     stopAllSound()
     if (isLast) {
+      // Sub-milestone for the Waiata module: the child has practised every
+      // line. Final `'waiata'` badge is still earned on the Reward page.
+      progress.markComplete(LEARN_COMPLETE_ID)
       onfinish()
       return
     }
@@ -383,62 +443,55 @@
 <div class="page">
   <div class="bg-image" style:background-image="url({background})" aria-hidden="true"></div>
 
-  <!-- Top bar: back + progress + read-to-me ------------------------------- -->
-  <header class="topbar">
-    <button class="pill ghost-pill" onclick={prevLine} aria-label="Back">
-      ← Back
-    </button>
+  <!-- Always-on shortcut back to the map (matches QuizPage / RewardPage). -->
+  <button class="pill btn-map" onclick={goMap}>← Map</button>
 
-    <div class="progress" aria-label="Line {idx + 1} of {total}">
-      <span class="badge">Line {idx + 1} of {total}</span>
-      <div class="dots" aria-hidden="true">
-        {#each SONG_LINES as _, i}
-          <span class="dot" class:done={attempted[i]} class:cur={i === idx}></span>
-        {/each}
-      </div>
+  <!-- Top bar: centred progress badge + line dots. The line-by-line Back
+       and the Read-to-me button live in the bottom nav for layout
+       consistency with the rest of the song flow. -->
+  <header class="topbar" aria-label="Line {idx + 1} of {total}">
+    <span class="badge">Line {idx + 1} of {total}</span>
+    <div class="dots" aria-hidden="true">
+      {#each SONG_LINES as _, i}
+        <span class="dot" class:done={attempted[i]} class:cur={i === idx}></span>
+      {/each}
     </div>
-
-    <button
-      class="pill read-pill"
-      class:on={speaking}
-      onclick={readToMe}
-      disabled={!settings.soundOn}
-      aria-label="Read to me"
-    >
-      🔊 {speaking ? 'Stop' : 'Read to me'}
-    </button>
   </header>
 
   <!-- Two-column layout: lesson card + puzzle ----------------------------- -->
   <main class="content">
     {#key idx}
       <section class="card lesson">
-        <p class="eyebrow">Sing along · Ngā Tae</p>
-        <h1 class="lyric">{line.lyric}</h1>
+        <header class="lesson-head">
+          <p class="eyebrow">Sing along · Ngā Tae</p>
+          <h1 class="lyric">{line.lyric}</h1>
+        </header>
 
-        <!-- Colour swatch + textual label, so the meaning is clear even in
-             high-contrast mode and for low-vision children (FR14 note). -->
-        <div class="swatch-wrap">
-          <div
-            class="swatch"
-            class:white={line.color === '#ffffff'}
-            style:background-color={line.color}
-            aria-hidden="true"
-          ></div>
-          <p class="meaning">
+        <!-- Hero "colour tile": the swatch and its label are one visual
+             unit (FR3) rather than two loose siblings. The label sits in
+             a white band so it stays readable on every colour — including
+             pure white — without relying on contrast tricks (FR14). -->
+        <div
+          class="color-tile"
+          class:white={line.color === '#ffffff'}
+          aria-label="{line.maoriWord} means {line.english}"
+        >
+          <div class="color-fill" style:background-color={line.color} aria-hidden="true"></div>
+          <div class="color-label">
             <strong>{line.maoriWord}</strong> = {line.english}
-          </p>
+          </div>
         </div>
 
-        <!-- Clickable Kiwi: tap to replay just this line (FR4). -->
+        <!-- Replay button (FR4): the Kiwi avatar and its prompt are now a
+             single pill control. Clear "tap to play" affordance — no more
+             floating speech bubble. -->
         <button
           class="kiwi-replay"
           onclick={playLine}
-          aria-label="Click Kiki to hear this line again"
-          title="Click me to hear this line again"
+          aria-label="Tap Kiwi to hear this line again"
         >
-          <img src={kiwiImg} alt="" draggable="false" />
-          <span class="kiwi-bubble">Click me to hear this line again</span>
+          <img class="kiwi-avatar" src={kiwiImg} alt="" draggable="false" />
+          <span class="replay-text">Tap Kiwi to hear this line again</span>
         </button>
 
         <!-- Primary actions: Try singing + Need help (FR6, FR8). -->
@@ -577,9 +630,21 @@
     </aside>
   </main>
 
-  <!-- Bottom nav: Back / Next  (Next stays disabled until attempted, FR9). -->
+  <!-- Bottom nav matches QuizPage layout: Back · Read-to-me · Next.
+       Next stays disabled until the current line is attempted (FR9). -->
   <nav class="bottom-nav">
-    <button class="pill" onclick={prevLine}>← {idx === 0 ? 'Map' : 'Back'}</button>
+    <button class="pill btn-back" onclick={prevLine}>
+      ← {idx === 0 ? 'Intro' : 'Back'}
+    </button>
+    <button
+      class="pill btn-read"
+      class:on={speaking}
+      onclick={readToMe}
+      disabled={!settings.soundOn}
+      aria-label="Read to me"
+    >
+      🔊 {speaking ? 'Stop' : 'Read to me'}
+    </button>
     <button class="pill btn-next" onclick={nextLine} disabled={!canAdvance}>
       {isLast ? 'Finish →' : 'Next →'}
     </button>
@@ -614,18 +679,15 @@
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.7));
   }
 
-  /* --- Top bar ------------------------------------------------------- */
+  /* --- Top bar: centred progress badge + line dots ----------------- */
   .topbar {
     position: relative;
     z-index: 20;
     width: min(1200px, 94%);
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 12px;
-    align-items: center;
-  }
-  .progress {
+    /* The fixed "← Map" pill lives at top:16/left:16 and is on the left
+       edge, so a small margin is enough — the centred badge clears it
+       horizontally on every reasonable viewport. */
+    margin-top: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -667,10 +729,13 @@
     z-index: 10;
     width: min(1200px, 94%);
     flex: 1;
-    padding: 22px 0 110px;
+    padding: 14px 0 96px;
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
-    gap: 22px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
+    gap: 18px;
+    /* Both columns sit at the top of the grid row — each takes its own
+       natural height. Bottom alignment is controlled explicitly by the
+       `.card`'s min-height below (single number to tune). */
     align-items: start;
   }
   @media (max-width: 860px) {
@@ -684,9 +749,23 @@
     background: rgba(255, 255, 255, 0.97);
     border-radius: 24px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
-    padding: 26px 28px 30px;
+    padding: 18px 28px;
     box-sizing: border-box;
     animation: slideIn 0.32s ease both;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* `space-between` pins the title to the top and the action row to
+       the bottom — combined with the explicit min-height below, this
+       is what lets the card's bottom edge match the right column. */
+    justify-content: space-between;
+    text-align: center;
+    gap: 8px;
+    /* ▼ ONLY KNOB YOU NEED TO TUNE ▼
+       Set this so the card's bottom edge meets the right column's last
+       visible card's bottom. Decrease to raise the bottom; increase to
+       lower it. Default is calibrated for a typical 1024 × 768 view. */
+    min-height: 590px;
   }
   @keyframes slideIn {
     from {
@@ -699,128 +778,117 @@
     }
   }
 
+  /* Card children: rely on the parent's `gap` for vertical rhythm — no
+     ad-hoc margins, so spacing stays consistent regardless of what shows. */
   .eyebrow {
-    margin: 0 0 6px;
+    margin: 0;
     text-transform: uppercase;
     letter-spacing: 2px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #b3722a;
   }
   .lyric {
     margin: 0;
-    font-size: clamp(28px, 4.6vw, 50px);
+    font-size: clamp(24px, 4vw, 42px);
     font-weight: 900;
     color: #1a2330;
     letter-spacing: -0.5px;
+    line-height: 1.1;
   }
 
-  .swatch-wrap {
-    margin-top: 20px;
+  /* Lesson title block: eyebrow + lyric kept tight together at the top
+     so they read as one heading, not two separate items. */
+  .lesson-head {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 2px;
   }
-  .swatch {
-    width: clamp(110px, 18vw, 180px);
-    aspect-ratio: 1 / 1;
-    border-radius: 26px;
-    border: 4px solid rgba(0, 0, 0, 0.18);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-    flex: none;
+
+  /* --- Colour tile: swatch + label as one unified card ----------- */
+  .color-tile {
+    width: clamp(180px, 26vw, 240px);
+    aspect-ratio: 1 / 1.1;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 3px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
   }
-  .swatch.white {
-    /* White-on-white needs an extra outline so the swatch reads as a shape. */
+  .color-tile.white {
+    /* Pure white swatch — a sharper edge so the tile still reads as a shape. */
     border-color: #1a1a1a;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18), inset 0 0 0 4px #fff;
   }
-  .meaning {
-    margin: 0;
-    font-size: clamp(20px, 2.8vw, 28px);
-    font-weight: 700;
+  .color-fill {
+    flex: 1;
+  }
+  .color-label {
+    background: #fffaf0;
     color: #1a2330;
+    font-weight: 700;
+    font-size: clamp(15px, 1.9vw, 19px);
+    padding: 8px 14px;
+    border-top: 2px solid rgba(0, 0, 0, 0.18);
+    white-space: nowrap;
   }
-  .meaning strong {
+  .color-label strong {
     color: #7a3d12;
   }
 
-  /* --- Clickable Kiwi (replay) --------------------------------------- */
+  /* --- Replay button: Kiwi avatar + label as one pill control --- */
   .kiwi-replay {
-    margin: 18px 0 8px;
-    background: none;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
+    margin: 0;
     display: inline-flex;
     align-items: center;
-    gap: 16px;
-    font-family: inherit;
-  }
-  .kiwi-replay img {
-    width: clamp(90px, 14vw, 130px);
-    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
-    transition: transform 0.18s ease;
-    animation: kiwiBob 3s ease-in-out infinite;
-  }
-  .kiwi-replay:hover img {
-    transform: translateY(-4px) scale(1.04);
-  }
-  .kiwi-replay:active img {
-    transform: scale(0.98);
-  }
-  .kiwi-bubble {
+    gap: 12px;
+    padding: 8px 22px 8px 10px;
     background: #fff;
-    border: 2.5px solid #1b1206;
-    border-radius: 18px;
-    padding: 10px 14px;
-    font-size: clamp(13px, 1.6vw, 16px);
+    border: 2.5px solid #d9b98a;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    font-family: inherit;
     font-weight: 700;
-    color: #1a2330;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
-    position: relative;
+    font-size: clamp(14px, 1.7vw, 16px);
+    color: #5a3514;
+    transition: transform 0.16s ease, box-shadow 0.18s ease, background 0.18s ease;
   }
-  .kiwi-bubble::before {
-    content: '';
-    position: absolute;
-    left: -10px;
-    top: 50%;
-    transform: translateY(-50%);
-    border: 8px solid transparent;
-    border-right-color: #1b1206;
+  .kiwi-replay:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+    background: #fff7e6;
   }
-  .kiwi-bubble::after {
-    content: '';
-    position: absolute;
-    left: -6px;
-    top: 50%;
-    transform: translateY(-50%);
-    border: 7px solid transparent;
-    border-right-color: #fff;
+  .kiwi-replay:active {
+    transform: translateY(0);
   }
-  @keyframes kiwiBob {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-4px);
-    }
+  .kiwi-avatar {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    flex: none;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
   }
 
   /* --- Action buttons row -------------------------------------------- */
   .actions {
-    margin-top: 18px;
+    margin: 4px 0 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    justify-content: center;
+    gap: 10px;
+    /* Buttons sit just under the kiwi row — a small extra nudge gives
+       them visual weight at the bottom of the card. */
   }
   .cta {
     border: 0;
     border-radius: 999px;
-    padding: 14px 26px;
+    padding: 16px 32px;
     font-family: inherit;
     font-weight: 800;
-    font-size: clamp(16px, 1.8vw, 19px);
+    font-size: clamp(18px, 2vw, 22px);
     cursor: pointer;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.18s ease;
   }
@@ -840,7 +908,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 220px;
+    min-width: 240px;
     /* Smooth colour swap between idle ↔ listening ↔ recognizing ↔ passed. */
     transition: background 0.25s ease, color 0.2s ease, box-shadow 0.25s ease,
       transform 0.16s ease;
@@ -964,14 +1032,14 @@
   }
   .puzzle {
     background: rgba(255, 255, 255, 0.97);
-    border-radius: 22px;
-    padding: 18px 18px 22px;
+    border-radius: 20px;
+    padding: 12px 14px 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     text-align: center;
   }
   .puzzle-title {
-    margin: 0 0 12px;
-    font-size: clamp(16px, 1.7vw, 19px);
+    margin: 0 0 8px;
+    font-size: clamp(15px, 1.6vw, 18px);
     font-weight: 800;
     color: #1a2330;
   }
@@ -1142,23 +1210,36 @@
     outline: 3px solid #ffe9a8;
     outline-offset: 3px;
   }
-  .ghost-pill {
-    padding: 10px 22px;
-    font-size: 15px;
-  }
-  .read-pill {
-    padding: 10px 22px;
-    font-size: 15px;
-  }
-  .read-pill.on {
-    background: linear-gradient(180deg, #ffe6a8, #f4c25c);
-  }
   .pill:disabled {
-    background: #d8d8d8;
+    background: #d0d0d0;
     color: #888;
     cursor: not-allowed;
     box-shadow: none;
     transform: none;
+  }
+
+  /* Fixed top-left "← Map" shortcut, mirroring QuizPage/RewardPage. */
+  .btn-map {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 50;
+    padding: 14px 28px;
+    font-size: 16px;
+  }
+  /* Match QuizPage/RewardPage typography for the bottom-nav pills. */
+  .bottom-nav .pill {
+    padding: 16px 34px;
+    font-size: 18px;
+  }
+  .btn-back,
+  .btn-read {
+    background: #fff;
+    color: #333;
+  }
+  .btn-read.on {
+    background: linear-gradient(180deg, #ffe6a8, #f4c25c);
+    color: #2c1600;
   }
   .btn-next {
     background: #f5a623;
@@ -1168,8 +1249,6 @@
   }
   .btn-next:disabled {
     animation: none;
-    background: #d0d0d0;
-    color: #888;
   }
   @keyframes breathe {
     0%,
@@ -1188,8 +1267,7 @@
     .puzzle-piece.filled,
     .fb,
     .btn-next,
-    .sweep,
-    .kiwi-replay img {
+    .sweep {
       animation: none !important;
     }
   }
