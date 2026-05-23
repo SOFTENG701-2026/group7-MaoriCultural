@@ -43,6 +43,11 @@ const routes = {
     props: { onBack: () => push('/song/learn'), onMap: onBackToMap, onFinish: onBackToMap },
   }),
 
+  '/reward': wrap({
+    asyncComponent: () =>
+      import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
+  }),
+
   // Fallback: unknown paths return to the home map.
   '*': wrap({
     asyncComponent: () =>
