@@ -5,6 +5,7 @@
   import badgeCard      from '../../../assets/quiz-page/badgecard.png';
   import badgeBackToMap from '../../../assets/quiz-page/badgebacktomap.png';
   import { push } from 'svelte-spa-router';
+  import { progress } from '../../../lib/progress.svelte';
 
   interface Props {
     onMap?: () => void;
@@ -20,6 +21,7 @@
   let showModal = $state(false);
 
   function handleDone() {
+    progress.markComplete('waiata');
     showModal = true;
   }
 
