@@ -1,8 +1,10 @@
-# Requirements Analysis: Waiata Songs Module — *Ngā Tae*
+# Requirements Analysis: Map Explorer and Waiata Songs Module — *Ngā Tae*
 
-## 1. Module Goal
+## 1. Overall Module Goal
 
-The **Waiata Songs** module is designed to help Year 1–3 children learn basic Māori colour words through the waiata *Ngā Tae*. The purpose of this module is not to assess whether children can sing perfectly. Instead, it supports children in listening, repeating, singing line by line, and understanding simple Māori vocabulary through a familiar song-based activity.
+The system is designed as a child-friendly Māori cultural learning experience for Year 1–3 children. The learning journey begins from a **Map Explorer Home Page**, where children can choose different cultural learning areas, such as **Pūrākau**, **Waiata**, **Pepeha**, and **Tikanga**.
+
+This document focuses on the **Waiata Songs** module, which helps children learn basic Māori colour words through the waiata *Ngā Tae*. The purpose is not to assess whether children can sing perfectly. Instead, the module supports children in listening, repeating, singing line by line, and understanding simple Māori vocabulary through a familiar song-based activity.
 
 *Ngā Tae* is suitable for young learners because colour words are concrete, visual, and easy to connect with everyday knowledge. Children can connect Māori words with colours they already know, such as:
 
@@ -12,26 +14,26 @@ The **Waiata Songs** module is designed to help Year 1–3 children learn basic 
 - **pango** = black
 - **mangu** = black / also black
 
-Therefore, the main goal of this module is to help children hear, imitate, recognise, and understand Māori colour words in a waiata context.
+Therefore, the main goal of the Waiata Songs module is to help children hear, imitate, recognise, and understand Māori colour words in a waiata context.
 
 ---
 
 ## 2. Target Users
 
-The target users are **Year 1–3 children**. Children at this age are still developing reading, listening, pronunciation, and attention skills. Therefore, the module should be simple, visual, repeatable, accessible, and encouraging.
+The target users are **Year 1–3 children**. Children at this age are still developing reading, listening, pronunciation, and attention skills. Therefore, the system should be simple, visual, repeatable, accessible, and encouraging.
 
 The design should consider that children in this age group:
 
 - may have short attention spans;
 - may need repeated listening before speaking;
 - may not be familiar with Māori pronunciation;
-- learn better through visual examples and imitation;
+- learn better through visual examples, imitation, and play;
 - need encouragement rather than strict correction;
 - benefit from short, step-by-step tasks;
 - may not yet be confident readers;
 - may have reading difficulties, low vision, or other visual accessibility needs.
 
-For this reason, the module should teach the song **one line at a time**, and only ask checking questions after the child has practised all song lines. Each page should also provide a **Read to me** function so that children can hear the instructions, lyrics, questions, and feedback aloud.
+For this reason, the Waiata Songs module teaches the song **one line at a time**, and only asks checking questions after the child has practised all song lines. Each page should also provide a **Read to me** function so that children can hear the instructions, lyrics, questions, answer options, and feedback aloud.
 
 ---
 
@@ -39,6 +41,8 @@ For this reason, the module should teach the song **one line at a time**, and on
 
 The learning requirements of the Waiata Songs module are:
 
+- Children should be able to enter the learning activity from a clear map-based home page.
+- Children should be able to select the **Waiata** learning area from the map.
 - Children should be able to listen to *Ngā Tae* before singing.
 - Children should practise the song line by line.
 - Children should be able to replay the current line when needed.
@@ -51,30 +55,36 @@ The learning requirements of the Waiata Songs module are:
 - Children should be able to open the **Rewards icon** to view earned rewards, such as the Waiata badge and completed puzzle.
 - Children should be able to use a **Read to me** button on each page to hear the instructions, lyrics, questions, answer options, and feedback read aloud.
 - Children with developing reading skills, reading difficulties, or visual impairments should be able to understand the task without relying only on written text.
+- After completing a module, children should return to the map, where Kiwi moves toward the recommended next learning area. The child should still click the highlighted module to enter it.
 
-The learning focus is on **listening, imitation, pronunciation practice, word recognition, meaning understanding, visible progress, and accessible audio support**.
+The learning focus is on **guided exploration, listening, imitation, pronunciation practice, word recognition, meaning understanding, visible progress, and accessible audio support**.
 
 ---
 
 ## 4. User Flow Requirements
 
-The Waiata Songs module should follow this flow:
+The overall user flow should be:
 
-1. Start page
-2. Listen page
-3. Sing line 1
-4. Receive feedback and one puzzle piece
-5. Sing line 2
+1. Map Explorer Home Page
+2. Select **Waiata** on the map
+3. Start page
+4. Listen page
+5. Sing line 1
 6. Receive feedback and one puzzle piece
-7. Sing line 3
+7. Sing line 2
 8. Receive feedback and one puzzle piece
-9. Sing line 4 / final line
+9. Sing line 3
 10. Receive feedback and one puzzle piece
-11. Word check
-12. Meaning check
-13. Reward page
+11. Sing line 4 / final line
+12. Receive feedback and one puzzle piece
+13. Word check
+14. Meaning check
+15. Reward page
+16. Return to Map Explorer Home Page
+17. Kiwi moves toward the recommended next module
+18. The child clicks the highlighted module to enter the next activity
 
-This order is important because it lets children experience and practise the song first before answering questions. If questions appear after every line, the singing activity may feel interrupted and more like a test. A better flow is to let children complete the line-by-line singing first, then check what they recognised and understood.
+This order is important because it lets children first enter the experience through a playful map, then complete the Waiata learning flow in a structured way. The song is practised before checking questions appear. If questions appear after every line, the singing activity may feel interrupted and more like a test. A better flow is to let children complete the line-by-line singing first, then check what they recognised and understood.
 
 The puzzle reward also supports this flow. After each line, children receive a visible piece of progress, which helps maintain motivation across the whole song.
 
@@ -83,6 +93,43 @@ Each page should also include a **Read to me** function. This ensures that child
 ---
 
 ## 5. Functional Requirements
+
+### FR0: Map Explorer Home Page
+
+The system should provide a **Map Explorer Home Page** as the entry point for the learning experience. This page should look like a child-friendly adventure map of Aotearoa, where different learning modules are shown as large tappable locations or icons.
+
+The map should include clear module areas, such as:
+
+- **Pūrākau** for stories;
+- **Waiata** for songs;
+- **Pepeha** for identity and introduction;
+- **Tikanga** for customs and cultural practices.
+
+Each module icon should be visually distinct and large enough for Year 1–3 children to click easily. When the child clicks the **Waiata** location on the map, the system should open the Waiata Songs module and begin the *Ngā Tae* learning flow.
+
+The map should feel like an exploration game rather than a normal menu. The Kiwi character can appear on the map as a guide, helping children understand that they are travelling between different learning areas. When a child selects a module, the system can show a simple transition, such as Kiwi moving toward the selected location or the selected icon giving a visual response. This makes the navigation feel playful and helps children understand that they have chosen a learning activity.
+
+After the child completes a module, the system should return to the Map Explorer Home Page. Kiwi should then automatically move toward the recommended next learning module, and the next module icon can show a simple visual cue, such as glowing, bouncing, or pulsing.
+
+However, the system should not automatically open the next module. The child should still click the highlighted module to enter it. This keeps the experience playful while still giving the child control over navigation.
+
+For example, after completing the Waiata Songs module, Kiwi can walk toward the next suggested area on the map. The highlighted icon shows the child where they can go next, but the child decides when to click and start the next activity.
+
+The map page should also include a simple learner profile area, such as **“Kia ora! Explorer”**, so the child feels personally welcomed into the activity. This does not need to function as a full account system in the prototype, but it supports a friendly and game-like learning experience.
+
+The page should include a **Read to me** button. This should read out the map instructions and explain what the child can do, for example:
+
+> Choose a place on the map to start learning. Tap Waiata to learn a Māori song.
+
+This is important for Year 1–3 children who are still developing reading skills, and also supports children with reading difficulties or visual accessibility needs.
+
+The map should also include a **Rewards icon**. This icon allows children to view the rewards they have earned, such as badges, puzzle pieces, or completed reward pictures. The Rewards icon should be visible from the map so children can return to their achievements after completing a module.
+
+A **Settings icon** can also be included for simple learning preferences, such as sound, volume, or accessibility options. This should be placed separately from the learning module icons so children do not confuse settings with a learning activity.
+
+Overall, the Map Explorer Home Page should support simple navigation, playful exploration, and clear access to learning modules. It should help children understand that they can choose a location on the map, enter an activity, complete learning tasks, and return to the map to continue their Māori cultural learning journey.
+
+---
 
 ### FR1: Start Page
 
@@ -364,14 +411,20 @@ The module should be:
 - **Accessible:** text should be large, buttons should be easy to click, and each page should include a **Read to me** function for children with developing reading skills, reading difficulties, or visual impairments.
 - **Structured:** children should complete each step before moving forward.
 - **Motivating:** children should be able to see progress through visual rewards, such as puzzle pieces, badges, and the Rewards icon.
+- **Playful:** the map and Kiwi movement should make the system feel like an exploration game rather than a static menu.
 
 ---
 
 ## 7. Acceptance Criteria
 
-The Waiata Songs module can be considered successful if:
+The Map Explorer and Waiata Songs module can be considered successful if:
 
-- Children can understand that the activity is about *Ngā Tae* and Māori colours.
+- Children can understand that the map is the entry point for different Māori cultural learning activities.
+- Children can identify and select the **Waiata** module from the map.
+- Kiwi visually guides children toward selected or recommended learning areas.
+- After completing a module, children return to the map and Kiwi moves toward the recommended next module.
+- The next recommended module is highlighted, but the child must click it to enter.
+- Children can understand that the Waiata activity is about *Ngā Tae* and Māori colours.
 - Children can listen to the song before singing.
 - Children can practise each line one at a time.
 - Children can click Kiwi to replay the current line.
@@ -397,19 +450,24 @@ The Waiata Songs module can be considered successful if:
 
 ## 8. Summary
 
-The Waiata Songs module uses *Ngā Tae* to support a simple and age-appropriate learning flow for Year 1–3 children:
+The system uses a playful map-based structure to guide Year 1–3 children through Māori cultural learning activities. Children begin from the **Map Explorer Home Page**, choose a learning area such as **Waiata**, complete the module, and return to the map. After completing a module, Kiwi automatically moves toward the recommended next learning area, while the child still chooses when to click and enter.
 
-1. Listen to *Ngā Tae*
-2. Sing the song line by line
-3. Click Kiwi to replay the current line
-4. Use **Read to me** to hear page instructions, lyrics, questions, and feedback
-5. Use AI help for pronunciation and meaning support
-6. Receive positive feedback and one puzzle piece after a reasonable singing attempt
-7. Complete the puzzle as the song lines are learned
-8. Recognise a Māori colour word in Word check
-9. Match the word to its colour meaning in Meaning check
-10. Earn a Waiata badge
-11. Review earned rewards through the Rewards icon
+The Waiata Songs module uses *Ngā Tae* to support a simple and age-appropriate learning flow:
+
+1. Start from the Map Explorer Home Page
+2. Select **Waiata**
+3. Listen to *Ngā Tae*
+4. Sing the song line by line
+5. Click Kiwi to replay the current line
+6. Use **Read to me** to hear page instructions, lyrics, questions, and feedback
+7. Use AI help for pronunciation and meaning support
+8. Receive positive feedback and one puzzle piece after a reasonable singing attempt
+9. Complete the puzzle as the song lines are learned
+10. Recognise a Māori colour word in Word check
+11. Match the word to its colour meaning in Meaning check
+12. Earn a Waiata badge
+13. Review earned rewards through the Rewards icon
+14. Return to the map and follow Kiwi toward the next recommended module
 
 This design is suitable for young learners because the colour words are concrete, the song lines are short, and the interaction is visual and repeatable. The puzzle reward and Global Rewards icon make progress visible during and after the activity, which can help maintain motivation for Year 1–3 children.
 
