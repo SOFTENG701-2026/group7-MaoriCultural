@@ -8,11 +8,13 @@
     loc,
     index,
     active = false,
+    completed = false,
     onpick,
   }: {
     loc: Loc
-    index: number // staggers the float animation so markers don't bob in sync
+    index: number
     active?: boolean
+    completed?: boolean
     onpick: (loc: Loc) => void
   } = $props()
 </script>
@@ -25,12 +27,17 @@
   aria-label={active ? `Enter ${loc.label}` : `Walk Kiwi to ${loc.label}`}
 >
   <img src={loc.img} alt={loc.label} draggable="false" />
+  {#if completed}
+    <span class="complete-badge" aria-label="Completed">✓</span>
+  {/if}
 </button>
 
 <style>
   .marker {
     position: absolute;
     transform: translate(-50%, -50%);
+    /* needed so .complete-badge positions relative to this button */
+    isolation: isolate;
     padding: 0;
     border: 0;
     background: none;
@@ -68,6 +75,27 @@
       drop-shadow(0 0 12px rgba(255, 224, 130, 0.95))
       drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
     animation: float 4.5s ease-in-out infinite, glow 1.4s ease-in-out infinite;
+  }
+
+  /* Completion badge — green circle with checkmark at top-right of marker */
+  .complete-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #27ae60;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.35);
+    border: 2px solid #fff;
+    pointer-events: none;
+    z-index: 2;
   }
 
   @keyframes float {

@@ -12,6 +12,11 @@ const routes = {
       import('./pages/SongPages/QuizPage/QuizPage.svelte').then(m => m.default),
   }),
 
+  '/reward': wrap({
+    asyncComponent: () =>
+      import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
+  }),
+
   // Fallback: unknown paths return to the home map.
   '*': wrap({
     asyncComponent: () =>
