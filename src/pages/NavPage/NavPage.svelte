@@ -1,37 +1,11 @@
 <script lang="ts">
   // Author: Shirley
-  // Home / navigation page — "Map of Kiwi's Aotearoa Adventure".
-  // The kiwi is a controllable character: tap a place to make it walk there,
-  // or use the arrow keys / WASD to roam the map freely.
-  import bg from '../../assets/Navpage/navi-background.png'
-  import titleImg from '../../assets/Navpage/navi-title.png'
-  import explorerImg from '../../assets/Navpage/navi-explorer.png'
-  import kiwiImg from '../../assets/Navpage/navi-kiwi.png'
-  import purakauImg from '../../assets/Navpage/navi-purakau.png'
-  import waiataImg from '../../assets/Navpage/navi-waiata.png'
-  import tikangaImg from '../../assets/Navpage/navi-tikanga.png'
-  import pepehaImg from '../../assets/Navpage/navi-Pepeha.png'
-  import settingImg from '../../assets/Navpage/navi-setting.png'
-  import rewardImg from '../../assets/Navpage/navi-reward.png'
 
-  type Pt = { x: number; y: number }
-  type Loc = {
-    id: string
-    label: string
-    img: string
-    icon: Pt // centre of the icon, in % of the map
-    stand: Pt // where the kiwi stands when it arrives
-    w: number // icon width, in % of the map
-  }
-
-  // All coordinates are percentages of the map stage, so the layout scales
-  // with the screen. Tweak these to nudge any element on the map.
-  const LOCATIONS: Loc[] = [
-    { id: 'purakau', label: 'Purākau', img: purakauImg, icon: { x: 29, y: 30 }, stand: { x: 21, y: 38 }, w: 9.6 },
-    { id: 'waiata',  label: 'Waiata',  img: waiataImg,  icon: { x: 47, y: 38 }, stand: { x: 47, y: 50 }, w: 9.0 },
-    { id: 'pepeha',  label: 'Pepeha',  img: pepehaImg,  icon: { x: 65, y: 57 }, stand: { x: 57, y: 64 }, w: 9.0 },
-    { id: 'tikanga', label: 'Tikanga', img: tikangaImg, icon: { x: 33, y: 79 }, stand: { x: 33, y: 90 }, w: 9.0 },
-  ]
+  import { bg, titleImg, explorerImg, settingImg, rewardImg } from './assets'
+  import { LOCATIONS, type Pt, type Loc } from './locations'
+  import MapMarker from './components/MapMarker.svelte'
+  import KiwiCharacter from './components/KiwiCharacter.svelte'
+  import ReadAloudButton from './components/ReadAloudButton.svelte'
 
   let { onnavigate = (_id: string) => {} }: { onnavigate?: (id: string) => void } = $props()
 
@@ -103,30 +77,12 @@
     e.preventDefault()
   }
 
-  // --- "Read to me" (Web Speech, optional) ---------------------------------
-  let speaking = $state(false)
-  function readToMe() {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-    if (speaking) {
-      window.speechSynthesis.cancel()
-      speaking = false
-      return
-    }
-    const u = new SpeechSynthesisUtterance(
-      "Kia ora! Welcome to the Map of Kiwi's Aotearoa Adventure. Tap a place to help Kiwi explore.",
-    )
-    u.rate = 0.95
-    u.onend = () => (speaking = false)
-    speaking = true
-    window.speechSynthesis.speak(u)
-  }
-
   const activeLoc = $derived(LOCATIONS.find((l) => l.id === active) ?? null)
 </script>
 
 <svelte:window onkeydown={onKey} />
 
-<div class="wrap">
+<div class="wrap" style="--map-bg:url({bg})">
   <div class="stage" style="background-image:url({bg})">
     <div class="vignette" aria-hidden="true"></div>
 
@@ -146,15 +102,7 @@
 
     <!-- Location markers -->
     {#each LOCATIONS as loc, i (loc.id)}
-      <button
-        class="marker"
-        class:active={active === loc.id}
-        style="left:{loc.icon.x}%; top:{loc.icon.y}%; width:{loc.w}%; --i:{i}"
-        onclick={() => selectLocation(loc)}
-        aria-label={active === loc.id ? `Enter ${loc.label}` : `Walk Kiwi to ${loc.label}`}
-      >
-        <img src={loc.img} alt={loc.label} draggable="false" />
-      </button>
+      <MapMarker {loc} index={i} active={active === loc.id} onselect={selectLocation} />
     {/each}
 
     <!-- Walk destination ring -->
@@ -174,36 +122,10 @@
     {/if}
 
     <!-- The kiwi character -->
-    <div
-      class="kiwi"
-      style="left:{kiwi.x}%; top:{kiwi.y}%; transition: left {walkDur}s cubic-bezier(.45,.05,.35,1), top {walkDur}s cubic-bezier(.45,.05,.35,1)"
-    >
-      <span class="shadow" class:walking></span>
-      <div class="flip" style="transform: scaleX({facing})">
-        <div class="bob" class:walking>
-          <img src={kiwiImg} alt="Kiwi" draggable="false" />
-        </div>
-      </div>
-    </div>
+    <KiwiCharacter pos={kiwi} {facing} {walking} {walkDur} />
 
     <!-- Read to me -->
-    <button class="readme" class:on={speaking} onclick={readToMe}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          d="M4 9v6h4l5 5V4L8 9H4z"
-          fill="currentColor"
-        />
-        <path
-          class="wave"
-          d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-        />
-      </svg>
-      <span>{speaking ? 'Stop' : 'Read to me'}</span>
-    </button>
+    <ReadAloudButton />
 
     <!-- How-to-play hint -->
     {#if hinted}
@@ -216,28 +138,51 @@
 
 <style>
   .wrap {
+    --pad: 0px;
     position: fixed;
     inset: 0;
     display: grid;
     place-items: center;
-    padding: clamp(8px, 2vmin, 28px);
+    padding: var(--pad);
     box-sizing: border-box;
     background:
       radial-gradient(120% 90% at 50% 18%, #1f6f8b 0%, #103447 55%, #081b27 100%);
     font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
-    overflow: auto;
+    overflow: hidden;
+  }
+
+  /* A blurred, zoomed copy of the map fills the whole viewport so wide /
+     tall screens never show empty bars. It sits behind the crisp stage;
+     the scale hides the soft edges blur leaves at the borders. */
+  .wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-image: var(--map-bg);
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) brightness(0.72) saturate(1.05);
+    transform: scale(1.15);
+    pointer-events: none;
   }
 
   .stage {
     position: relative;
-    width: min(96vw, calc((100svh - 24px) * (1024 / 652)));
-    aspect-ratio: 1024 / 652;
+    z-index: 1;
+    /* Sized to the 1280×832 art ratio (1.538) and fit within the viewport so
+       the whole map — and every %-positioned button — scales without cropping.
+       Since that ratio is close to a 14" laptop's 16:10 (1.6), the crisp map
+       covers almost the entire screen; the blurred layer fills the thin
+       remainder so it reads as full-screen. */
+    width: min(
+      calc(100vw - var(--pad) * 2),
+      calc((100svh - var(--pad) * 2) * (1280 / 832))
+    );
+    aspect-ratio: 1280 / 832;
     background-size: cover;
     background-position: center;
-    border-radius: clamp(12px, 1.6vmin, 22px);
-    box-shadow:
-      0 30px 80px -20px rgba(0, 0, 0, 0.7),
-      0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    box-shadow: 0 0 44px rgba(0, 0, 0, 0.45);
     overflow: hidden;
     user-select: none;
   }
@@ -261,7 +206,7 @@
   .title {
     position: absolute;
     left: 50%;
-    top: 3.5%;
+    top: 1.5%;
     width: 43%;
     transform: translateX(-50%);
     z-index: 40;
@@ -272,7 +217,7 @@
     position: absolute;
     left: 1.6%;
     top: 4%;
-    width: 22%;
+    width: 13.2%;
     z-index: 40;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
   }
@@ -310,56 +255,6 @@
   }
   .reward {
     right: 1.6%;
-  }
-
-  /* ---- Location markers ---- */
-  .marker {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: pointer;
-    z-index: 12;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
-  }
-  .marker img {
-    width: 100%;
-    display: block;
-    filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
-    animation: float 4.5s ease-in-out infinite;
-    animation-delay: calc(var(--i) * -1.1s);
-  }
-  .marker:hover {
-    transform: translate(-50%, -50%) scale(1.09);
-    z-index: 13;
-  }
-  .marker:hover img {
-    filter: drop-shadow(0 12px 16px rgba(0, 0, 0, 0.45));
-  }
-  .marker:active {
-    transform: translate(-50%, -50%) scale(0.96);
-  }
-  .marker:focus-visible {
-    outline: none;
-  }
-  .marker:focus-visible img {
-    filter: drop-shadow(0 0 0 4px #ffe9a8) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
-  }
-  .marker.active img {
-    filter:
-      drop-shadow(0 0 12px rgba(255, 224, 130, 0.95))
-      drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
-    animation: float 4.5s ease-in-out infinite, glow 1.4s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6%); }
-  }
-  @keyframes glow {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.78; }
   }
 
   /* ---- Walk destination ring ---- */
@@ -409,108 +304,6 @@
     to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
   }
 
-  /* ---- The kiwi ---- */
-  .kiwi {
-    position: absolute;
-    width: 6.2%;
-    transform: translate(-50%, -86%);
-    z-index: 20;
-    pointer-events: none;
-    will-change: left, top;
-  }
-  .kiwi img {
-    width: 100%;
-    display: block;
-    filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.4));
-  }
-  .kiwi .shadow {
-    position: absolute;
-    left: 50%;
-    bottom: -6%;
-    width: 78%;
-    aspect-ratio: 3 / 1;
-    transform: translateX(-50%);
-    background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, 0.4), transparent 72%);
-    z-index: -1;
-  }
-  .kiwi .shadow.walking {
-    animation: shadowPulse 0.36s ease-in-out infinite;
-  }
-  .bob {
-    transform-origin: 50% 100%;
-    animation: breathe 3.2s ease-in-out infinite;
-  }
-  .bob.walking {
-    animation: bob 0.36s ease-in-out infinite;
-  }
-  @keyframes bob {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    25% { transform: translateY(-13%) rotate(-4deg); }
-    50% { transform: translateY(0) rotate(0deg); }
-    75% { transform: translateY(-13%) rotate(4deg); }
-  }
-  @keyframes breathe {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-2.5%) scale(1.015); }
-  }
-  @keyframes shadowPulse {
-    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.85; }
-    50% { transform: translateX(-50%) scale(0.78); opacity: 0.6; }
-  }
-
-  /* ---- Read to me ---- */
-  .readme {
-    position: absolute;
-    left: 2.4%;
-    bottom: 4.5%;
-    z-index: 40;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5em;
-    padding: 0.55em 1em 0.55em 0.7em;
-    border: 2px solid rgba(255, 255, 255, 0.55);
-    border-radius: 999px;
-    cursor: pointer;
-    color: #15364a;
-    font-family: inherit;
-    font-weight: 700;
-    font-size: clamp(11px, 1.7vmin, 17px);
-    background: linear-gradient(180deg, #eaf6ff, #bfe3f5);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.2s ease;
-  }
-  .readme svg {
-    width: 1.3em;
-    height: 1.3em;
-    flex: none;
-  }
-  .readme .wave {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-  .readme.on {
-    background: linear-gradient(180deg, #ffe6a8, #f4c25c);
-  }
-  .readme.on .wave {
-    opacity: 1;
-    animation: pulse 1s ease-in-out infinite;
-  }
-  .readme:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
-  }
-  .readme:active {
-    transform: translateY(0);
-  }
-  .readme:focus-visible {
-    outline: 3px solid #ffe9a8;
-    outline-offset: 3px;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
-  }
-
   /* ---- Hint ---- */
   .hint {
     position: absolute;
@@ -536,14 +329,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .marker img,
-    .marker.active img,
-    .bob,
-    .bob.walking,
-    .shadow.walking,
     .ring,
-    .hint,
-    .readme.on .wave {
+    .hint {
       animation: none !important;
     }
   }
