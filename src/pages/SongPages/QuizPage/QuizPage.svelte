@@ -5,6 +5,7 @@
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png';
   import kikiSays     from '../../../assets/quiz-page/kikisays.png';
   import { settings, speak } from '../../../lib/settings.svelte';
+  import { push } from 'svelte-spa-router';
 
   interface Option {
     id: string;
@@ -34,40 +35,44 @@
     onMap?: () => void;
   }
 
-  let { onFinish = () => {}, onBack = () => {}, onMap = () => {} }: Props = $props();
+  let { onFinish = () => {}, onBack = () => push('/'), onMap = () => push('/') }: Props = $props();
 
   const quizzes: Quiz[] = [
     {
+      // FR10: recognise the Māori colour word from Ngā Tae
       badge: 'Word check',
-      question: 'Which word did you hear?',
-      readWord: 'tātou',
+      question: 'Which one is a Māori colour word from Ngā Tae?',
+      readWord: 'Which one is a Māori colour word from Ngā Tae? whero, kai, whare, kuri',
       options: [
-        { id: 'tatou', icon: '👥', word: 'tātou',  isCorrect: true,  bg: '#f9f9f9' },
-        { id: 'whare', icon: '🏠', word: 'whare',  isCorrect: false, bg: '#fde8ee' },
-        { id: 'kai',   icon: '🍎', word: 'kai',    isCorrect: false, bg: '#fef6e4' },
+        { id: 'whero', icon: '🔴', word: 'whero', isCorrect: true,  bg: '#f9f9f9' },
+        { id: 'kai',   icon: '🍎', word: 'kai',   isCorrect: false, bg: '#fde8ee' },
+        { id: 'whare', icon: '🏠', word: 'whare', isCorrect: false, bg: '#fef6e4' },
+        { id: 'kuri',  icon: '🐕', word: 'kuri',  isCorrect: false, bg: '#f0f4ff' },
       ],
       correctTitle: 'Yes!',
-      correctBody: 'Ka pai! You heard "tātou".',
+      correctBody: 'Ka pai! "Whero" is the Māori colour word from Ngā Tae.',
       wrongTitle: 'Try again',
-      wrongBody: 'Try again. Listen for the word that means all of us together.',
-      kikiCorrect: 'Great listening. "Tātou" means all of us together.',
-      kikiWrong: 'Look for the word that matches the people together picture.',
+      wrongBody: 'Try again. Listen for the colour word in the song.',
+      kikiCorrect: '"Whero" is the colour word. It is one of the colours in Ngā Tae!',
+      kikiWrong: 'Look for the word that is a colour in the song Ngā Tae.',
     },
     {
+      // FR11: understand the meaning of the colour word
       badge: 'Meaning check',
-      question: 'What is this song about?',
-      readWord: 'Being together',
+      question: 'What colour does "whero" mean?',
+      readWord: 'What colour does whero mean? red, white, green, black',
       options: [
-        { id: 'together', icon: '👥',    word: 'Being together',   isCorrect: true,  bg: '#f9f9f9' },
-        { id: 'sleep',    icon: '🌙',    word: 'Going to sleep',   isCorrect: false, bg: '#fde8ee' },
-        { id: 'count',    icon: '1 2 3', iconText: true, word: 'Counting numbers', isCorrect: false, bg: '#fef6e4' },
+        { id: 'red',   icon: '🔴', word: 'red',   isCorrect: true,  bg: '#fff0f0' },
+        { id: 'white', icon: '⚪', word: 'white', isCorrect: false, bg: '#f9f9f9' },
+        { id: 'green', icon: '🟢', word: 'green', isCorrect: false, bg: '#f0fff4' },
+        { id: 'black', icon: '⚫', word: 'black', isCorrect: false, bg: '#f5f5f5' },
       ],
       correctTitle: 'Yes!',
-      correctBody: 'Ka pai! This song is about being together.',
+      correctBody: 'Ka pai! "Whero" means red.',
       wrongTitle: 'Try again',
-      wrongBody: 'Try again. Think about "all of us together".',
-      kikiCorrect: '"Tātou" means we are all together — that\'s what this song celebrates!',
-      kikiWrong: 'Which picture shows people together?',
+      wrongBody: 'Try again. Think about the colour of the whero circle.',
+      kikiCorrect: 'Great work! "Whero" is the Māori word for red.',
+      kikiWrong: 'Look at the red circle — that colour is "whero" in Māori.',
     },
   ];
 
@@ -86,7 +91,7 @@
 
   function goNext() {
     if (!isCorrect) return;
-    if (isLast) { onFinish(); return; }
+    if (isLast) { onFinish(); push('/reward'); return; }
     leaving = true;
     setTimeout(() => {
       currentIdx++;
@@ -286,7 +291,8 @@
 
   /* ── Options ── */
   .opts {
-    display: grid; grid-template-columns: repeat(3, 1fr);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 12px; width: 100%;
   }
 
