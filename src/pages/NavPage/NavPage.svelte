@@ -10,6 +10,7 @@
   import GuideTour from './components/GuideTour.svelte'
   import AwardPanel from './components/AwardPanel.svelte'
   import { settings } from '../../lib/settings.svelte'
+  import { progress } from '../../lib/progress.svelte'
 
   let { onnavigate = (_id: string) => {} }: { onnavigate?: (id: string) => void } = $props()
 
@@ -134,7 +135,7 @@
 
     <!-- Location markers -->
     {#each LOCATIONS as loc, i (loc.id)}
-      <MapMarker {loc} index={i} active={active === loc.id} onpick={selectLocation} />
+      <MapMarker {loc} index={i} active={active === loc.id} completed={progress.isComplete(loc.id)} onpick={selectLocation} />
     {/each}
 
     <!-- Walk destination ring -->
