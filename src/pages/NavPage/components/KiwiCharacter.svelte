@@ -2,6 +2,7 @@
   // Author: Shirley
   // The kiwi avatar that roams the map. Position, facing and walk timing are
   // driven by the parent so it can be steered by taps or the arrow keys.
+
   import type { Pt } from '../locations'
   import { kiwiImg } from '../assets'
 

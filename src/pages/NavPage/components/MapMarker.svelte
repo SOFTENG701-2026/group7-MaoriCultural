@@ -8,12 +8,12 @@
     loc,
     index,
     active = false,
-    onselect,
+    onpick,
   }: {
     loc: Loc
     index: number // staggers the float animation so markers don't bob in sync
     active?: boolean
-    onselect: (loc: Loc) => void
+    onpick: (loc: Loc) => void
   } = $props()
 </script>
 
@@ -21,7 +21,7 @@
   class="marker"
   class:active
   style="left:{loc.icon.x}%; top:{loc.icon.y}%; width:{loc.w}%; --i:{index}"
-  onclick={() => onselect(loc)}
+  onclick={() => onpick(loc)}
   aria-label={active ? `Enter ${loc.label}` : `Walk Kiwi to ${loc.label}`}
 >
   <img src={loc.img} alt={loc.label} draggable="false" />
@@ -60,7 +60,8 @@
     outline: none;
   }
   .marker:focus-visible img {
-    filter: drop-shadow(0 0 0 4px #ffe9a8) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 0 4px #ffe9a8) drop-shadow(0 0 2px #ffe9a8)
+      drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
   }
   .marker.active img {
     filter:

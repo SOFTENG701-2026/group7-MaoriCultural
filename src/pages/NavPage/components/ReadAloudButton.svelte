@@ -1,30 +1,41 @@
 <script lang="ts">
   // Author: Shirley
-  // "Read to me" button — speaks a short message via the Web Speech API.
-  // Self-contained: it owns its speaking state and degrades quietly when the
-  // browser has no speech synthesis.
+  // "Read to me" button — speaks a short message via the shared speak() helper
+  // so it follows the Sound, Volume and Read-to-me settings (FR14). In
+  // "Out loud" (auto) mode it reads itself once when the page opens; otherwise
+  // it only speaks on tap. Degrades quietly when sound is off or unsupported.
+  import { onMount } from 'svelte'
+  import { settings, speak, stopSpeaking } from '../../../lib/settings.svelte'
+
   let {
     text = "Kia ora! Welcome to the Map of Kiwi's Aotearoa Adventure. Tap a place to help Kiwi explore.",
   }: { text?: string } = $props()
 
   let speaking = $state(false)
 
+  function start() {
+    const u = speak(text)
+    if (!u) return // sound off or unsupported
+    speaking = true
+    u.onend = () => (speaking = false)
+  }
+
   function readToMe() {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
     if (speaking) {
-      window.speechSynthesis.cancel()
+      stopSpeaking()
       speaking = false
       return
     }
-    const u = new SpeechSynthesisUtterance(text)
-    u.rate = 0.95
-    u.onend = () => (speaking = false)
-    speaking = true
-    window.speechSynthesis.speak(u)
+    start()
   }
+
+  onMount(() => {
+    if (settings.readMode === 'auto') start()
+    return () => stopSpeaking()
+  })
 </script>
 
-<button class="readme" class:on={speaking} onclick={readToMe}>
+<button class="readme" class:on={speaking} onclick={readToMe} disabled={!settings.soundOn}>
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor" />
     <path
@@ -76,12 +87,16 @@
     opacity: 1;
     animation: pulse 1s ease-in-out infinite;
   }
-  .readme:hover {
+  .readme:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 10px 18px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
   }
-  .readme:active {
+  .readme:active:not(:disabled) {
     transform: translateY(0);
+  }
+  .readme:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   .readme:focus-visible {
     outline: 3px solid #ffe9a8;

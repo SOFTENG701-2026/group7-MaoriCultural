@@ -6,6 +6,10 @@
   import MapMarker from './components/MapMarker.svelte'
   import KiwiCharacter from './components/KiwiCharacter.svelte'
   import ReadAloudButton from './components/ReadAloudButton.svelte'
+  import LocationInfoModal from './components/LocationInfoModal.svelte'
+  import GuideTour from './components/GuideTour.svelte'
+  import AwardPanel from './components/AwardPanel.svelte'
+  import { settings } from '../../lib/settings.svelte'
 
   let { onnavigate = (_id: string) => {} }: { onnavigate?: (id: string) => void } = $props()
 
@@ -17,6 +21,19 @@
   let active = $state<string | null>(null) // location the kiwi is visiting
   let dest = $state<Pt | null>(null) // current walk target (for the ring)
   let hinted = $state(true) // show the "how to play" hint until first move
+  let infoLoc = $state<Loc | null>(null) // place whose intro popup is open
+  let showAwards = $state(false) // reward/award collection panel
+  let showGuide = $state(true) // new-player guide banner, shown on first load
+
+  // Friendly one-line tips, kept short for young readers. Tap to advance.
+  const GUIDE_LINES = [
+    'Kia ora! Welcome to Kiwi’s big adventure!',
+    'This is a map of Aotearoa, my home.',
+    'Tap a place and I will walk there.',
+    'Or use the arrow keys to move me.',
+    'Tap the place again to play and learn.',
+    'Now let’s go, explorer!',
+  ]
 
   let walkTimer: ReturnType<typeof setTimeout>
   let stepTimer: ReturnType<typeof setTimeout>
@@ -38,13 +55,18 @@
 
   function selectLocation(loc: Loc) {
     hinted = false
-    // Tapping a place the kiwi has already reached enters it.
+    // Tapping a place the kiwi has already reached opens its intro popup.
     if (active === loc.id && !walking) {
-      onnavigate(loc.id)
+      infoLoc = loc
       return
     }
     active = loc.id
     walkTo(loc.stand)
+  }
+
+  function startLocation() {
+    if (infoLoc) onnavigate(infoLoc.id)
+    infoLoc = null
   }
 
   const STEP = 3
@@ -64,6 +86,16 @@
   }
 
   function onKey(e: KeyboardEvent) {
+    // While a popup is open it owns the keyboard: Escape closes it, everything
+    // else is ignored so the kiwi doesn't walk behind the dialog.
+    if (infoLoc) {
+      if (e.key === 'Escape') infoLoc = null
+      return
+    }
+    if (showAwards) {
+      if (e.key === 'Escape') showAwards = false
+      return
+    }
     const k = e.key.toLowerCase()
     if (k === 'arrowleft' || k === 'a') nudge(-STEP, 0)
     else if (k === 'arrowright' || k === 'd') nudge(STEP, 0)
@@ -93,16 +125,16 @@
     <img class="explorer" src={explorerImg} alt="Kia ora! Explorer" draggable="false" />
 
     <!-- Top-right utilities -->
-    <button class="util setting" onclick={() => onnavigate('setting')} aria-label="Setting">
+    <button class="util setting" onclick={() => (settings.open = true)} aria-label="Settings">
       <img src={settingImg} alt="" draggable="false" />
     </button>
-    <button class="util reward" onclick={() => onnavigate('reward')} aria-label="Reward">
+    <button class="util reward" onclick={() => (showAwards = true)} aria-label="Reward">
       <img src={rewardImg} alt="" draggable="false" />
     </button>
 
     <!-- Location markers -->
     {#each LOCATIONS as loc, i (loc.id)}
-      <MapMarker {loc} index={i} active={active === loc.id} onselect={selectLocation} />
+      <MapMarker {loc} index={i} active={active === loc.id} onpick={selectLocation} />
     {/each}
 
     <!-- Walk destination ring -->
@@ -127,11 +159,26 @@
     <!-- Read to me -->
     <ReadAloudButton />
 
-    <!-- How-to-play hint -->
-    {#if hinted}
+    <!-- How-to-play hint (suppressed while the new-player guide is open) -->
+    {#if hinted && !showGuide}
       <div class="hint" aria-hidden="true">
         Tap a place — or use the arrow keys — to walk Kiwi
       </div>
+    {/if}
+
+    <!-- New-player guide banner -->
+    {#if showGuide}
+      <GuideTour lines={GUIDE_LINES} onfinish={() => (showGuide = false)} />
+    {/if}
+
+    <!-- Teaching-intro popup for the tapped place -->
+    {#if infoLoc}
+      <LocationInfoModal loc={infoLoc} onstart={startLocation} onclose={() => (infoLoc = null)} />
+    {/if}
+
+    <!-- Award collection panel -->
+    {#if showAwards}
+      <AwardPanel onclose={() => (showAwards = false)} />
     {/if}
   </div>
 </div>

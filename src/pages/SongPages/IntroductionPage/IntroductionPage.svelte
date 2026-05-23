@@ -4,12 +4,22 @@
   // kiwi to Waiata and tapping it again. Flesh out the content here; the
   // `onback` prop returns to the map and `onnavigate` is ready for the next
   // step (e.g. LearningSongWithAIPage / PlayMusicPage).
+  import { onMount } from 'svelte'
   import waiataIcon from '../../../assets/Navpage/navi-waiata.png'
+  import { settings, speak } from '../../../lib/settings.svelte'
 
   let {
     onback = () => {},
     onnavigate = (_id: string) => {},
   }: { onback?: () => void; onnavigate?: (id: string) => void } = $props()
+
+  const intro =
+    "Waiata are the songs of Aotearoa. We sing them to share stories and to say hello. Let's learn one together."
+
+  // In "Out loud" mode the intro reads itself when the page opens.
+  onMount(() => {
+    if (settings.readMode === 'auto') speak(intro)
+  })
 </script>
 
 <div class="page">
