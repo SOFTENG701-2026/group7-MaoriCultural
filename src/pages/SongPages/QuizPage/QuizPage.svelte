@@ -4,6 +4,7 @@
   import kiwiYes      from '../../../assets/quiz-page/kiwiyes.png';
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png';
   import kikiSays     from '../../../assets/quiz-page/kikisays.png';
+  import { settings, speak } from '../../../lib/settings.svelte';
 
   interface Option {
     id: string;
@@ -94,14 +95,17 @@
     }, 280);
   }
 
+  // Routed through the shared helper so Sound on/off and Volume settings apply.
   function readToMe() {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(quiz.readWord);
-      utt.rate = 0.75;
-      window.speechSynthesis.speak(utt);
-    }
+    speak(quiz.readWord);
   }
+
+  // In "Out loud" mode, read each question's word as it appears (this effect
+  // also runs once on mount).
+  $effect(() => {
+    quiz.readWord; // track so it re-reads when the question changes
+    if (settings.readMode === 'auto') speak(quiz.readWord);
+  });
 </script>
 
 <div class="page">

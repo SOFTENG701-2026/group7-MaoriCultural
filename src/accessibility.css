@@ -1,0 +1,111 @@
+/* Author: Shirley
+   Accessibility layer for FR14. Two switches are toggled on <html> by the
+   settings store:
+     html.big-text  -> larger reading text
+     html.hc        -> high-contrast colours
+
+   These are global overrides. Svelte keeps each element's original class name in
+   the DOM (alongside its scoped hash), so selectors like `.lead` still match
+   inside any component. !important is used deliberately: an accessibility layer
+   must win over component styling. Important learning content never relies on
+   colour alone — e.g. colour cues always carry a text label such as
+   "whero = red" — so high-contrast mode stays understandable. */
+
+/* ============================================================= LARGE TEXT == */
+
+/* Map intro popup + Waiata intro + quiz card text */
+html.big-text .lead { font-size: clamp(18px, 2.7vmin, 24px) !important; }
+html.big-text .eyebrow { font-size: clamp(13px, 1.9vmin, 16px) !important; }
+html.big-text .card h1 { font-size: clamp(34px, 4.6vw, 56px) !important; }
+html.big-text .card h2 { font-size: clamp(34px, 6.6vmin, 52px) !important; }
+html.big-text .cta,
+html.big-text .ghost { font-size: clamp(17px, 2.5vmin, 22px) !important; }
+
+/* Map page floating text + new-player guide */
+html.big-text .hint { font-size: clamp(14px, 2.1vmin, 19px) !important; }
+html.big-text .tag { font-size: clamp(13px, 2vmin, 17px) !important; }
+html.big-text .line { font-size: clamp(17px, 3vmin, 28px) !important; }
+
+/* Quiz */
+html.big-text .word { font-size: 28px !important; }
+html.big-text .fb-msg p { font-size: 19px !important; }
+html.big-text .lbl { font-size: 20px !important; }
+html.big-text .kiki-lbl { font-size: 17px !important; }
+html.big-text .pill { font-size: 22px !important; }
+html.big-text .badge { font-size: 18px !important; }
+
+/* Settings panel itself */
+html.big-text .set-label { font-size: clamp(18px, 2.6vmin, 22px) !important; }
+html.big-text .seg .opt { font-size: clamp(17px, 2.4vmin, 21px) !important; }
+html.big-text .set-head h2 { font-size: clamp(28px, 4.6vmin, 36px) !important; }
+html.big-text .set-done { font-size: clamp(19px, 2.8vmin, 23px) !important; }
+
+/* ========================================================== HIGH CONTRAST == */
+
+/* Stronger, darker dimming behind every dialog. */
+html.hc .backdrop,
+html.hc .set-backdrop { background: rgba(0, 0, 0, 0.8) !important; }
+
+/* Cards / panels: solid background + bold dark frame. */
+html.hc .card,
+html.hc .set-card {
+  background: #fffdf8 !important;
+  border: 3px solid #1b1206 !important;
+}
+
+/* Reader text to near-black. */
+html.hc .lead,
+html.hc .card h1,
+html.hc .card h2,
+html.hc .word,
+html.hc .fb-msg p,
+html.hc .set-label,
+html.hc h1.set-title { color: #160c01 !important; }
+
+/* Muted/eyebrow text darkened so it still passes contrast. */
+html.hc .eyebrow { color: #6e3408 !important; }
+html.hc .set-head h2 { color: #5a2a06 !important; }
+
+/* Primary + secondary buttons get firm edges and high-contrast fills. */
+html.hc .cta,
+html.hc .set-done,
+html.hc .btn-next {
+  background: #a85200 !important;
+  color: #fff !important;
+  border: 2.5px solid #1b1206 !important;
+}
+html.hc .ghost {
+  background: #fff !important;
+  color: #3a1d06 !important;
+  border: 2.5px solid #5a3514 !important;
+}
+html.hc .pill {
+  border: 2.5px solid #1b1206 !important;
+  color: #111 !important;
+}
+html.hc .badge {
+  background: #7a3d12 !important;
+  color: #fff !important;
+}
+
+/* Quiz answer cards + settings options: strong borders, not colour alone. */
+html.hc .opt { border-color: #1b1206 !important; }
+html.hc .seg .opt.on { box-shadow: inset 0 0 0 2px #1b1206 !important; }
+
+/* Map page: make floating labels readable on the painted map. */
+html.hc .hint,
+html.hc .tag {
+  background: #000 !important;
+  color: #fff !important;
+  border: 2px solid #fff;
+}
+html.hc .line { color: #241405 !important; }
+html.hc .skip,
+html.hc .cue { color: #5a2a06 !important; }
+
+/* Image-only top icons (gear / reward): add a visible ring. */
+html.hc .util {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
