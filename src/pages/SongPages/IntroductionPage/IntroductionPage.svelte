@@ -1,194 +1,211 @@
 <script lang="ts">
-  // Author: Sungava
-  // Scaffold for the Waiata introduction. Reached from the map by walking the
-  // kiwi to Waiata and tapping it again. Flesh out the content here; the
-  // `onback` prop returns to the map and `onnavigate` is ready for the next
-  // step (e.g. LearningSongWithAIPage / PlayMusicPage).
-  import { onMount } from 'svelte'
-  import waiataIcon from '../../../assets/Navpage/navi-waiata.png'
-  import { settings, speak } from '../../../lib/settings.svelte'
+  import { onDestroy } from 'svelte';
+  import bgImg  from '../../../assets/p3_background.png';
+  import rtmImg from '../../../assets/read_to_me.png';
 
-  let {
-    onback = () => {},
-    onnavigate = (_id: string) => {},
-  }: { onback?: () => void; onnavigate?: (id: string) => void } = $props()
+  import mergedSong from '../../../assets/merged_song.mp3';
 
-  const intro =
-    "Waiata are the songs of Aotearoa. We sing them to share stories and to say hello. Let's learn one together."
+  const { onBack, onNext } = $props<{ onBack: () => void; onNext: () => void }>();
 
-  // In "Out loud" mode the intro reads itself when the page opens.
-  onMount(() => {
-    if (settings.readMode === 'auto') speak(intro)
-  })
+  let playing = $state(false);
+  let currentMaori = $state('Ngā Tae');
+  let currentEnglish = $state('The Colours');
+
+  // Timed lyrics based on exact clip durations
+  const lyrics = [
+    { start: 0,     maori: 'Mā is white',    english: 'Mā = White' },
+    { start: 3.056, maori: 'Whero is red',   english: 'Whero = Red' },
+    { start: 4.832, maori: 'Kākāriki green', english: 'Kākāriki = Green' },
+    { start: 8.280, maori: 'Pango is black', english: 'Pango = Black' },
+    { start: 9.900, maori: 'Mangu is too',   english: 'Mangu = Black too' },
+  ];
+
+  const audio = new Audio(mergedSong);
+  audio.preload = 'auto';
+
+  // Update lyrics in sync with playback
+  audio.ontimeupdate = () => {
+    const t = audio.currentTime;
+    // Find the last lyric whose start time is <= current time
+    for (let i = lyrics.length - 1; i >= 0; i--) {
+      if (t >= lyrics[i].start) {
+        currentMaori = lyrics[i].maori;
+        currentEnglish = lyrics[i].english;
+        break;
+      }
+    }
+  };
+
+  audio.onended = () => {
+    playing = false;
+    audio.currentTime = 0;
+    currentMaori = 'Ngā Tae';
+    currentEnglish = 'The Colours';
+  };
+
+  function handlePlay() {
+    if (playing) {
+      audio.pause();
+      playing = false;
+    } else {
+      audio.play();
+      playing = true;
+    }
+  }
+
+  onDestroy(() => {
+    audio.pause();
+  });
 </script>
 
-<div class="page">
-  <button class="back" onclick={onback}>
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M15 5l-7 7 7 7"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.4"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-    <span>Back to map</span>
-  </button>
+<div class="full-screen-wrapper">
+  <div class="game-stage" style="background-image: url({bgImg})">
 
-  <main class="card">
-    <img class="icon" src={waiataIcon} alt="" draggable="false" />
-    <p class="eyebrow">He Waiata · Māori Song</p>
-    <h1>Waiata</h1>
-    <p class="lead">
-      Waiata are the songs of Aotearoa — sung to share stories, welcome
-      visitors, and pass knowledge between generations. Let's learn one together.
-    </p>
+    <button class="back-btn" onclick={onBack}>← Map</button>
 
-    <div class="actions">
-      <button class="cta" onclick={() => onnavigate('learn-song')}>Start learning</button>
-      <button class="ghost" onclick={onback}>Maybe later</button>
+    <div class="lyrics-overlay-container">
+      <div class="lyrics-board-content">
+        <h2 class="maori-line">{currentMaori}</h2>
+        <p class="english-line">{currentEnglish}</p>
+      </div>
     </div>
-  </main>
+
+    <div class="bottom-bar">
+      <button class="btn-rtm">
+        <img src={rtmImg} alt=""/>
+        Read to me
+      </button>
+      <button class="btn-play" onclick={handlePlay}>
+        {playing ? '⏸ Pause' : '▶ Play'}
+      </button>
+      <button class="btn-next" onclick={onNext}>Next →</button>
+    </div>
+
+    <p class="copyright">🎵 Ngā Tae — Audio by Toi Tū Toi Ora. Educational use only.</p>
+
+  </div>
 </div>
 
 <style>
-  .page {
+  :global(html, body) {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+  .full-screen-wrapper {
     position: fixed;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    padding: clamp(16px, 4vmin, 48px);
-    box-sizing: border-box;
-    background: radial-gradient(120% 90% at 50% 18%, #1f6f8b 0%, #103447 55%, #081b27 100%);
-    font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
-    color: #0e2e3e;
-    overflow: auto;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
   }
-
-  .back {
+  .game-stage {
     position: absolute;
-    top: clamp(14px, 3vmin, 28px);
-    left: clamp(14px, 3vmin, 28px);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45em;
-    padding: 0.5em 1em 0.5em 0.7em;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    border-radius: 999px;
-    cursor: pointer;
-    color: #eaf6ff;
-    background: rgba(8, 27, 39, 0.45);
-    backdrop-filter: blur(4px);
-    font-family: inherit;
-    font-weight: 700;
-    font-size: clamp(13px, 1.7vmin, 17px);
-    transition: transform 0.16s ease, background 0.18s ease;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    font-family: 'Nunito', sans-serif;
+    overflow: hidden;
   }
-  .back svg {
-    width: 1.2em;
-    height: 1.2em;
-  }
-  .back:hover {
-    transform: translateX(-2px);
-    background: rgba(8, 27, 39, 0.65);
-  }
-  .back:focus-visible {
-    outline: 3px solid #ffe9a8;
-    outline-offset: 3px;
-  }
-
-  .card {
-    width: min(560px, 100%);
-    text-align: center;
-    background: linear-gradient(180deg, #fffaf0, #fbeccc);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    border-radius: 28px;
-    padding: clamp(28px, 5vmin, 52px);
-    box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.7);
-  }
-
-  .icon {
-    width: clamp(96px, 18vmin, 150px);
-    filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.3));
-    animation: float 4s ease-in-out infinite;
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
-
-  .eyebrow {
-    margin: 14px 0 0;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-size: clamp(11px, 1.6vmin, 14px);
-    font-weight: 600;
-    color: #b3722a;
-  }
-
-  h1 {
-    margin: 4px 0 12px;
-    font-size: clamp(40px, 8vmin, 64px);
-    font-weight: 700;
-    color: #7a3d12;
-    letter-spacing: -0.5px;
-  }
-
-  .lead {
-    margin: 0 auto;
-    max-width: 42ch;
-    font-size: clamp(15px, 2.1vmin, 19px);
-    line-height: 1.5;
-    color: #4a3a2a;
-  }
-
-  .actions {
-    margin-top: clamp(22px, 4vmin, 34px);
+  .lyrics-overlay-container {
+    position: absolute;
+    top: 48%;
+    left: 51.1%;
+    transform: translate(-50%, -50%);
+    width: 42%;
+    height: 25%;
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
     justify-content: center;
+    align-items: center;
+    z-index: 5;
+    border-radius: 12px;
+    background-color: #fbe0b3;
   }
-
-  .cta,
-  .ghost {
-    font-family: inherit;
-    font-weight: 700;
-    font-size: clamp(14px, 2vmin, 18px);
-    padding: 0.7em 1.6em;
-    border-radius: 999px;
+  .lyrics-board-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    width: 95%;
+  }
+  .maori-line {
+    font-size: clamp(20px, 4.5vh, 44px);
+    font-weight: 900;
+    color: #2c1a04;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .english-line {
+    font-size: clamp(14px, 2.8vh, 26px);
+    font-weight: 800;
+    color: #593e1a;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .back-btn {
+    position: absolute;
+    top: 3%; left: 3%;
+    z-index: 10;
+    background: rgba(255,255,255,.95);
+    border: none; border-radius: 50px;
+    padding: 10px 24px;
+    font-size: 15px; font-weight: 800; color: #374151;
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.18s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    font-family: 'Nunito', sans-serif;
   }
-  .cta {
-    border: 0;
-    color: #fff;
-    background: linear-gradient(180deg, #f0a93f, #d97c1d);
-    box-shadow: 0 8px 18px -4px rgba(217, 124, 29, 0.7);
+  .bottom-bar {
+    position: absolute;
+    bottom: 4%; left: 4%; right: 4%;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
-  .cta:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 22px -4px rgba(217, 124, 29, 0.8);
+  .btn-rtm {
+    background: rgba(255,255,255,.95);
+    border: 2px solid rgba(255,255,255,1);
+    border-radius: 50px;
+    padding: 12px 24px;
+    font-size: 15px; font-weight: 700; color: #374151;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    font-family: 'Nunito', sans-serif;
   }
-  .ghost {
-    border: 2px solid #d9b98a;
-    background: transparent;
-    color: #7a3d12;
+  .btn-rtm img { width: 20px; height: 20px; object-fit: contain; }
+  .btn-play {
+    background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+    border: none; border-radius: 50px;
+    padding: 14px 64px;
+    font-size: 24px; font-weight: 900; color: #fff;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #15803d, 0 6px 20px rgba(0,0,0,.25);
+    font-family: 'Nunito', sans-serif;
   }
-  .ghost:hover {
-    background: rgba(217, 185, 138, 0.25);
+  .btn-next {
+    background: linear-gradient(180deg, #FDE68A 0%, #F59E0B 100%);
+    border: none; border-radius: 50px;
+    padding: 14px 40px;
+    font-size: 20px; font-weight: 900; color: #78350f;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #b45309, 0 6px 20px rgba(0,0,0,.2);
+    font-family: 'Nunito', sans-serif;
   }
-  .cta:focus-visible,
-  .ghost:focus-visible {
-    outline: 3px solid #d97c1d;
-    outline-offset: 3px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .icon {
-      animation: none;
-    }
+  .copyright {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: rgba(255,255,255,0.7);
+    z-index: 10;
+    white-space: nowrap;
+    font-family: 'Nunito', sans-serif;
   }
 </style>
