@@ -115,7 +115,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div class="wrap" style="--map-bg:url({bg})">
+<div class="wrap">
   <div class="stage" style="background-image:url({bg})">
     <div class="vignette" aria-hidden="true"></div>
 
@@ -199,36 +199,16 @@
     overflow: hidden;
   }
 
-  /* A blurred, zoomed copy of the map fills the whole viewport so wide /
-     tall screens never show empty bars. It sits behind the crisp stage;
-     the scale hides the soft edges blur leaves at the borders. */
-  .wrap::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background-image: var(--map-bg);
-    background-size: cover;
-    background-position: center;
-    filter: blur(30px) brightness(0.72) saturate(1.05);
-    transform: scale(1.15);
-    pointer-events: none;
-  }
-
   .stage {
     position: relative;
     z-index: 1;
-    /* Sized to the 1280×832 art ratio (1.538) and fit within the viewport so
-       the whole map — and every %-positioned button — scales without cropping.
-       Since that ratio is close to a 14" laptop's 16:10 (1.6), the crisp map
-       covers almost the entire screen; the blurred layer fills the thin
-       remainder so it reads as full-screen. */
-    width: min(
-      calc(100vw - var(--pad) * 2),
-      calc((100svh - var(--pad) * 2) * (1280 / 832))
-    );
-    aspect-ratio: 1280 / 832;
-    background-size: cover;
+    /* The map is stretched to exactly fill the viewport (background-size:
+       100% 100%). Because the markers and the kiwi are positioned by the same
+       percentages, they stay locked to their spots on the map even when the
+       1280×832 art is stretched to a wider screen. */
+    width: 100vw;
+    height: 100svh;
+    background-size: 100% 100%;
     background-position: center;
     box-shadow: 0 0 44px rgba(0, 0, 0, 0.45);
     overflow: hidden;
