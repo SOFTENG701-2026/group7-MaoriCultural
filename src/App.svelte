@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { QuizPage } from './pages/SongPages/QuizPage';
+  import Router from 'svelte-spa-router';
+  import routes from './routes';
 </script>
 
-<QuizPage />
+<Router {routes} />
