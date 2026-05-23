@@ -75,14 +75,36 @@ export type Recorder = {
   done: Promise<Blob>
 }
 
-export async function startRecording(opts: { maxMs?: number } = {}): Promise<Recorder> {
+export type RecordOptions = {
+  /** Hard cap on recording length, ms. The recorder stops automatically. */
+  maxMs?: number
+  /**
+   * Auto-stop after this many ms of silence *following* a stretch of voice.
+   * Lets a child speak one word and have the mic shut off promptly instead
+   * of waiting for the hard cap. Set 0 to disable.
+   */
+  silenceMs?: number
+  /**
+   * Wait at least this long before silence-auto-stop can fire, so the mic
+   * doesn't bail out before the child has had a chance to start speaking.
+   */
+  minMs?: number
+  /** Normalised audio level [0, 1] — called ~60Hz while recording. */
+  onLevel?: (level: number) => void
+  /** Fired when voice activity is detected for the first time. */
+  onVoiceStart?: () => void
+}
+
+export async function startRecording(opts: RecordOptions = {}): Promise<Recorder> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
     throw new Error('mic-unsupported')
   }
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  const stream = await navigator.mediaDevices.getUserMedia({
+    // Echo / noise / gain hints help on laptop mics; browsers that don't
+    // know these keys simply ignore them.
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+  })
 
-  // Pick the first mime type the browser actually supports. Whisper accepts
-  // a wide range, so we just take whatever the platform gives us.
   const mime = pickMimeType()
   const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
   const chunks: BlobPart[] = []
@@ -93,28 +115,101 @@ export async function startRecording(opts: { maxMs?: number } = {}): Promise<Rec
     rejecter = rej
   })
 
+  // --- Live level + silence detection via Web Audio --------------------
+  // We tap the same MediaStream into an AnalyserNode so we can report RMS
+  // (for the on-screen meter) and auto-stop after a stretch of silence.
+  const VOICE_THRESHOLD = 0.045 // RMS above which we consider audio "voice"
+  const audioCtx: AudioContext | null = createAudioContext()
+  let analyser: AnalyserNode | null = null
+  // Backed by an explicit ArrayBuffer to satisfy the stricter
+  // `Uint8Array<ArrayBuffer>` overload of getByteTimeDomainData in newer
+  // lib.dom typings (otherwise TS picks `Uint8Array<ArrayBufferLike>`).
+  let timeData: Uint8Array<ArrayBuffer> | null = null
+  let rafId: number | null = null
+  const startedAt = performance.now()
+  let lastVoiceAt = 0
+  let voiceSeen = false
+
+  if (audioCtx) {
+    const source = audioCtx.createMediaStreamSource(stream)
+    analyser = audioCtx.createAnalyser()
+    analyser.fftSize = 1024
+    analyser.smoothingTimeConstant = 0.4
+    source.connect(analyser)
+    timeData = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount))
+  }
+
+  const minMs = opts.minMs ?? 400
+  const silenceMs = opts.silenceMs ?? 0
+
+  const tick = () => {
+    if ((rec.state as string) === 'inactive') return
+    if (analyser && timeData) {
+      analyser.getByteTimeDomainData(timeData)
+      let sum = 0
+      for (let i = 0; i < timeData.length; i++) {
+        const v = (timeData[i] - 128) / 128
+        sum += v * v
+      }
+      const rms = Math.sqrt(sum / timeData.length)
+      opts.onLevel?.(rms)
+      const now = performance.now()
+      if (rms > VOICE_THRESHOLD) {
+        if (!voiceSeen) {
+          voiceSeen = true
+          opts.onVoiceStart?.()
+        }
+        lastVoiceAt = now
+      } else if (
+        silenceMs > 0 &&
+        voiceSeen &&
+        now - startedAt > minMs &&
+        lastVoiceAt > 0 &&
+        now - lastVoiceAt > silenceMs &&
+        (rec.state as string) !== 'inactive'
+      ) {
+        rec.stop()
+        return
+      }
+    }
+    rafId = requestAnimationFrame(tick)
+  }
+
   rec.ondataavailable = (e) => {
     if (e.data && e.data.size > 0) chunks.push(e.data)
   }
   rec.onerror = (e) => rejecter(e)
   rec.onstop = () => {
+    if (rafId != null) cancelAnimationFrame(rafId)
+    audioCtx?.close().catch(() => {})
     const blob = new Blob(chunks, { type: mime || 'audio/webm' })
-    // Release the microphone so the browser indicator turns off promptly.
     stream.getTracks().forEach((t) => t.stop())
     resolver(blob)
   }
 
   rec.start()
-  const timer = setTimeout(() => {
-    if (rec.state !== 'inactive') rec.stop()
+  rafId = requestAnimationFrame(tick)
+  const hardCap = setTimeout(() => {
+    if ((rec.state as string) !== 'inactive') rec.stop()
   }, opts.maxMs ?? 5000)
 
   return {
     stop: () => {
-      clearTimeout(timer)
-      if (rec.state !== 'inactive') rec.stop()
+      clearTimeout(hardCap)
+      if ((rec.state as string) !== 'inactive') rec.stop()
     },
     done,
+  }
+}
+
+function createAudioContext(): AudioContext | null {
+  try {
+    const Ctor =
+      (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    return Ctor ? new Ctor() : null
+  } catch {
+    return null
   }
 }
 

@@ -63,19 +63,42 @@
   let kikiMessage = $state<string>('')
   // The most recent listen result, for the Yes!/Try again panel.
   let lastAttempt = $state<{ heard: string; matched: boolean } | null>(null)
-  // Recording state: 'idle' before the child taps, 'recording' while the mic
-  // is open, 'transcribing' while Groq is processing the upload. Drives the
-  // Try singing button label so the child sees that something is happening.
+  // Recording state machine:
+  //   idle         → before the child taps Try singing
+  //   recording    → mic is open, AnalyserNode is feeding `micLevel`
+  //   transcribing → recording stopped, upload + Groq Whisper is running
   let micState = $state<'idle' | 'recording' | 'transcribing'>('idle')
   let recorder: Recorder | null = null
   // Set when the child taps Try singing while a recording is in progress so
   // the resulting transcript is discarded (manual cancel != failed attempt).
   let recordingCancelled = false
+  // Live mic RMS, [0..1]. Drives the on-screen level bars while recording.
+  let micLevel = $state(0)
   // Tiny transient announcement (e.g. "+1 puzzle piece"). Used for a11y too.
   let pieceFlash = $state(false)
   // Surfaced when the Groq key is missing or transcription errored. Lets the
   // child still move on so they aren't blocked by config issues.
   let micError = $state<string>('')
+  // Hard cap on a single attempt's recording length.
+  const MAX_RECORD_MS = 5000
+
+  // The Try-singing button cycles through four visual states only:
+  //   idle        → "🎤 Try Singing" (orange)
+  //   listening   → mic level bars + "Listening" + sweeping bg lines
+  //   recognizing → brief upload/transcribe wait
+  //   passed      → green button with ✓ — the child has passed this line
+  // We derive this from the recording state and `attempted[idx]` so the
+  // button visual stays in sync without juggling another flag.
+  type ButtonState = 'idle' | 'listening' | 'recognizing' | 'passed'
+  const buttonState = $derived<ButtonState>(
+    micState === 'recording'
+      ? 'listening'
+      : micState === 'transcribing'
+      ? 'recognizing'
+      : attempted[idx]
+      ? 'passed'
+      : 'idle',
+  )
 
   const line = $derived<SongLine>(SONG_LINES[idx])
   const total = SONG_LINES.length
@@ -164,22 +187,33 @@
     }
 
     try {
-      recorder = await startRecording({ maxMs: 5000 })
+      micLevel = 0
+      recorder = await startRecording({
+        maxMs: MAX_RECORD_MS,
+        // Auto-stop after a short stretch of silence following speech, so a
+        // child saying just "whero" doesn't have to wait out the full cap.
+        silenceMs: 1200,
+        minMs: 500,
+        onLevel: (l) => (micLevel = l),
+      })
       micState = 'recording'
       recordingCancelled = false
       const blob = await recorder.done
       recorder = null
       if (recordingCancelled) {
         micState = 'idle'
+        micLevel = 0
         return
       }
       micState = 'transcribing'
       const text = await transcribeWithGroq(blob)
       micState = 'idle'
+      micLevel = 0
       const matched = transcriptMatchesLine(text, line)
       acceptAttempt({ matched, heard: text })
     } catch (err) {
       micState = 'idle'
+      micLevel = 0
       recorder = null
       handleMicError(err)
     }
@@ -410,24 +444,60 @@
         <!-- Primary actions: Try singing + Need help (FR6, FR8). -->
         <div class="actions">
           <button
-            class="cta try"
-            class:listening={micState === 'recording'}
-            class:working={micState === 'transcribing'}
+            class="cta try state-{buttonState}"
             onclick={startTrySinging}
-            disabled={micState === 'transcribing'}
-            aria-pressed={micState === 'recording'}
+            disabled={buttonState === 'recognizing'}
+            aria-pressed={buttonState === 'listening'}
+            aria-label={buttonState === 'listening'
+              ? 'Listening, tap to stop'
+              : buttonState === 'recognizing'
+              ? 'Recognizing your attempt'
+              : buttonState === 'passed'
+              ? 'Passed — tap to try again'
+              : 'Try singing this line'}
           >
-            {#if micState === 'recording'}
-              <span class="mic-on" aria-hidden="true"></span>
-              Listening…
-            {:else if micState === 'transcribing'}
-              <span class="spinner" aria-hidden="true"></span>
-              Thinking…
-            {:else}
-              🎤 Try singing
+            <!-- Countdown scanline: a single bright vertical line that
+                 sweeps from right to left across the button over the full
+                 recording budget. Mounted only while listening so the CSS
+                 animation restarts cleanly on every attempt. -->
+            {#if buttonState === 'listening'}
+              <span
+                class="sweep"
+                style:--countdown-ms="{MAX_RECORD_MS}ms"
+                aria-hidden="true"
+              ></span>
             {/if}
+
+            <span class="label">
+              {#if buttonState === 'listening'}
+                <span class="meter" aria-hidden="true">
+                  {#each Array(5) as _, i}
+                    {@const threshold = (i + 1) / 5}
+                    {@const scaled = Math.min(1, micLevel * 3)}
+                    <span
+                      class="bar"
+                      style:transform="scaleY({Math.max(0.18, Math.min(1, scaled / threshold))})"
+                    ></span>
+                  {/each}
+                </span>
+                Listening
+              {:else if buttonState === 'recognizing'}
+                Recognizing
+              {:else if buttonState === 'passed'}
+                <span class="check" aria-hidden="true">✓</span>
+                Passed
+              {:else}
+                🎤 Try Singing
+              {/if}
+            </span>
           </button>
-          <button class="cta ghost" onclick={needHelp}>💡 Need help?</button>
+          <button
+            class="cta ghost"
+            onclick={needHelp}
+            disabled={micState !== 'idle'}
+          >
+            💡 Need help?
+          </button>
         </div>
 
         {#if micError}
@@ -472,6 +542,9 @@
               <div class="fb-msg">
                 <b class="lbl yes-lbl">Yes!</b>
                 <p>Ka pai! You tried "{line.maoriWord}".</p>
+                {#if lastAttempt.heard}
+                  <p class="heard">Kiwi heard: <em>"{lastAttempt.heard}"</em></p>
+                {/if}
               </div>
             </div>
           {:else}
@@ -480,6 +553,10 @@
               <div class="fb-msg">
                 <b class="lbl try-lbl">Try again</b>
                 <p>Nearly there. Let's say "{line.maoriWord}" again.</p>
+                <p class="heard">
+                  Kiwi heard:
+                  <em>{lastAttempt.heard ? `"${lastAttempt.heard}"` : "(I didn't hear anything)"}</em>
+                </p>
               </div>
             </div>
           {/if}
@@ -756,29 +833,113 @@
     transform: translateY(-2px);
     box-shadow: 0 12px 22px -4px rgba(217, 124, 29, 0.8);
   }
-  .cta.try.listening {
-    background: linear-gradient(180deg, #e23b3b, #a82626);
-    animation: pulse 1.2s ease-in-out infinite;
+  /* ---- Try-singing button: four discrete visual states ---- */
+  .cta.try {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 220px;
+    /* Smooth colour swap between idle ↔ listening ↔ recognizing ↔ passed. */
+    transition: background 0.25s ease, color 0.2s ease, box-shadow 0.25s ease,
+      transform 0.16s ease;
   }
-  .cta.try.working {
-    background: linear-gradient(180deg, #8a8a8a, #5e5e5e);
+  .cta.try:disabled {
     cursor: progress;
   }
-  .spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    margin-right: 8px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-top-color: #fff;
-    border-radius: 50%;
-    vertical-align: middle;
-    animation: spin 0.9s linear infinite;
+  .cta.try .label {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
+
+  /* State 1 — Idle: the baseline orange already comes from `.cta.try`. */
+
+  /* State 2 — Listening: idle orange + countdown scanline + meter bars. */
+
+  /* State 3 — Recognizing: dim, neutral colour. Brief by design. */
+  .cta.try.state-recognizing {
+    background: linear-gradient(180deg, #b9a89a, #826a55);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* State 4 — Passed: green + check. Stays this way until the next line. */
+  .cta.try.state-passed {
+    background: linear-gradient(180deg, #4caf50, #2e7d32);
+    box-shadow: 0 8px 18px -4px rgba(46, 125, 50, 0.55);
+  }
+  .cta.try.state-passed:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px -4px rgba(46, 125, 50, 0.7);
+  }
+  .check {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    font-weight: 900;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  /* Countdown scanline — a 2px vertical line that travels right → left
+     across the button over `--countdown-ms`. `box-shadow` supplies the
+     asymmetric light/shadow on either side:
+       • left side: soft white glow (the swept area lit up by the scan)
+       • right side: a tighter dark shadow (the not-yet-swept area)
+     Both shadows are tightly clamped so the effect stays narrow. */
+  .sweep {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    pointer-events: none;
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow:
+      -6px 0 8px -2px rgba(255, 255, 255, 0.45),
+       4px 0 6px -1px rgba(0, 0, 0, 0.35);
+    animation: sweepCountdown var(--countdown-ms, 5000ms) linear forwards;
+  }
+  @keyframes sweepCountdown {
+    from {
+      left: 100%;
     }
+    to {
+      left: -2px;
+    }
+  }
+
+  /* Live mic-level bars shown inside the button while listening. */
+  .meter {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 18px;
+  }
+  .meter .bar {
+    width: 4px;
+    height: 100%;
+    border-radius: 2px;
+    background: #fff;
+    transform-origin: bottom;
+    transition: transform 60ms linear;
+  }
+
+  /* "Kiwi heard: …" — small reflective line inside the feedback panel. */
+  .heard {
+    margin: 4px 0 0 !important;
+    font-size: 13px !important;
+    color: #4a3a2a !important;
+    font-style: normal;
+  }
+  .heard em {
+    font-style: italic;
+    color: #1a2330;
   }
   .cta.ghost {
     background: #fff;
@@ -789,35 +950,6 @@
     background: #fff7e6;
     transform: translateY(-2px);
   }
-  .mic-on {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    background: #fff;
-    border-radius: 50%;
-    margin-right: 6px;
-    animation: blink 1s ease-in-out infinite;
-    vertical-align: middle;
-  }
-  @keyframes pulse {
-    0%,
-    100% {
-      box-shadow: 0 8px 18px -4px rgba(226, 59, 59, 0.7);
-    }
-    50% {
-      box-shadow: 0 12px 28px -4px rgba(226, 59, 59, 0.95);
-    }
-  }
-  @keyframes blink {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.4;
-    }
-  }
-
   .hint-row {
     margin: 12px 0 0;
     font-size: 14px;
@@ -1056,7 +1188,7 @@
     .puzzle-piece.filled,
     .fb,
     .btn-next,
-    .cta.try.listening,
+    .sweep,
     .kiwi-replay img {
       animation: none !important;
     }
