@@ -63,7 +63,7 @@
 
     <button class="back-btn" onclick={onBack}>← Map</button>
 
-    <div class="lyrics-overlay-container">
+    <div class="lyrics-overlay-container" class:active-session={playing}>
       <div class="lyrics-board-content">
         <h2 class="maori-line">{currentMaori}</h2>
         <p class="english-line">{currentEnglish}</p>
