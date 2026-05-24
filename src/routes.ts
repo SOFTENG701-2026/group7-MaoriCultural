@@ -19,13 +19,22 @@ const routes = {
     props: { onnavigate: onMapNavigate },
   }),
 
-  // Waiata intro page (FR1) — child reads/listens to what's coming.
+  // Waiata intro page (FR1) — child reads/listens to what's coming, then taps
+  // ▶ Start to go to the play-along.
   '/song': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/IntroductionPage/IntroductionPage.svelte').then(
         m => m.default,
       ),
-    props: { onback: onBackToMap, onnavigate: onSongStart },
+    props: { onStart: () => push('/song/play') },
+  }),
+
+  // Waiata play-along — listen to the full song with synced lyrics, then
+  // Next → the line-by-line sing-along.
+  '/song/play': wrap({
+    asyncComponent: () =>
+      import('./pages/SongPages/PlayMusicPage').then(m => m.default),
+    props: { onBack: onBackToMap, onNext: onSongStart },
   }),
 
   // Line-by-line sing-along with AI help (FR3 – FR9).
@@ -34,7 +43,7 @@ const routes = {
       import(
         './pages/SongPages/LearningSongWithAIPage/LearningSongWithAIPage.svelte'
       ).then(m => m.default),
-    props: { onback: () => push('/song'), onfinish: onSongFinish },
+    props: { onback: () => push('/song/play'), onfinish: onSongFinish },
   }),
 
   '/quiz': wrap({
