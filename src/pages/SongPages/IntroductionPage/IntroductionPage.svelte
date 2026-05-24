@@ -1,194 +1,205 @@
 <script lang="ts">
-  // Author: Sungava
-  // Scaffold for the Waiata introduction. Reached from the map by walking the
-  // kiwi to Waiata and tapping it again. Flesh out the content here; the
-  // `onback` prop returns to the map and `onnavigate` is ready for the next
-  // step (e.g. LearningSongWithAIPage / PlayMusicPage).
-  import { onMount } from 'svelte'
-  import waiataIcon from '../../../assets/Navpage/navi-waiata.png'
-  import { settings, speak } from '../../../lib/settings.svelte'
-
-  let {
-    onback = () => {},
-    onnavigate = (_id: string) => {},
-  }: { onback?: () => void; onnavigate?: (id: string) => void } = $props()
-
-  const intro =
-    "Waiata are the songs of Aotearoa. We sing them to share stories and to say hello. Let's learn one together."
-
-  // In "Out loud" mode the intro reads itself when the page opens.
-  onMount(() => {
-    if (settings.readMode === 'auto') speak(intro)
-  })
+  import bgImg from '../../../assets/p2_goal_background.png';
+  import kiwiImg from '../../../assets/kiwihello.png';
+  import settingsImg from '../../../assets/settings.png';
+  import rewardsImg from '../../../assets/rewards.png';
+  import rtmImg from '../../../assets/read_to_me.png';
+  
+  const { onStart } = $props<{ onStart: () => void }>();
 </script>
 
-<div class="page">
-  <button class="back" onclick={onback}>
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M15 5l-7 7 7 7"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.4"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-    <span>Back to map</span>
-  </button>
-
-  <main class="card">
-    <img class="icon" src={waiataIcon} alt="" draggable="false" />
-    <p class="eyebrow">He Waiata · Māori Song</p>
-    <h1>Waiata</h1>
-    <p class="lead">
-      Waiata are the songs of Aotearoa — sung to share stories, welcome
-      visitors, and pass knowledge between generations. Let's learn one together.
-    </p>
-
-    <div class="actions">
-      <button class="cta" onclick={() => onnavigate('learn-song')}>Start learning</button>
-      <button class="ghost" onclick={onback}>Maybe later</button>
+<div class="full-screen-wrapper">
+  <div class="game-stage" style="background-image: url({bgImg});">
+    
+    <div class="top-header">
+      <div class="user-badge">
+        <img src={kiwiImg} alt="kiwi" />
+        <div class="user-info">
+          <span class="kia-ora">Kia ora!</span>
+          <span class="badge-tag">Explorer 🌿</span>
+        </div>
+      </div>
+      <div class="utility-buttons">
+        <button class="nav-btn">
+          <img src={settingsImg} alt="Settings" />
+          <span>Settings</span>
+        </button>
+        <button class="nav-btn">
+          <img src={rewardsImg} alt="Rewards" />
+          <span>Rewards</span>
+        </button>
+      </div>
     </div>
-  </main>
+
+    <div class="action-footer">
+      <button onclick={onStart} class="action-start-button">▶ Start</button>
+      <button class="action-rtm-button">
+        <img src={rtmImg} alt="" />
+        Read to me
+      </button>
+    </div>
+
+  </div>
 </div>
 
 <style>
-  .page {
+  /* Force the whole browser window fullscreen safely */
+  :global(html, body) {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  .full-screen-wrapper {
     position: fixed;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    padding: clamp(16px, 4vmin, 48px);
-    box-sizing: border-box;
-    background: radial-gradient(120% 90% at 50% 18%, #1f6f8b 0%, #103447 55%, #081b27 100%);
-    font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
-    color: #0e2e3e;
-    overflow: auto;
-  }
-
-  .back {
-    position: absolute;
-    top: clamp(14px, 3vmin, 28px);
-    left: clamp(14px, 3vmin, 28px);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45em;
-    padding: 0.5em 1em 0.5em 0.7em;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    border-radius: 999px;
-    cursor: pointer;
-    color: #eaf6ff;
-    background: rgba(8, 27, 39, 0.45);
-    backdrop-filter: blur(4px);
-    font-family: inherit;
-    font-weight: 700;
-    font-size: clamp(13px, 1.7vmin, 17px);
-    transition: transform 0.16s ease, background 0.18s ease;
-  }
-  .back svg {
-    width: 1.2em;
-    height: 1.2em;
-  }
-  .back:hover {
-    transform: translateX(-2px);
-    background: rgba(8, 27, 39, 0.65);
-  }
-  .back:focus-visible {
-    outline: 3px solid #ffe9a8;
-    outline-offset: 3px;
-  }
-
-  .card {
-    width: min(560px, 100%);
-    text-align: center;
-    background: linear-gradient(180deg, #fffaf0, #fbeccc);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    border-radius: 28px;
-    padding: clamp(28px, 5vmin, 52px);
-    box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.7);
-  }
-
-  .icon {
-    width: clamp(96px, 18vmin, 150px);
-    filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.3));
-    animation: float 4s ease-in-out infinite;
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
-
-  .eyebrow {
-    margin: 14px 0 0;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-size: clamp(11px, 1.6vmin, 14px);
-    font-weight: 600;
-    color: #b3722a;
-  }
-
-  h1 {
-    margin: 4px 0 12px;
-    font-size: clamp(40px, 8vmin, 64px);
-    font-weight: 700;
-    color: #7a3d12;
-    letter-spacing: -0.5px;
-  }
-
-  .lead {
-    margin: 0 auto;
-    max-width: 42ch;
-    font-size: clamp(15px, 2.1vmin, 19px);
-    line-height: 1.5;
-    color: #4a3a2a;
-  }
-
-  .actions {
-    margin-top: clamp(22px, 4vmin, 34px);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
     justify-content: center;
+    align-items: center;
+    overflow: hidden;
   }
 
-  .cta,
-  .ghost {
-    font-family: inherit;
+  /* Renders the artwork completely full screen */
+  .game-stage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center bottom;
+    background-repeat: no-repeat;
+    font-family: 'Nunito', sans-serif;
+    overflow: hidden;
+  }
+
+  /* Header System Positioning */
+  .top-header {
+    position: absolute;
+    top: 2%;
+    left: 3%;
+    right: 3%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 20;
+  }
+
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 50px;
+    padding: 6px 16px 6px 6px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  }
+
+  .user-badge img {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kia-ora {
+    font-size: 14px;
+    font-weight: 800;
+    color: #2d5a1b;
+    line-height: 1.2;
+  }
+
+  .badge-tag {
+    font-size: 11px;
     font-weight: 700;
-    font-size: clamp(14px, 2vmin, 18px);
-    padding: 0.7em 1.6em;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.18s ease;
-  }
-  .cta {
-    border: 0;
-    color: #fff;
-    background: linear-gradient(180deg, #f0a93f, #d97c1d);
-    box-shadow: 0 8px 18px -4px rgba(217, 124, 29, 0.7);
-  }
-  .cta:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 22px -4px rgba(217, 124, 29, 0.8);
-  }
-  .ghost {
-    border: 2px solid #d9b98a;
-    background: transparent;
-    color: #7a3d12;
-  }
-  .ghost:hover {
-    background: rgba(217, 185, 138, 0.25);
-  }
-  .cta:focus-visible,
-  .ghost:focus-visible {
-    outline: 3px solid #d97c1d;
-    outline-offset: 3px;
+    color: #2d7dd2;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .icon {
-      animation: none;
-    }
+  .utility-buttons {
+    display: flex;
+    gap: 10px;
+  }
+
+  .nav-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .nav-btn img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .nav-btn span {
+    font-size: 10px;
+    font-weight: 800;
+    color: #555;
+  }
+
+  /* Footer Controls Layout matching the background ground line */
+  .action-footer {
+    position: absolute;
+    bottom: 4%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .action-start-button {
+    background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+    border: none;
+    border-radius: 50px;
+    padding: 14px 80px;
+    font-size: 26px;
+    font-weight: 900;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #15803d, 0 6px 20px rgba(0,0,0,0.25);
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .action-rtm-button {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(255, 255, 255, 1);
+    border-radius: 50px;
+    padding: 10px 24px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  .action-rtm-button img {
+    width: 20px;
+    height: 20px;
   }
 </style>
