@@ -25,7 +25,8 @@
     hasGroqKey,
     startRecording,
     transcribeWithGroq,
-    transcriptMatchesLine,
+    scoreAttempt,
+    type AttemptLevel,
     type Recorder,
   } from './groq-stt'
   import { hasClip, playClipOrSpeak, stopAllAudio, type ClipKey } from './audio'
@@ -72,23 +73,41 @@
   }
 
   // --- Per-line state -------------------------------------------------------
-  // Restore from the persistent progress store so a reload keeps the puzzle
-  // pieces the child already earned. Resume at the first unfinished line so
-  // a returning learner picks up roughly where they left off.
-  const initialAttempted = SONG_LINES.map((_, i) =>
-    progress.isComplete(lineProgressId(i)),
+  // Tier = the child's *latest* attempt on this line. Every call to
+  // acceptAttempt overwrites it directly — including a silent attempt,
+  // which resets it to null. Honest feedback over "best ever".
+  type Tier = 'exact' | 'fuzzy' | 'attempt'
+  function starsForTier(t: Tier | null): 0 | 1 | 2 | 3 {
+    return t === 'exact' ? 3 : t === 'fuzzy' ? 2 : t === 'attempt' ? 1 : 0
+  }
+
+  // Returning child whose progress is restored from the shared store sees
+  // the lowest 1⭐ baseline (they did pass it before — at least an attempt).
+  const initialLineLevel: (Tier | null)[] = SONG_LINES.map((_, i) =>
+    progress.isComplete(lineProgressId(i)) ? 'attempt' : null,
   )
   // Resume at the first unfinished line (typical case). When every line is
   // already done we drop them on the last one so the Finish button is one
   // tap away — they're clearly here to wrap up rather than redo.
-  const firstUnfinished = initialAttempted.findIndex((v) => !v)
+  const firstUnfinished = initialLineLevel.findIndex((l) => l === null)
   let idx = $state(
     firstUnfinished === -1 ? SONG_LINES.length - 1 : firstUnfinished,
   )
-  let attempted = $state<boolean[]>(initialAttempted)
-  // Puzzle pieces collected so far. Always derived from `attempted` so the
-  // count stays consistent with what the puzzle grid is actually showing.
+  // Per-line latest tier. Reactive.
+  let lineLevel = $state<(Tier | null)[]>(initialLineLevel)
+
+  // Unlock state is decoupled from tier — once the child has made a single
+  // reasonable attempt the line stays unlocked for Next, even if a later
+  // silent retry zeroes out the visible stars. Sourced from the persistent
+  // progress store so it survives reloads.
+  const attempted = $derived(
+    SONG_LINES.map((_, i) => progress.isComplete(lineProgressId(i))),
+  )
   const pieces = $derived(attempted.filter(Boolean).length)
+  // Total stars across all lines — kid-friendly cumulative score.
+  const totalStars = $derived(
+    lineLevel.reduce<number>((s, t) => s + starsForTier(t), 0),
+  )
   // How many times Need help has been pressed *for this line* — drives the
   // escalating hint in FR8.
   let helpCount = $state(0)
@@ -96,7 +115,17 @@
   // gentle pronunciation nudge. Treated like the QuizPage's Kiki Says panel.
   let kikiMessage = $state<string>('')
   // The most recent listen result, for the Yes!/Try again panel.
-  let lastAttempt = $state<{ heard: string; matched: boolean } | null>(null)
+  //   • `matched: true`   — exact / fuzzy / reasonable-attempt (all unlock)
+  //   • `matched: false`  — silent (no voice + no transcript) — does NOT unlock
+  //   • `level`           — staged outcome, drives the Kiki Says copy
+  let lastAttempt = $state<
+    | { heard: string; matched: boolean; level: AttemptLevel }
+    | null
+  >(null)
+  // Set by the recorder's `onVoiceStart` callback when the analyser first
+  // picks up audible voice. Used together with the Whisper transcript to
+  // tell a "reasonable attempt" apart from total silence (FR6).
+  let voiceHeard = false
   // Recording state machine:
   //   idle         → before the child taps Try singing
   //   recording    → mic is open, AnalyserNode is feeding `micLevel`
@@ -121,30 +150,23 @@
   // Hard cap on a single attempt's recording length.
   const MAX_RECORD_MS = 5000
 
-  // The Try-singing button cycles through four visual states only:
-  //   idle        → "🎤 Try Singing" (orange)
-  //   listening   → mic level bars + "Listening" + sweeping bg lines
-  //   recognizing → brief upload/transcribe wait
-  //   passed      → green button with ✓ — the latest attempt was accepted
-  //
-  // We look at the *latest* attempt rather than the historic
-  // `attempted[idx]` flag, so retrying a passed line and getting an
-  // unrecognised result reverts the button to idle. The line stays
-  // unlocked for "Next" (FR9) because the puzzle piece was already
-  // earned — only the button's visual reflects this session's attempt.
+  // The Try-singing button cycles through four states. When `passed`, a
+  // second value (`currentStars`) tells the UI which tier to render —
+  // bright/3⭐, mid/2⭐, soft/1⭐.
   type ButtonState = 'idle' | 'listening' | 'recognizing' | 'passed'
   const buttonState = $derived<ButtonState>(
     micState === 'recording'
       ? 'listening'
       : micState === 'transcribing'
       ? 'recognizing'
-      : lastAttempt
-      ? lastAttempt.matched
-        ? 'passed'
-        : 'idle'
-      : attempted[idx]
+      : lineLevel[idx] !== null
       ? 'passed'
       : 'idle',
+  )
+  // 0–3 stars for the current line; null while mic is busy so the stars
+  // don't flash on top of the meter / spinner.
+  const currentStars = $derived<0 | 1 | 2 | 3>(
+    micState !== 'idle' ? 0 : starsForTier(lineLevel[idx]),
   )
 
   const line = $derived<SongLine>(SONG_LINES[idx])
@@ -253,12 +275,13 @@
       // tap as a reasonable attempt, but tell the operator what's missing.
       micError =
         'Speech recognition is not configured (VITE_GROQ_API_KEY). Counting this as a reasonable try.'
-      acceptAttempt({ matched: true, heard: '' })
+      acceptAttempt({ level: 'attempt', heard: '' })
       return
     }
 
     try {
       micLevel = 0
+      voiceHeard = false
       recorder = await startRecording({
         maxMs: MAX_RECORD_MS,
         // Auto-stop after a short stretch of silence following speech, so a
@@ -266,6 +289,7 @@
         silenceMs: 1200,
         minMs: 500,
         onLevel: (l) => (micLevel = l),
+        onVoiceStart: () => (voiceHeard = true),
       })
       micState = 'recording'
       recordingStartedAt = Date.now()
@@ -278,11 +302,15 @@
         return
       }
       micState = 'transcribing'
-      const text = await transcribeWithGroq(blob)
+      // Focused per-line prompt + greedy decoding for stable identification
+      // of one-word utterances.
+      const text = await transcribeWithGroq(blob, { targetWord: line.maoriWord })
       micState = 'idle'
       micLevel = 0
-      const matched = transcriptMatchesLine(text, line)
-      acceptAttempt({ matched, heard: text })
+      // Staged score: exact > fuzzy > attempt > silent. Anything except
+      // `silent` is treated as a reasonable attempt and unlocks Next.
+      const level = scoreAttempt(text, line, voiceHeard)
+      acceptAttempt({ level, heard: text })
     } catch (err) {
       micState = 'idle'
       micLevel = 0
@@ -303,49 +331,64 @@
     if (msg === 'mic-unsupported') {
       micError =
         "This browser can't record audio. Try Chrome or Edge. Counting this as a reasonable try."
-      acceptAttempt({ matched: true, heard: '' })
+      acceptAttempt({ level: 'attempt', heard: '' })
       return
     }
     if (msg === 'no-api-key') {
       micError =
         'Speech recognition is not configured (VITE_GROQ_API_KEY). Counting this as a reasonable try.'
-      acceptAttempt({ matched: true, heard: '' })
+      acceptAttempt({ level: 'attempt', heard: '' })
       return
     }
     // Network / Groq HTTP error: don't block the child, fall back to
     // accepting the attempt so the lesson keeps moving.
     micError = "Couldn't reach the listener right now. Counting this as a reasonable try."
-    acceptAttempt({ matched: true, heard: '' })
+    acceptAttempt({ level: 'attempt', heard: '' })
   }
 
-  function acceptAttempt(r: { matched: boolean; heard: string }) {
-    lastAttempt = r
-    if (r.matched) {
-      // Positive feedback + puzzle piece (FR6 + FR7). Even an empty transcript
-      // counts as "tried" when STT isn't available.
-      if (!attempted[idx]) {
-        attempted[idx] = true
-        // Persist this line — survives reloads and is what NavPage/RewardPage
-        // can inspect to know how far the child has come.
-        progress.markComplete(lineProgressId(idx))
-        pieceFlash = true
-        setTimeout(() => (pieceFlash = false), 1400)
-      }
-      kikiMessage = `Ka pai! ${capitalise(line.maoriWord)} means ${line.english}.`
-      // Encourage out loud — short and warm. Will play a recorded "Ka pai!"
-      // clip when one lands.
+  function acceptAttempt(r: { level: AttemptLevel; heard: string }) {
+    // Anything except `silent` unlocks the line — that's the lowered
+    // threshold from the FR6 spec ("encourage attempts, do not grade").
+    const unlocked = r.level !== 'silent'
+    lastAttempt = { heard: r.heard, matched: unlocked, level: r.level }
+
+    if (!unlocked) {
+      // Silent — overwrite the tier with `null` so the button and the
+      // puzzle stars reflect *this* attempt honestly (no never-demote).
+      // The line stays unlocked for Next via the persistent `progress`
+      // store, but the visual tier resets.
+      lineLevel[idx] = null
+      kikiMessage = `Have a go! Say "${line.maoriWord}" out loud.`
+      return
+    }
+
+    // The first ever reasonable attempt persists the milestone and triggers
+    // the puzzle-piece flash. Subsequent attempts just rewrite the tier.
+    const wasFresh = !attempted[idx]
+    lineLevel[idx] = r.level as Tier
+    if (wasFresh) {
+      progress.markComplete(lineProgressId(idx))
+      pieceFlash = true
+      setTimeout(() => (pieceFlash = false), 1400)
+    }
+
+    // Staged copy — tailored to how close the attempt was. All three
+    // branches unlock; only the warmth of the encouragement varies.
+    if (r.level === 'exact') {
+      kikiMessage = `Ka pai! You said "${line.maoriWord}" — that means ${line.english}.`
+      playClipOrSpeak('kapai', `Ka pai! You said ${line.maoriWord}.`)
+    } else if (r.level === 'fuzzy') {
+      kikiMessage = `Close enough! "${line.maoriWord}" means ${line.english}. Tap Kiwi to hear it again.`
       playClipOrSpeak('kapai', `Ka pai! You tried ${line.maoriWord}.`)
     } else {
-      // Pronunciation nudge, never "you are wrong" (FR6/FR8).
-      kikiMessage = `Almost! Try the word slowly: ${line.syllables.join(' - ')}.`
-      // Reference pronunciation. Prefer a word-level clip when available;
-      // otherwise play the full line — children hear a proper Māori example
-      // in context, which is far better than a syllabic TTS fallback.
+      // `attempt` — voice was heard but Whisper didn't match. Still a
+      // reasonable try; play the line back so the child hears the target.
+      kikiMessage = `Nice try! "${line.maoriWord}" means ${line.english}. Listen and try again whenever you like.`
       const wordKey = WORD_CLIPS[line.maoriWord]
       if (wordKey && hasClip(wordKey)) {
         playClipOrSpeak(wordKey, `${line.syllables.join(', ')}.`)
       } else {
-        playClipOrSpeak(LINE_CLIPS[idx], `Try the word slowly. ${line.syllables.join(', ')}.`)
+        playClipOrSpeak(LINE_CLIPS[idx], line.lyric)
       }
     }
   }
@@ -431,11 +474,6 @@
     stopAllSound()
   })
 
-  function capitalise(s: string): string {
-    if (!s) return s
-    return s[0].toLocaleUpperCase() + s.slice(1)
-  }
-
   // Keyboard helpers for older / motor-impaired children. Space replays the
   // line, Enter triggers Try singing, ArrowRight advances when allowed.
   function onKey(e: KeyboardEvent) {
@@ -514,7 +552,7 @@
         <!-- Primary actions: Try singing + Need help (FR6, FR8). -->
         <div class="actions">
           <button
-            class="cta try state-{buttonState}"
+            class="cta try state-{buttonState} tier-{currentStars}"
             onclick={startTrySinging}
             disabled={buttonState === 'recognizing'}
             aria-pressed={buttonState === 'listening'}
@@ -554,8 +592,16 @@
               {:else if buttonState === 'recognizing'}
                 Recognizing
               {:else if buttonState === 'passed'}
-                <span class="check" aria-hidden="true">✓</span>
-                Passed
+                <span class="stars" aria-hidden="true">
+                  {#each [0, 1, 2] as i}
+                    <span class="star" class:on={i < currentStars}>★</span>
+                  {/each}
+                </span>
+                {currentStars === 3
+                  ? 'Perfect!'
+                  : currentStars === 2
+                  ? 'Great!'
+                  : 'Good Try!'}
               {:else}
                 🎤 Try Singing
               {/if}
@@ -592,6 +638,14 @@
             >
               {#if attempted[i]}
                 <span class="piece-label">{p.maoriWord}</span>
+                <span class="piece-stars" aria-hidden="true">
+                  {#each [0, 1, 2] as j}
+                    <span
+                      class="piece-star"
+                      class:on={j < starsForTier(lineLevel[i])}
+                    >★</span>
+                  {/each}
+                </span>
               {:else}
                 <span class="piece-lock" aria-hidden="true">🔒</span>
               {/if}
@@ -599,7 +653,10 @@
           {/each}
         </div>
         <p class="puzzle-count" class:flash={pieceFlash} aria-live="polite">
-          {pieces} of {total} pieces
+          <span class="puzzle-pieces">{pieces} / {total} pieces</span>
+          <span class="puzzle-stars" aria-label="{totalStars} of {total * 3} stars">
+            ★ {totalStars} <span class="muted">/ {total * 3}</span>
+          </span>
         </p>
       </section>
 
@@ -782,7 +839,7 @@
        Set this so the card's bottom edge meets the right column's last
        visible card's bottom. Decrease to raise the bottom; increase to
        lower it. Default is calibrated for a typical 1024 × 768 view. */
-    min-height: 590px;
+    min-height: 610px;
   }
   @keyframes slideIn {
     from {
@@ -951,7 +1008,9 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
-  /* State 4 — Passed: green + check. Stays this way until the next line. */
+  /* State 4 — Passed: green pill with a 3-star tier indicator.
+     Tier shades differentiate Perfect / Great / Good Try without taking
+     the green confirmation away — a 1⭐ attempt is still a pass. */
   .cta.try.state-passed {
     background: linear-gradient(180deg, #4caf50, #2e7d32);
     box-shadow: 0 8px 18px -4px rgba(46, 125, 50, 0.55);
@@ -960,16 +1019,62 @@
     transform: translateY(-2px);
     box-shadow: 0 12px 22px -4px rgba(46, 125, 50, 0.7);
   }
-  .check {
-    display: inline-grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.25);
-    font-weight: 900;
-    font-size: 14px;
+  /* 3⭐ Perfect — brightest green + gold glow, the celebratory tier. */
+  .cta.try.state-passed.tier-3 {
+    background: linear-gradient(180deg, #5bd35f, #2e9d33);
+    box-shadow: 0 8px 22px -4px rgba(46, 157, 50, 0.7),
+      0 0 24px rgba(252, 198, 58, 0.45);
+  }
+  /* 2⭐ Great — standard green. */
+  .cta.try.state-passed.tier-2 {
+    background: linear-gradient(180deg, #66bb6a, #388e3c);
+  }
+  /* 1⭐ Good Try — softer, lighter green so the child sees there's
+     still room to climb without the colour feeling negative. */
+  .cta.try.state-passed.tier-1 {
+    background: linear-gradient(180deg, #9ccc65, #689f38);
+    box-shadow: 0 6px 16px -4px rgba(104, 159, 56, 0.55);
+  }
+
+  /* Star row inside the button (3 slots, fill from left). */
+  .cta.try .stars {
+    display: inline-flex;
+    gap: 1px;
+    font-size: 18px;
     line-height: 1;
+    margin-right: 2px;
+  }
+  .cta.try .star {
+    color: rgba(255, 255, 255, 0.32);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+  .cta.try .star.on {
+    color: #ffd54a;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 6px rgba(255, 213, 74, 0.5);
+  }
+  /* A tiny pop-in for the freshly lit stars when they appear. */
+  .cta.try.state-passed .star.on {
+    animation: starPop 0.4s ease both;
+  }
+  .cta.try.state-passed .star.on:nth-child(2) {
+    animation-delay: 0.08s;
+  }
+  .cta.try.state-passed .star.on:nth-child(3) {
+    animation-delay: 0.16s;
+  }
+  @keyframes starPop {
+    0% {
+      transform: scale(0.4);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.25);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 
   /* Countdown scanline — a 2px vertical line that travels right → left
@@ -1093,6 +1198,23 @@
   .piece-label {
     padding: 0 4px;
   }
+  /* Tiny 3-star strip at the bottom of every earned puzzle piece. Gives
+     a quick "best so far" read across the whole grid. */
+  .piece-stars {
+    display: flex;
+    gap: 1px;
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1;
+  }
+  .piece-star {
+    color: rgba(255, 255, 255, 0.25);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  }
+  .piece-star.on {
+    color: #ffd54a;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6), 0 0 3px rgba(255, 213, 74, 0.6);
+  }
   @keyframes pop-in {
     from {
       transform: scale(0.4);
@@ -1111,11 +1233,24 @@
     font-weight: 800;
     color: #5a3514;
     font-size: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
     transition: transform 0.4s ease, color 0.4s ease;
   }
   .puzzle-count.flash {
     color: #2e7d32;
-    transform: scale(1.15);
+    transform: scale(1.05);
+  }
+  .puzzle-stars {
+    color: #b3722a;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+  }
+  .puzzle-stars .muted {
+    color: rgba(90, 53, 20, 0.55);
+    font-weight: 700;
   }
 
   /* --- Feedback panels ----------------------------------------------- */
