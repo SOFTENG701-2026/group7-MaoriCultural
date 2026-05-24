@@ -19,7 +19,6 @@
   import { push } from 'svelte-spa-router'
   import { settings, stopSpeaking } from '../../../lib/settings.svelte'
   import { progress } from '../../../lib/progress.svelte'
-  import { kiwiImg } from '../../NavPage/assets'
   import { SONG_LINES, type SongLine } from './lyrics'
   import {
     hasGroqKey,
@@ -34,6 +33,7 @@
   import kiwiYes from '../../../assets/quiz-page/kiwiyes.png'
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png'
   import kikiSays from '../../../assets/quiz-page/kikisays.png'
+  import kiwiSingImg from '../../../assets/kiwising.png'
 
   // Per-line progress flag in the shared `progress` store. NavPage reads
   // `progress.isComplete('waiata')` to mark the map medal; we use a finer
@@ -73,41 +73,32 @@
   }
 
   // --- Per-line state -------------------------------------------------------
-  // Tier = the child's *latest* attempt on this line. Every call to
-  // acceptAttempt overwrites it directly — including a silent attempt,
-  // which resets it to null. Honest feedback over "best ever".
-  type Tier = 'exact' | 'fuzzy' | 'attempt'
-  function starsForTier(t: Tier | null): 0 | 1 | 2 | 3 {
-    return t === 'exact' ? 3 : t === 'fuzzy' ? 2 : t === 'attempt' ? 1 : 0
-  }
-
-  // Returning child whose progress is restored from the shared store sees
-  // the lowest 1⭐ baseline (they did pass it before — at least an attempt).
-  const initialLineLevel: (Tier | null)[] = SONG_LINES.map((_, i) =>
-    progress.isComplete(lineProgressId(i)) ? 'attempt' : null,
+  // A line counts as "passed" only when the latest recognition reached
+  // medium quality or above (`fuzzy` / `exact`). Lower-quality attempts
+  // ("attempt" = voice but no match, "silent" = nothing heard) leave the
+  // line as not-yet-passed and the child is invited to try again.
+  const initialLinePassed: boolean[] = SONG_LINES.map((_, i) =>
+    progress.isComplete(lineProgressId(i)),
   )
   // Resume at the first unfinished line (typical case). When every line is
   // already done we drop them on the last one so the Finish button is one
   // tap away — they're clearly here to wrap up rather than redo.
-  const firstUnfinished = initialLineLevel.findIndex((l) => l === null)
+  const firstUnfinished = initialLinePassed.findIndex((p) => !p)
   let idx = $state(
     firstUnfinished === -1 ? SONG_LINES.length - 1 : firstUnfinished,
   )
-  // Per-line latest tier. Reactive.
-  let lineLevel = $state<(Tier | null)[]>(initialLineLevel)
+  // Per-line live pass state. Mirrors the persistent progress store but
+  // can flip back to false on a fresh failed retry so the button reflects
+  // the most recent attempt honestly.
+  let linePassed = $state<boolean[]>(initialLinePassed)
 
-  // Unlock state is decoupled from tier — once the child has made a single
-  // reasonable attempt the line stays unlocked for Next, even if a later
-  // silent retry zeroes out the visible stars. Sourced from the persistent
-  // progress store so it survives reloads.
+  // Persistent "ever passed this line" flag — sourced from the progress
+  // store so it survives reloads and keeps the puzzle piece filled even
+  // if a later retry fails. Drives Next-button gating + puzzle visuals.
   const attempted = $derived(
     SONG_LINES.map((_, i) => progress.isComplete(lineProgressId(i))),
   )
   const pieces = $derived(attempted.filter(Boolean).length)
-  // Total stars across all lines — kid-friendly cumulative score.
-  const totalStars = $derived(
-    lineLevel.reduce<number>((s, t) => s + starsForTier(t), 0),
-  )
   // How many times Need help has been pressed *for this line* — drives the
   // escalating hint in FR8.
   let helpCount = $state(0)
@@ -150,23 +141,17 @@
   // Hard cap on a single attempt's recording length.
   const MAX_RECORD_MS = 5000
 
-  // The Try-singing button cycles through four states. When `passed`, a
-  // second value (`currentStars`) tells the UI which tier to render —
-  // bright/3⭐, mid/2⭐, soft/1⭐.
+  // The Try-singing button cycles through four states. `passed` is a
+  // single green confirmation — no tier shading.
   type ButtonState = 'idle' | 'listening' | 'recognizing' | 'passed'
   const buttonState = $derived<ButtonState>(
     micState === 'recording'
       ? 'listening'
       : micState === 'transcribing'
       ? 'recognizing'
-      : lineLevel[idx] !== null
+      : linePassed[idx]
       ? 'passed'
       : 'idle',
-  )
-  // 0–3 stars for the current line; null while mic is busy so the stars
-  // don't flash on top of the meter / spinner.
-  const currentStars = $derived<0 | 1 | 2 | 3>(
-    micState !== 'idle' ? 0 : starsForTier(lineLevel[idx]),
   )
 
   const line = $derived<SongLine>(SONG_LINES[idx])
@@ -347,49 +332,47 @@
   }
 
   function acceptAttempt(r: { level: AttemptLevel; heard: string }) {
-    // Anything except `silent` unlocks the line — that's the lowered
-    // threshold from the FR6 spec ("encourage attempts, do not grade").
-    const unlocked = r.level !== 'silent'
-    lastAttempt = { heard: r.heard, matched: unlocked, level: r.level }
+    // Pass threshold: medium quality (`fuzzy`) or better. Anything below
+    // — voice without a match, or pure silence — counts as a retry.
+    const passed = r.level === 'exact' || r.level === 'fuzzy'
+    lastAttempt = { heard: r.heard, matched: passed, level: r.level }
 
-    if (!unlocked) {
-      // Silent — overwrite the tier with `null` so the button and the
-      // puzzle stars reflect *this* attempt honestly (no never-demote).
-      // The line stays unlocked for Next via the persistent `progress`
-      // store, but the visual tier resets.
-      lineLevel[idx] = null
-      kikiMessage = `Have a go! Say "${line.maoriWord}" out loud.`
+    if (!passed) {
+      // Honest visual: revert the button to idle so the kid sees that
+      // *this* attempt didn't pass. Persistent puzzle progress (if any)
+      // is untouched — once earned, the piece stays filled.
+      linePassed[idx] = false
+      if (r.level === 'silent') {
+        kikiMessage = `Have a go! Say "${line.maoriWord}" out loud.`
+      } else {
+        // `attempt` — voice heard but Whisper didn't catch the word.
+        // Encourage another try and play the target back as a model.
+        kikiMessage = `Nearly there! Try saying "${line.maoriWord}" again — it means ${line.english}.`
+        const wordKey = WORD_CLIPS[line.maoriWord]
+        if (wordKey && hasClip(wordKey)) {
+          playClipOrSpeak(wordKey, `${line.syllables.join(', ')}.`)
+        } else {
+          playClipOrSpeak(LINE_CLIPS[idx], line.lyric)
+        }
+      }
       return
     }
 
-    // The first ever reasonable attempt persists the milestone and triggers
-    // the puzzle-piece flash. Subsequent attempts just rewrite the tier.
+    // First-ever pass on this line — persist it and flash the puzzle piece.
     const wasFresh = !attempted[idx]
-    lineLevel[idx] = r.level as Tier
+    linePassed[idx] = true
     if (wasFresh) {
       progress.markComplete(lineProgressId(idx))
       pieceFlash = true
       setTimeout(() => (pieceFlash = false), 1400)
     }
 
-    // Staged copy — tailored to how close the attempt was. All three
-    // branches unlock; only the warmth of the encouragement varies.
     if (r.level === 'exact') {
       kikiMessage = `Ka pai! You said "${line.maoriWord}" — that means ${line.english}.`
       playClipOrSpeak('kapai', `Ka pai! You said ${line.maoriWord}.`)
-    } else if (r.level === 'fuzzy') {
-      kikiMessage = `Close enough! "${line.maoriWord}" means ${line.english}. Tap Kiwi to hear it again.`
-      playClipOrSpeak('kapai', `Ka pai! You tried ${line.maoriWord}.`)
     } else {
-      // `attempt` — voice was heard but Whisper didn't match. Still a
-      // reasonable try; play the line back so the child hears the target.
-      kikiMessage = `Nice try! "${line.maoriWord}" means ${line.english}. Listen and try again whenever you like.`
-      const wordKey = WORD_CLIPS[line.maoriWord]
-      if (wordKey && hasClip(wordKey)) {
-        playClipOrSpeak(wordKey, `${line.syllables.join(', ')}.`)
-      } else {
-        playClipOrSpeak(LINE_CLIPS[idx], line.lyric)
-      }
+      kikiMessage = `Close enough! "${line.maoriWord}" means ${line.english}.`
+      playClipOrSpeak('kapai', `Ka pai! You tried ${line.maoriWord}.`)
     }
   }
 
@@ -513,8 +496,21 @@
     </div>
   </header>
 
-  <!-- Two-column layout: lesson card + puzzle ----------------------------- -->
+  <!-- Three-column layout: kiwi sidekick · lesson card · puzzle ---------- -->
   <main class="content">
+    <!-- Replay shortcut (FR4) — its own grid column so it never steals
+         width from the card and never gets clipped by the page gutter. -->
+    <aside class="kiwi-singer" aria-label="Tap kiwi to hear this line again">
+      <button
+        class="kiwi-btn"
+        onclick={playLine}
+        aria-label="Tap kiwi to hear this line again"
+      >
+        <img class="kiwi-sing-img" src={kiwiSingImg} alt="" draggable="false" />
+      </button>
+      <div class="bubble" aria-hidden="true">Tap me to hear again</div>
+    </aside>
+
     {#key idx}
       <section class="card lesson">
         <header class="lesson-head">
@@ -537,22 +533,10 @@
           </div>
         </div>
 
-        <!-- Replay button (FR4): the Kiwi avatar and its prompt are now a
-             single pill control. Clear "tap to play" affordance — no more
-             floating speech bubble. -->
-        <button
-          class="kiwi-replay"
-          onclick={playLine}
-          aria-label="Tap Kiwi to hear this line again"
-        >
-          <img class="kiwi-avatar" src={kiwiImg} alt="" draggable="false" />
-          <span class="replay-text">Tap Kiwi to hear this line again</span>
-        </button>
-
         <!-- Primary actions: Try singing + Need help (FR6, FR8). -->
         <div class="actions">
           <button
-            class="cta try state-{buttonState} tier-{currentStars}"
+            class="cta try state-{buttonState}"
             onclick={startTrySinging}
             disabled={buttonState === 'recognizing'}
             aria-pressed={buttonState === 'listening'}
@@ -592,16 +576,8 @@
               {:else if buttonState === 'recognizing'}
                 Recognizing
               {:else if buttonState === 'passed'}
-                <span class="stars" aria-hidden="true">
-                  {#each [0, 1, 2] as i}
-                    <span class="star" class:on={i < currentStars}>★</span>
-                  {/each}
-                </span>
-                {currentStars === 3
-                  ? 'Perfect!'
-                  : currentStars === 2
-                  ? 'Great!'
-                  : 'Good Try!'}
+                <span class="pass-check" aria-hidden="true">✓</span>
+                Pass!
               {:else}
                 🎤 Try Singing
               {/if}
@@ -638,14 +614,6 @@
             >
               {#if attempted[i]}
                 <span class="piece-label">{p.maoriWord}</span>
-                <span class="piece-stars" aria-hidden="true">
-                  {#each [0, 1, 2] as j}
-                    <span
-                      class="piece-star"
-                      class:on={j < starsForTier(lineLevel[i])}
-                    >★</span>
-                  {/each}
-                </span>
               {:else}
                 <span class="piece-lock" aria-hidden="true">🔒</span>
               {/if}
@@ -654,9 +622,6 @@
         </div>
         <p class="puzzle-count" class:flash={pieceFlash} aria-live="polite">
           <span class="puzzle-pieces">{pieces} / {total} pieces</span>
-          <span class="puzzle-stars" aria-label="{totalStars} of {total * 3} stars">
-            ★ {totalStars} <span class="muted">/ {total * 3}</span>
-          </span>
         </p>
       </section>
 
@@ -801,18 +766,32 @@
   .content {
     position: relative;
     z-index: 10;
-    width: min(1200px, 94%);
+    /* Slightly wider than a 2-column page so the kiwi can have its own
+       dedicated column without squeezing the lesson card. */
+    width: min(1280px, 96%);
     flex: 1;
-    padding: 14px 0 96px;
+    /* Generous bottom padding so the lesson card never tucks under the
+       fixed bottom nav, even on shorter viewports. */
+    padding: 14px 0 140px;
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
-    gap: 18px;
-    /* Both columns sit at the top of the grid row — each takes its own
-       natural height. Bottom alignment is controlled explicitly by the
-       `.card`'s min-height below (single number to tune). */
+    /* Three columns: [kiwi sidekick] · [lesson card] · [puzzle/feedback].
+       Kiwi column is fixed-width so it never shoves the card. The lesson
+       card gets the lion's share (1.6fr) so its two action buttons fit
+       side-by-side on one row instead of wrapping. */
+    grid-template-columns: 220px minmax(0, 1.6fr) minmax(240px, 1fr);
+    gap: 20px;
     align-items: start;
   }
-  @media (max-width: 860px) {
+  @media (max-width: 1180px) {
+    .content {
+      /* Slim the kiwi column on tighter widescreens. */
+      grid-template-columns: 180px minmax(0, 1.6fr) minmax(220px, 1fr);
+      gap: 16px;
+    }
+  }
+  @media (max-width: 980px) {
+    /* Below this width the kiwi drops out and the page falls back to
+       the original two-card stack so the lesson card stays readable. */
     .content {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -835,11 +814,11 @@
     justify-content: space-between;
     text-align: center;
     gap: 8px;
-    /* ▼ ONLY KNOB YOU NEED TO TUNE ▼
-       Set this so the card's bottom edge meets the right column's last
-       visible card's bottom. Decrease to raise the bottom; increase to
-       lower it. Default is calibrated for a typical 1024 × 768 view. */
-    min-height: 610px;
+    /* Height adapts to the viewport so the card never sneaks under the
+       fixed bottom nav. Caps at 610px on tall desktops; shrinks to fit
+       short laptop / portrait screens. */
+    min-height: clamp(460px, 70vh, 610px);
+    min-width: 0;
   }
   @keyframes slideIn {
     from {
@@ -912,38 +891,121 @@
     color: #7a3d12;
   }
 
-  /* --- Replay button: Kiwi avatar + label as one pill control --- */
-  .kiwi-replay {
-    margin: 0;
-    display: inline-flex;
+  /* --- Singing-kiwi sidekick (FR4 replay) -----------------------------
+     Lives in its own grid column to the LEFT of the lesson card. No
+     absolute positioning, no overlap, no clipping — the kiwi just sits
+     in its column and the grid keeps everything aligned. Vertically
+     centred against the card's height. */
+  .kiwi-singer {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 8px 22px 8px 10px;
-    background: #fff;
-    border: 2.5px solid #d9b98a;
-    border-radius: 999px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    justify-content: center;
+    gap: 10px;
+    align-self: center;
+    /* Match the card's min-height so the kiwi can centre against it
+       even when the card is shorter than expected on tall screens. */
+    min-height: clamp(460px, 70vh, 610px);
+  }
+  .kiwi-btn {
+    background: transparent;
+    border: 0;
+    padding: 0;
     cursor: pointer;
-    font-family: inherit;
-    font-weight: 700;
-    font-size: clamp(14px, 1.7vw, 16px);
+    line-height: 0;
+    transform-origin: 50% 85%;
+    animation: kiwiSing 2.4s ease-in-out infinite;
+    transition: transform 0.15s ease, filter 0.2s ease;
+  }
+  .kiwi-btn:hover {
+    filter: brightness(1.05);
+  }
+  .kiwi-btn:active {
+    transform: scale(0.96);
+    animation-play-state: paused;
+  }
+  .kiwi-btn:focus-visible {
+    outline: 3px solid #ffe9a8;
+    outline-offset: 4px;
+    border-radius: 12px;
+  }
+  .kiwi-sing-img {
+    /* Fill the kiwi column width so the bird is as big as the layout
+       allows — the grid column governs the size, not a hardcoded px. */
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.28));
+    pointer-events: none;
+  }
+  /* A gentle bobbing-while-singing wiggle. Disabled by reduced-motion below. */
+  @keyframes kiwiSing {
+    0%, 100% {
+      transform: rotate(-3deg) translateY(0);
+    }
+    50% {
+      transform: rotate(3deg) translateY(-4px);
+    }
+  }
+
+  /* Speech bubble sitting under the kiwi, with a small tail pointing up
+     toward the bird. Stays compact so it doesn't crowd the lesson card. */
+  .bubble {
+    position: relative;
+    background: #fff;
     color: #5a3514;
-    transition: transform 0.16s ease, box-shadow 0.18s ease, background 0.18s ease;
+    border: 2.5px solid #d9b98a;
+    border-radius: 16px;
+    padding: 9px 14px;
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 1.25;
+    text-align: center;
+    max-width: 170px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    animation: bubblePop 0.4s ease both;
   }
-  .kiwi-replay:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
-    background: #fff7e6;
+  .bubble::before,
+  .bubble::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
   }
-  .kiwi-replay:active {
-    transform: translateY(0);
+  .bubble::after {
+    /* Outer (border) tail. */
+    top: -12px;
+    border-width: 0 10px 12px 10px;
+    border-color: transparent transparent #d9b98a transparent;
   }
-  .kiwi-avatar {
-    width: 34px;
-    height: 34px;
-    object-fit: contain;
-    flex: none;
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
+  .bubble::before {
+    /* Inner (fill) tail — sits 2px below the outer to leave the border edge. */
+    top: -9px;
+    border-width: 0 8px 10px 8px;
+    border-color: transparent transparent #fff transparent;
+    z-index: 1;
+  }
+  @keyframes bubblePop {
+    from {
+      opacity: 0;
+      transform: scale(0.7);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Kiwi sizing is driven by its grid column width (see `.content`
+     media queries above). Below 980px the kiwi column collapses and
+     the bird is hidden so the lesson card has the full row. */
+  @media (max-width: 980px) {
+    .kiwi-singer {
+      display: none;
+    }
   }
 
   /* --- Action buttons row -------------------------------------------- */
@@ -960,6 +1022,14 @@
     border: 0;
     border-radius: 999px;
     padding: 16px 32px;
+    /* Shared pill shape: same min-width + inline-flex centring so the two
+       primary actions (Try Singing / Need help?) sit as a matched pair. */
+    min-width: 240px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
     font-family: inherit;
     font-weight: 800;
     font-size: clamp(18px, 2vw, 22px);
@@ -979,10 +1049,6 @@
   .cta.try {
     position: relative;
     overflow: hidden;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 240px;
     /* Smooth colour swap between idle ↔ listening ↔ recognizing ↔ passed. */
     transition: background 0.25s ease, color 0.2s ease, box-shadow 0.25s ease,
       transform 0.16s ease;
@@ -1008,68 +1074,40 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
-  /* State 4 — Passed: green pill with a 3-star tier indicator.
-     Tier shades differentiate Perfect / Great / Good Try without taking
-     the green confirmation away — a 1⭐ attempt is still a pass. */
+  /* State 4 — Passed: single bright-green pill with a check mark. The
+     pass threshold is a "medium or better" recognition — we no longer
+     surface tier shades, just a clean go/no-go confirmation. */
   .cta.try.state-passed {
-    background: linear-gradient(180deg, #4caf50, #2e7d32);
-    box-shadow: 0 8px 18px -4px rgba(46, 125, 50, 0.55);
+    background: linear-gradient(180deg, #5bd35f, #2e9d33);
+    box-shadow: 0 8px 22px -4px rgba(46, 157, 50, 0.7),
+      0 0 24px rgba(252, 198, 58, 0.35);
   }
   .cta.try.state-passed:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 22px -4px rgba(46, 125, 50, 0.7);
+    box-shadow: 0 12px 26px -4px rgba(46, 157, 50, 0.8),
+      0 0 28px rgba(252, 198, 58, 0.45);
   }
-  /* 3⭐ Perfect — brightest green + gold glow, the celebratory tier. */
-  .cta.try.state-passed.tier-3 {
-    background: linear-gradient(180deg, #5bd35f, #2e9d33);
-    box-shadow: 0 8px 22px -4px rgba(46, 157, 50, 0.7),
-      0 0 24px rgba(252, 198, 58, 0.45);
-  }
-  /* 2⭐ Great — standard green. */
-  .cta.try.state-passed.tier-2 {
-    background: linear-gradient(180deg, #66bb6a, #388e3c);
-  }
-  /* 1⭐ Good Try — softer, lighter green so the child sees there's
-     still room to climb without the colour feeling negative. */
-  .cta.try.state-passed.tier-1 {
-    background: linear-gradient(180deg, #9ccc65, #689f38);
-    box-shadow: 0 6px 16px -4px rgba(104, 159, 56, 0.55);
-  }
-
-  /* Star row inside the button (3 slots, fill from left). */
-  .cta.try .stars {
+  .cta.try .pass-check {
     display: inline-flex;
-    gap: 1px;
-    font-size: 18px;
-    line-height: 1;
-    margin-right: 2px;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 900;
+    margin-right: 4px;
+    animation: passPop 0.4s ease both;
   }
-  .cta.try .star {
-    color: rgba(255, 255, 255, 0.32);
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
-    transition: color 0.2s ease, transform 0.2s ease;
-  }
-  .cta.try .star.on {
-    color: #ffd54a;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 6px rgba(255, 213, 74, 0.5);
-  }
-  /* A tiny pop-in for the freshly lit stars when they appear. */
-  .cta.try.state-passed .star.on {
-    animation: starPop 0.4s ease both;
-  }
-  .cta.try.state-passed .star.on:nth-child(2) {
-    animation-delay: 0.08s;
-  }
-  .cta.try.state-passed .star.on:nth-child(3) {
-    animation-delay: 0.16s;
-  }
-  @keyframes starPop {
+  @keyframes passPop {
     0% {
       transform: scale(0.4);
       opacity: 0;
     }
     60% {
-      transform: scale(1.25);
+      transform: scale(1.2);
     }
     100% {
       transform: scale(1);
@@ -1198,23 +1236,6 @@
   .piece-label {
     padding: 0 4px;
   }
-  /* Tiny 3-star strip at the bottom of every earned puzzle piece. Gives
-     a quick "best so far" read across the whole grid. */
-  .piece-stars {
-    display: flex;
-    gap: 1px;
-    margin-top: 4px;
-    font-size: 11px;
-    line-height: 1;
-  }
-  .piece-star {
-    color: rgba(255, 255, 255, 0.25);
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
-  }
-  .piece-star.on {
-    color: #ffd54a;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6), 0 0 3px rgba(255, 213, 74, 0.6);
-  }
   @keyframes pop-in {
     from {
       transform: scale(0.4);
@@ -1242,15 +1263,6 @@
   .puzzle-count.flash {
     color: #2e7d32;
     transform: scale(1.05);
-  }
-  .puzzle-stars {
-    color: #b3722a;
-    font-size: 16px;
-    letter-spacing: 0.5px;
-  }
-  .puzzle-stars .muted {
-    color: rgba(90, 53, 20, 0.55);
-    font-weight: 700;
   }
 
   /* --- Feedback panels ----------------------------------------------- */
@@ -1419,7 +1431,9 @@
     .puzzle-piece.filled,
     .fb,
     .btn-next,
-    .sweep {
+    .sweep,
+    .kiwi-btn,
+    .bubble {
       animation: none !important;
     }
   }
