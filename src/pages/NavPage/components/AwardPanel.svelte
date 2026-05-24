@@ -1,28 +1,36 @@
 <script lang="ts">
   // Author: Shirley
   // The "Reward" collection panel, opened from the map's trophy button. It shows
-  // Kiwi's achievement medals on the carved wooden board (award-bg). For now
-  // every medal is in its LOCKED state — children earn the colourful versions
-  // later. A "Locked" caption makes the state clear in words, so it never relies
-  // on the greyed-out art (or colour) alone.
+  // Kiwi's achievement medals on the carved wooden board (award-bg). A medal
+  // lights up (swaps to its colourful art) once the matching module is finished
+  // — e.g. completing the Waiata song unlocks the music medal. Medals not yet
+  // earned stay greyed-out, and a "Locked"/"Earned" caption states the status in
+  // words so it never relies on the art (or colour) alone.
   import {
     awardBg,
     awardLockMusic,
     awardLockLanguage,
     awardLockMyth,
     awardLockPolite,
+    awardMusic,
+    awardLanguage,
+    awardMyth,
+    awardPolite,
   } from '../assets'
+  import { progress } from '../../../lib/progress.svelte'
 
   let { onclose }: { onclose: () => void } = $props()
 
-  type Award = { id: string; name: string; locked: string }
+  // `progressId` is the completion flag this medal watches in the shared
+  // `progress` store. RewardPage marks 'waiata' when the song module is done.
+  type Award = { id: string; name: string; locked: string; unlocked: string; progressId: string }
 
   // Two round medals first, then the two shield medals — keeps the shelf tidy.
   const AWARDS: Award[] = [
-    { id: 'waiata', name: 'Waiata', locked: awardLockMusic },
-    { id: 'korero', name: 'Kōrero', locked: awardLockLanguage },
-    { id: 'purakau', name: 'Pūrākau', locked: awardLockMyth },
-    { id: 'pepeha', name: 'Pepeha', locked: awardLockPolite },
+    { id: 'waiata', name: 'Waiata', locked: awardLockMusic, unlocked: awardMusic, progressId: 'waiata' },
+    { id: 'korero', name: 'Kōrero', locked: awardLockLanguage, unlocked: awardLanguage, progressId: 'korero' },
+    { id: 'purakau', name: 'Pūrākau', locked: awardLockMyth, unlocked: awardMyth, progressId: 'purakau' },
+    { id: 'pepeha', name: 'Pepeha', locked: awardLockPolite, unlocked: awardPolite, progressId: 'pepeha' },
   ]
 </script>
 
@@ -33,21 +41,42 @@
 
     <ul class="shelf">
       {#each AWARDS as a (a.id)}
-        <li class="medal">
-          <img src={a.locked} alt="{a.name} award, locked" draggable="false" />
-          <span class="caption">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M7 10V7a5 5 0 0 1 10 0v3"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <rect x="5" y="10" width="14" height="9" rx="2" fill="currentColor" />
-            </svg>
-            Locked
-          </span>
+        {@const earned = progress.isComplete(a.progressId)}
+        <li class="medal" class:earned>
+          <img
+            src={earned ? a.unlocked : a.locked}
+            alt="{a.name} award, {earned ? 'earned' : 'locked'}"
+            draggable="false"
+          />
+          {#if earned}
+            <span class="caption earned">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M5 12.5l4 4 10-10"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              Earned
+            </span>
+          {:else}
+            <span class="caption">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M7 10V7a5 5 0 0 1 10 0v3"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <rect x="5" y="10" width="14" height="9" rx="2" fill="currentColor" />
+              </svg>
+              Locked
+            </span>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -128,8 +157,22 @@
     height: auto;
     -webkit-user-drag: none;
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
-    /* Slightly dimmed to read as "not yet earned". */
-    opacity: 0.92;
+    /* Dimmed + desaturated to read as "not yet earned". */
+    opacity: 0.75;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55)) grayscale(0.35);
+    /* Grow a little when the child points at it. */
+    transition: transform 0.18s ease;
+    cursor: pointer;
+  }
+  .medal img:hover {
+    transform: scale(1.12);
+  }
+
+  /* Earned: full colour with a warm golden glow so it clearly stands out. */
+  .medal.earned img {
+    opacity: 1;
+    filter: drop-shadow(0 0 14px rgba(255, 213, 120, 0.85))
+      drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
   }
 
   .caption {
@@ -149,6 +192,12 @@
     width: 1.05em;
     height: 1.05em;
   }
+  /* Earned caption: golden badge instead of the muted "Locked" pill. */
+  .caption.earned {
+    background: linear-gradient(180deg, #f6c453 0%, #d9962a 100%);
+    color: #2a1602;
+    box-shadow: 0 2px 8px rgba(217, 150, 42, 0.55);
+  }
 
   @keyframes fade {
     from { opacity: 0; }
@@ -167,6 +216,12 @@
     .award-frame,
     .medal {
       animation: none !important;
+    }
+    .medal img {
+      transition: none !important;
+    }
+    .medal img:hover {
+      transform: none;
     }
   }
 </style>
