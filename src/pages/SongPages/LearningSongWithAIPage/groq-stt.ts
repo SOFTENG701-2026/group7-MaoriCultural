@@ -49,6 +49,77 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+/** Standard Levenshtein edit distance — used by `transcriptFuzzyMatchesLine`. */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0
+  if (a.length === 0) return b.length
+  if (b.length === 0) return a.length
+  // Two-row rolling DP to keep memory at O(min(a, b)).
+  let prev = new Array(b.length + 1)
+  let curr = new Array(b.length + 1)
+  for (let j = 0; j <= b.length; j++) prev[j] = j
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost)
+    }
+    ;[prev, curr] = [curr, prev]
+  }
+  return prev[b.length]
+}
+
+/**
+ * Forgiving phonetic match — Levenshtein distance against each token in the
+ * transcript. Allowed edit distance scales with the candidate length so we
+ * accept "fero" / "hero" for "whero" but don't accept "no" for "mā".
+ *
+ * This is the looser companion to `transcriptMatchesLine`; the page tries
+ * the exact matcher first, then this one, to keep an "exact" vs "fuzzy"
+ * distinction in the staged result.
+ */
+export function transcriptFuzzyMatchesLine(transcript: string, line: SongLine): boolean {
+  if (!transcript) return false
+  const t = normalise(transcript)
+  if (!t) return false
+  const tokens = t.split(' ').filter(Boolean)
+  const candidates = [line.maoriWord, ...line.aliases].map(normalise).filter(Boolean)
+  for (const c of candidates) {
+    // Around 30 % of the candidate's length, rounded down, but at least 1.
+    // "whero" (5) → 1; "kakariki" (8) → 2; "mā"→"ma" (2) → 1.
+    const maxDist = Math.max(1, Math.floor(c.length * 0.35))
+    for (const w of tokens) {
+      if (Math.abs(w.length - c.length) > maxDist) continue
+      if (levenshtein(w, c) <= maxDist) return true
+    }
+  }
+  return false
+}
+
+/**
+ * Four-level scoring for a Try-singing attempt, ordered strongest →
+ * weakest:
+ *   • `exact`   — `transcriptMatchesLine` accepted (word found verbatim)
+ *   • `fuzzy`   — `transcriptFuzzyMatchesLine` accepted (close phonetic)
+ *   • `attempt` — Whisper didn't find the word, but the child *did* speak
+ *                 (the recorder heard voice during the take). Still counts
+ *                 as a reasonable attempt under FR6.
+ *   • `silent`  — no voice and no useful transcript → ask the child to try
+ *                 again, the only level that does NOT unlock the line.
+ */
+export type AttemptLevel = 'exact' | 'fuzzy' | 'attempt' | 'silent'
+
+export function scoreAttempt(
+  transcript: string,
+  line: SongLine,
+  voiceHeard: boolean,
+): AttemptLevel {
+  if (transcriptMatchesLine(transcript, line)) return 'exact'
+  if (transcriptFuzzyMatchesLine(transcript, line)) return 'fuzzy'
+  if (voiceHeard) return 'attempt'
+  return 'silent'
+}
+
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/audio/transcriptions'
 const MODEL = 'whisper-large-v3'
 const MAORI_LANG = 'mi'
@@ -231,8 +302,15 @@ function pickMimeType(): string | null {
  * Send a recording to Groq Whisper and return the transcript. The API key is
  * read from `VITE_GROQ_API_KEY` at build time; throws "no-api-key" when it
  * isn't set so the page can show a clear setup hint.
+ *
+ * `opts.targetWord` lets the caller bias Whisper toward the current line's
+ * word (much sharper than listing all 5 colour words) — paired with
+ * `temperature=0` to keep decoding deterministic.
  */
-export async function transcribeWithGroq(audio: Blob): Promise<string> {
+export async function transcribeWithGroq(
+  audio: Blob,
+  opts: { targetWord?: string } = {},
+): Promise<string> {
   const key = getGroqKey()
   if (!key) throw new Error('no-api-key')
 
@@ -243,9 +321,16 @@ export async function transcribeWithGroq(audio: Blob): Promise<string> {
   form.append('model', MODEL)
   form.append('language', MAORI_LANG)
   form.append('response_format', 'json')
-  // A short prompt nudges Whisper toward the colour vocabulary we're
-  // actually teaching, which helps when a child only says one word.
-  form.append('prompt', SONG_LINES.map((l: SongLine) => l.maoriWord).join(' '))
+  // Lower temperature = greedy decoding = much more stable identification
+  // when the child only utters one short word.
+  form.append('temperature', '0')
+  // Bias the model toward what we *expect* to hear. When the page tells us
+  // which line is active, focus on that one word; otherwise fall back to
+  // the full colour-word list as a softer hint.
+  const prompt = opts.targetWord
+    ? `Māori colour word: ${opts.targetWord}.`
+    : SONG_LINES.map((l: SongLine) => l.maoriWord).join(' ')
+  form.append('prompt', prompt)
 
   const res = await fetch(GROQ_ENDPOINT, {
     method: 'POST',
