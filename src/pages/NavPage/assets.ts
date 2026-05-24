@@ -22,11 +22,16 @@ export { default as waiataImg } from '../../assets/Navpage/navi-waiata.png'
 export { default as tikangaImg } from '../../assets/Navpage/navi-tikanga.png'
 export { default as pepehaImg } from '../../assets/Navpage/navi-Pepeha.png'
 
-// Award (reward) collection — wooden panel + the locked medals. Unlocked medal
-// art (award-music / award-language / award-Myth / award-polite) also exists in
-// the same folder for when earning/unlocking is implemented later.
+// Award (reward) collection — wooden panel + the medals. Each medal has a
+// greyed-out LOCKED version and a colourful UNLOCKED version; AwardPanel swaps
+// to the unlocked art once the matching module is complete (e.g. finishing the
+// Waiata song lights up the music medal).
 export { default as awardBg } from '../../assets/Navpage/award-bg.png'
 export { default as awardLockMusic } from '../../assets/Navpage/award-Lockmusic.png'
 export { default as awardLockLanguage } from '../../assets/Navpage/award-Locklanguage.png'
 export { default as awardLockMyth } from '../../assets/Navpage/award-LockMyth.png'
 export { default as awardLockPolite } from '../../assets/Navpage/award-Lockpolite.png'
+export { default as awardMusic } from '../../assets/Navpage/award-music.png'
+export { default as awardLanguage } from '../../assets/Navpage/award-language.png'
+export { default as awardMyth } from '../../assets/Navpage/award-Myth.png'
+export { default as awardPolite } from '../../assets/Navpage/award-polite.png'
