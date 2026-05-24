@@ -70,7 +70,7 @@
 
     <p class="copyright">🎵 Ngā Tae — Audio by Toi Tū Toi Ora. Educational use only.</p>
 
-    <div class="lyrics-overlay-container">
+    <div class="lyrics-overlay-container" class:active-session={playing}>
       <div class="lyrics-board-content">
         <h2 class="maori-line">{currentMaori}</h2>
         <p class="english-line">{currentEnglish}</p>
