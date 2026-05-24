@@ -24,7 +24,27 @@
   let hinted = $state(true) // show the "how to play" hint until first move
   let infoLoc = $state<Loc | null>(null) // place whose intro popup is open
   let showAwards = $state(false) // reward/award collection panel
-  let showGuide = $state(true) // new-player guide banner, shown on first load
+
+  // New-player guide banner: shown only the first time ever. Once dismissed the
+  // flag is saved to localStorage so it never reappears on later map visits or
+  // page reloads (matches the settings/progress persistence pattern).
+  const GUIDE_SEEN_KEY = 'mca-guide-seen'
+  function guideSeen(): boolean {
+    try {
+      return localStorage.getItem(GUIDE_SEEN_KEY) === '1'
+    } catch {
+      return false // storage disabled — treat as first-time
+    }
+  }
+  let showGuide = $state(!guideSeen())
+  function dismissGuide() {
+    showGuide = false
+    try {
+      localStorage.setItem(GUIDE_SEEN_KEY, '1')
+    } catch {
+      // Private mode / storage disabled — guide will simply show again next time.
+    }
+  }
 
   // Friendly one-line tips, kept short for young readers. Tap to advance.
   const GUIDE_LINES = [
@@ -169,7 +189,7 @@
 
     <!-- New-player guide banner -->
     {#if showGuide}
-      <GuideTour lines={GUIDE_LINES} onfinish={() => (showGuide = false)} />
+      <GuideTour lines={GUIDE_LINES} onfinish={dismissGuide} />
     {/if}
 
     <!-- Teaching-intro popup for the tapped place -->
