@@ -1,3 +1,3 @@
 // Author: Sungava
-export { default } from 'index.svelte';
+export { default } from './index.svelte';
 
