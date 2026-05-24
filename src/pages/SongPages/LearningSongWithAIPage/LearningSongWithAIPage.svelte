@@ -28,7 +28,7 @@
     transcriptMatchesLine,
     type Recorder,
   } from './groq-stt'
-  import { playClipOrSpeak, stopAllAudio, type ClipKey } from './audio'
+  import { hasClip, playClipOrSpeak, stopAllAudio, type ClipKey } from './audio'
   import background from '../../../assets/common/background.png'
   import kiwiYes from '../../../assets/quiz-page/kiwiyes.png'
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png'
@@ -176,10 +176,27 @@
     return [intro, lyric, feedback, next].filter(Boolean).join(' ')
   }
 
+  // Flipped to `true` whenever we stop audio for any reason — keeps the
+  // auto-read TTS → line-audio chain from firing the second clip after a
+  // navigation away or a manual cancellation.
+  let autoReadCancelled = false
+
   // --- Single source of truth for "stop everything that is making sound". --
   function stopAllSound() {
+    autoReadCancelled = true
     stopAllAudio()
     stopSpeaking()
+  }
+
+  // Plays the page readout TTS, then chains the recorded line audio so the
+  // child hears a proper Māori example after the framing instructions.
+  function startAutoRead() {
+    autoReadCancelled = false
+    const handle = playClipOrSpeak('click-kiki', pageReadout)
+    handle.onend = () => {
+      if (autoReadCancelled) return
+      playClipOrSpeak(LINE_CLIPS[idx], line.lyric)
+    }
   }
 
   // --- Kiwi replay (FR4) ---------------------------------------------------
@@ -321,12 +338,14 @@
     } else {
       // Pronunciation nudge, never "you are wrong" (FR6/FR8).
       kikiMessage = `Almost! Try the word slowly: ${line.syllables.join(' - ')}.`
-      // Play the word clip on its own — a clean reference pronunciation.
+      // Reference pronunciation. Prefer a word-level clip when available;
+      // otherwise play the full line — children hear a proper Māori example
+      // in context, which is far better than a syllabic TTS fallback.
       const wordKey = WORD_CLIPS[line.maoriWord]
-      if (wordKey) {
+      if (wordKey && hasClip(wordKey)) {
         playClipOrSpeak(wordKey, `${line.syllables.join(', ')}.`)
       } else {
-        playClipOrSpeak('try-again', `Try the word slowly. ${line.syllables.join(', ')}.`)
+        playClipOrSpeak(LINE_CLIPS[idx], `Try the word slowly. ${line.syllables.join(', ')}.`)
       }
     }
   }
@@ -340,22 +359,19 @@
     // FR8: hints escalate. Start with "click Kiwi", then break the word,
     // then offer a sing-with-Kiwi option, then loop the most concrete tip.
     let msg: string
-    let clip: ClipKey = 'click-kiki'
     if (helpCount === 1 && !lastAttempt) {
       msg = `Click Kiki to hear this line again, then try singing.`
-      clip = 'click-kiki'
     } else if (helpCount === 1 || helpCount === 2) {
       msg = `Say the word in small parts: ${breakdown}. Then try the whole line.`
-      clip = WORD_CLIPS[w] ?? 'click-kiki'
     } else if (helpCount === 3) {
       msg = `First just say "${w}". Then say the whole line: ${line.lyric}.`
-      clip = WORD_CLIPS[w] ?? LINE_CLIPS[idx]
     } else {
       msg = `Sing it with Kiki! Click Kiki, listen, then say "${w}" the same way.`
-      clip = LINE_CLIPS[idx]
     }
+    // Need help shows the hint in the Kiki Says panel — no audio. The
+    // child stays in control of what to listen to (they can tap the
+    // Kiwi pill explicitly to replay the line).
     kikiMessage = msg
-    playClipOrSpeak(clip, msg)
   }
 
   // --- Navigation ----------------------------------------------------------
@@ -372,10 +388,11 @@
     }
     idx += 1
     resetLineState()
-    // Auto-read on entry if the child has chosen Out loud mode (FR5).
-    if (settings.readMode === 'auto') {
-      setTimeout(() => playClipOrSpeak('click-kiki', pageReadout), 250)
-    }
+    // Auto-play the new line's recording so the child immediately hears
+    // the next lyric in a proper Māori voice. Respects Sound on/off via
+    // `playClipOrSpeak`. Triggered only by Next (not Prev, not first mount).
+    const newLine = SONG_LINES[idx]
+    playClipOrSpeak(LINE_CLIPS[idx], newLine.lyric)
   }
 
   function prevLine() {
@@ -407,7 +424,7 @@
 
   // --- Lifecycle -----------------------------------------------------------
   onMount(() => {
-    if (settings.readMode === 'auto') playClipOrSpeak('click-kiki', pageReadout)
+    if (settings.readMode === 'auto') startAutoRead()
   })
   onDestroy(() => {
     cancelMic()
