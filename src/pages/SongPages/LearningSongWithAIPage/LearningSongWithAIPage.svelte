@@ -59,7 +59,7 @@
     // Default to going back up the Waiata flow (intro → map) so the page
     // still has sensible navigation when opened by deep link without a
     // parent-supplied handler.
-    onback = () => push('/song'),
+    onback = () => push('/song/play'),
     onfinish = () => push('/quiz'),
   }: { onback?: () => void; onfinish?: () => void } = $props()
 
