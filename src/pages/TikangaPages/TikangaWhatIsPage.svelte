@@ -1,6 +1,6 @@
 <!-- Tikanga Module — Page 2: What is Tikanga? -->
 <script lang="ts">
-  import bgImg     from '../../assets/tikanga/p1 background.png'
+  import bgImg     from '../../assets/tikanga/p2 background.png'
   import goalsImg  from '../../assets/tikanga/p2 goals.png'
   import goal1Img  from '../../assets/tikanga/p2 goal 1 listen first (1).png'
   import goal2Img  from '../../assets/tikanga/p2 goal 2.png'
@@ -101,7 +101,7 @@
   </button>
 
   <!-- Read to me — bottom-left -->
-  <nav class="bottom-left-nav">
+  <nav class="rtm-nav">
     <ReadToMe text={readText} />
   </nav>
 
@@ -298,8 +298,8 @@
   .next-img-btn[aria-disabled='true'] { cursor: not-allowed; opacity: .85; }
   .next-img-btn[aria-disabled='true']:hover { transform: translateX(-50%); }
 
-  /* Read to me — fixed bottom-left */
-  .bottom-left-nav {
+  /* Read to me — fixed bottom-right */
+  .rtm-nav {
     position: fixed;
     bottom: 18px;
     left: 18px;

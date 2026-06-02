@@ -178,9 +178,9 @@
 
   <nav class="bottom-nav">
     <button class="pill btn-back-bottom" onclick={onBack}>← Back</button>
-    <ReadToMe text={readText} />
     <button class="pill btn-next" onclick={handleNext} disabled={!completed}>Next →</button>
   </nav>
+  <nav class="rtm-nav"><ReadToMe text={readText} /></nav>
 </div>
 
 <style>
@@ -410,4 +410,5 @@
     0%,100% { transform: scale(1);    box-shadow: 0 4px 12px rgba(245,166,35,.35); }
     50%      { transform: scale(1.05); box-shadow: 0 8px 24px rgba(245,166,35,.6);  }
   }
+  .rtm-nav { position: fixed; bottom: 18px; left: 18px; z-index: 50; }
 </style>

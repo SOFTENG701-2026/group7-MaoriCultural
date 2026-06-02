@@ -1,5 +1,6 @@
 <!-- Tikanga Module — Page 4: Station 2 Welcome Area (hongi) -->
 <script lang="ts">
+  import bgImg      from '../../assets/tikanga/p4 background.png'
   import kiwiHello  from '../../assets/tikanga/kiwihello.png'
   import kiwiYes    from '../../assets/tikanga/kiwiyes.png'
   import kiwiTry    from '../../assets/tikanga/kiwitryagain.png'
@@ -69,8 +70,8 @@
   }
 </script>
 
-<div class="page">
-  <div class="bg" aria-hidden="true"></div>
+<div class="page" style="background-image:url({bgImg})">
+
 
   <!-- Station badge -->
   <div class="station-pill">Station 2 — Welcome Area</div>
@@ -163,7 +164,6 @@
   <!-- Bottom nav -->
   <nav class="bottom-nav">
     <button class="pill btn-back-bottom" onclick={onBack}>← Back</button>
-    <ReadToMe text={readText} />
     <button
       class="pill btn-next"
       onclick={handleNext}
@@ -172,27 +172,23 @@
       Next →
     </button>
   </nav>
+  <nav class="rtm-nav"><ReadToMe text={readText} /></nav>
 </div>
 
 <style>
   .page {
-    position: relative;
-    min-height: 100vh;
-    width: 100%;
+    position: fixed;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     flex-direction: column;
     align-items: center;
     font-family: 'Nunito', system-ui, sans-serif;
     padding: 80px 16px 120px;
     box-sizing: border-box;
-    overflow-x: hidden;
-  }
-
-  .bg {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    background: linear-gradient(150deg, #0d4f6e 0%, #1a7a9a 40%, #2bb5d8 75%, #7dd9f0 100%);
+    overflow-y: auto;
   }
 
   .station-pill {
@@ -371,4 +367,5 @@
     0%,100% { transform: scale(1);    box-shadow: 0 4px 12px rgba(245,166,35,.35); }
     50%      { transform: scale(1.05); box-shadow: 0 8px 24px rgba(245,166,35,.6);  }
   }
+  .rtm-nav { position: fixed; bottom: 18px; left: 18px; z-index: 50; }
 </style>

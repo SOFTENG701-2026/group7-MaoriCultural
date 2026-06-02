@@ -1,5 +1,6 @@
 <!-- Tikanga Module — Page 5: Station 3 Wharenui (meeting house) -->
 <script lang="ts">
+  import bgImg      from '../../assets/tikanga/p5 background.png'
   import kiwiThink  from '../../assets/tikanga/kiwithink.png'
   import kiwiYes    from '../../assets/tikanga/kiwiyes.png'
   import kiwiTry    from '../../assets/tikanga/kiwitryagain.png'
@@ -80,8 +81,8 @@
   }
 </script>
 
-<div class="page">
-  <div class="bg" aria-hidden="true"></div>
+<div class="page" style="background-image:url({bgImg})">
+
 
   <div class="station-pill">Station 3 — Wharenui</div>
   <button class="pill btn-back" onclick={onBack}>← Back</button>
@@ -157,30 +158,25 @@
 
   <nav class="bottom-nav">
     <button class="pill btn-back-bottom" onclick={onBack}>← Back</button>
-    <ReadToMe text={readText} />
     <button class="pill btn-next" onclick={handleNext} disabled={!completed}>Next →</button>
   </nav>
+  <nav class="rtm-nav"><ReadToMe text={readText} /></nav>
 </div>
 
 <style>
   .page {
-    position: relative;
-    min-height: 100vh;
-    width: 100%;
+    position: fixed;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     flex-direction: column;
     align-items: center;
     font-family: 'Nunito', system-ui, sans-serif;
     padding: 80px 16px 120px;
     box-sizing: border-box;
-    overflow-x: hidden;
-  }
-
-  .bg {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    background: linear-gradient(155deg, #3b2000 0%, #6a3a10 35%, #a05a20 65%, #c97c30 100%);
+    overflow-y: auto;
   }
 
   .station-pill {
@@ -396,4 +392,5 @@
     0%,100% { transform: scale(1);    box-shadow: 0 4px 12px rgba(245,166,35,.35); }
     50%      { transform: scale(1.05); box-shadow: 0 8px 24px rgba(245,166,35,.6);  }
   }
+  .rtm-nav { position: fixed; bottom: 18px; left: 18px; z-index: 50; }
 </style>
