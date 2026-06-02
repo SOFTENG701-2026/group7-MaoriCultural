@@ -1,10 +1,10 @@
 import { push } from 'svelte-spa-router';
 import { wrap } from 'svelte-spa-router/wrap';
 
-// When the child taps Waiata on the map, head into the Waiata Songs intro;
-// other modules aren't built out yet so we let them fall through silently.
+// When the child taps a module on the map, route into the correct flow.
 const onMapNavigate = (id: string) => {
-  if (id === 'waiata') push('/song');
+  if (id === 'waiata')   push('/song');
+  if (id === 'tikanga')  push('/tikanga');
 };
 
 const onSongStart = () => push('/song/learn');
@@ -55,6 +55,55 @@ const routes = {
   '/reward': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
+  }),
+
+  // ── Tikanga module (8 pages) ──────────────────────────────────────────────
+  '/tikanga': wrap({
+    asyncComponent: () =>
+      import('./pages/TikangaPages/TikangaStartPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/tikanga/what-is') },
+  }),
+
+  '/tikanga/what-is': wrap({
+    asyncComponent: () =>
+      import('./pages/TikangaPages/TikangaWhatIsPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/tikanga/station1'), onBack: () => push('/tikanga') },
+  }),
+
+  '/tikanga/station1': wrap({
+    asyncComponent: () =>
+      import('./pages/TikangaPages/TikangaStation1Page.svelte').then(m => m.default),
+    props: { onNext: () => push('/tikanga/station2'), onBack: () => push('/tikanga/what-is') },
+  }),
+
+  '/tikanga/station2': wrap({
+    asyncComponent: () =>
+      import('./pages/TikangaPages/TikangaStation2Page.svelte').then(m => m.default),
+    props: { onNext: () => push('/tikanga/station3'), onBack: () => push('/tikanga/station1') },
+  }),
+
+  '/tikanga/station3': wrap({
+    asyncComponent: () =>
+      import('./pages/TikangaPages/TikangaStation3Page.svelte').then(m => m.default),
+    props: { onNext: () => push('/tikanga/station4'), onBack: () => push('/tikanga/station2') },
+  }),
+
+  '/tikanga/station4': wrap({
+    asyncComponent: () =>
+      import('./pages/TikangaPages/TikangaStation4Page.svelte').then(m => m.default),
+    props: { onNext: () => push('/tikanga/review'), onBack: () => push('/tikanga/station3') },
+  }),
+
+  '/tikanga/review': wrap({
+    asyncComponent: () =>
+      import('./pages/TikangaPages/TikangaReviewPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/tikanga/reward'), onBack: () => push('/tikanga/station4') },
+  }),
+
+  '/tikanga/reward': wrap({
+    asyncComponent: () =>
+      import('./pages/TikangaPages/TikangaRewardPage.svelte').then(m => m.default),
+    props: { onMap: onBackToMap },
   }),
 
   // Fallback: unknown paths return to the home map.
