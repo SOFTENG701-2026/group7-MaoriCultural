@@ -3,7 +3,7 @@
   // reads the bubble aloud in her "AI voice" whenever the text changes — routed
   // through the shared `speak()` so the Sound on/off + Volume settings apply
   // (FR14). Used for the intro (Step 2), narration (Step 3) and feedback.
-  import { speak } from '../../../lib/settings.svelte'
+  import { speak, narrate } from '../../../lib/settings.svelte'
   import { kikiHello, kikiYes, kikiThink, kikiTryAgain, kikiGo } from '../assets'
 
   type KikiPose = 'hello' | 'yes' | 'think' | 'tryagain' | 'go'
@@ -32,11 +32,11 @@
   }
   const img = $derived(POSE_IMG[pose])
 
-  // Read each new line aloud. `speak()` cancels any previous utterance, so
-  // advancing scenes never stacks voices.
+  // Read each new line aloud ONLY in "Out loud" mode (narrate). By default
+  // nothing auto-plays; the 🔊 replay button below always speaks on demand.
   $effect(() => {
     const line = text
-    if (autoSpeak && line) speak(line)
+    if (autoSpeak && line) narrate(line)
   })
 
   function replay() {

@@ -3,7 +3,7 @@
   // Correct → Kiki cheers and shares a related Fun Fact. Wrong → no punishment:
   // Kiki says "Let's think again" with a gentle hint, and the child can retry.
   import type { QuizQuestion, QuizOption } from '../stories'
-  import { speak } from '../../../lib/settings.svelte'
+  import { narrate } from '../../../lib/settings.svelte'
   import KiwiGuide from './KiwiGuide.svelte'
   import ReadToMe from '../../../lib/ReadToMe.svelte'
 
@@ -26,8 +26,8 @@
 
   function pick(opt: QuizOption) {
     selected = opt.id
-    if (opt.correct) speak(`${q.kikiCorrect} ${q.funFact}`)
-    else speak(`Let's think again. ${q.hint}`)
+    if (opt.correct) narrate(`${q.kikiCorrect} ${q.funFact}`)
+    else narrate(`Let's think again. ${q.hint}`)
   }
 
   function next() {

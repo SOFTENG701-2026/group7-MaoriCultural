@@ -4,7 +4,7 @@
   // voice; some scenes end in an interaction the child must complete before the
   // story continues (a 5-prop choice, or a "pull the line" tap game).
   import type { Scene } from '../stories'
-  import { speak } from '../../../lib/settings.svelte'
+  import { speak, narrate } from '../../../lib/settings.svelte'
   import SceneArt from './SceneArt.svelte'
   import KiwiGuide from './KiwiGuide.svelte'
   import PropPicker from './PropPicker.svelte'
@@ -33,11 +33,11 @@
   const narration = $derived(scene.narration.join(' '))
   const tugPips = $derived(tapI ? Array.from({ length: tapI.target }, (_, i) => i) : [])
 
-  // Narrate each scene on entry. Prop scenes stay quiet here so PropPicker can
-  // voice its prompt/clue without being cut off.
+  // Narrate each scene on entry — only in "Out loud" mode. Prop scenes stay
+  // quiet here so PropPicker can voice its prompt/clue without being cut off.
   $effect(() => {
     const s = scenes[idx]
-    if (s && s.interaction?.kind !== 'prop') speak(s.narration.join(' '))
+    if (s && s.interaction?.kind !== 'prop') narrate(s.narration.join(' '))
   })
 
   // Reset the pull counter whenever the scene changes.
@@ -55,8 +55,8 @@
     if (!it || it.kind !== 'tap' || solved[scene.id]) return
     pulls += 1
     if (pulls >= it.target) {
-      speak(it.cheer)
-      markSolved()
+      markSolved() // advance FIRST — never gated by speech
+      narrate(it.cheer)
     }
   }
 

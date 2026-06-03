@@ -5,8 +5,8 @@
   // from the controlled hint engine, with unlimited gentle retries.
   import { onMount } from 'svelte'
   import { PROPS, type Prop, type Interaction } from '../stories'
-  import { getHint } from '../hint-engine'
-  import { speak } from '../../../lib/settings.svelte'
+  import { requestHint } from '../hint-engine'
+  import { narrate } from '../../../lib/settings.svelte'
   import { woodenTray } from '../assets'
   import KiwiGuide from './KiwiGuide.svelte'
 
@@ -32,40 +32,48 @@
   let solved = $state(false)
   let wrongId = $state<string | null>(null)
   let shakeId = $state<string | null>(null)
-
-  const hint = $derived(
-    wrongId ? getHint(interaction.correctId, wrongId as Prop['id']) : '',
-  )
+  let hint = $state('')
+  let thinking = $state(false)
+  let reqToken = 0 // guards against an earlier slow hint landing after a newer pick
 
   function pick(p: Prop) {
     if (solved) return
     if (p.id === interaction.correctId) {
       solved = true
       wrongId = null
-      speak(interaction.cheer)
-      onCorrect()
+      hint = ''
+      thinking = false
+      onCorrect() // advance FIRST — progression is never gated by speech
+      narrate(interaction.cheer)
     } else {
       wrongId = p.id
       shakeId = p.id
-      // hint speaks via the $effect below (after `hint` recomputes)
       setTimeout(() => (shakeId = null), 600)
+      const my = ++reqToken
+      thinking = true
+      hint = ''
+      // Controlled AI hint (DeepSeek if configured, else curated) — async.
+      requestHint(interaction.correctId, p.id).then((h) => {
+        if (my !== reqToken || solved) return // superseded or already solved
+        hint = h
+        thinking = false
+        narrate(h)
+      })
     }
   }
 
-  // Voice the prompt + clue once when the challenge appears.
-  onMount(() => speak(`${interaction.prompt} ${interaction.clue}`))
-
-  // Voice the current hint whenever it changes (Kiki's controlled AI hint).
-  $effect(() => {
-    if (hint && !solved) speak(hint)
-  })
+  // Voice the prompt + clue when the challenge appears — only in "Out loud"
+  // mode. Otherwise the text is shown silently; the 🔊 button reads it on tap.
+  onMount(() => narrate(`${interaction.prompt} ${interaction.clue}`))
 </script>
 
 <div class="picker">
   <!-- Prompt + clue / feedback from Kiki -->
   {#if solved}
     <KiwiGuide pose="yes" text={interaction.cheer} />
-  {:else if wrongId}
+  {:else if thinking}
+    <KiwiGuide pose="think" text="Hmm… let me think how to help you." />
+  {:else if wrongId && hint}
     <KiwiGuide pose="tryagain" text={hint} />
   {:else}
     <KiwiGuide pose="think" text={`${interaction.prompt} ${interaction.clue}`} />

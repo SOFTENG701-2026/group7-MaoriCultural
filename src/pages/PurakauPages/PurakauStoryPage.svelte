@@ -11,7 +11,7 @@
   import { push } from 'svelte-spa-router'
   import { storyById } from './stories'
   import { purakauState } from '../../lib/purakauState.svelte'
-  import { speak } from '../../lib/settings.svelte'
+  import { narrate } from '../../lib/settings.svelte'
   import { beachScene, heiMatau } from './assets'
   import KiwiGuide from './components/KiwiGuide.svelte'
   import StoryScenes from './components/StoryScenes.svelte'
@@ -36,7 +36,7 @@
       push('/purakau')
       return
     }
-    speak(introText)
+    narrate(introText)
   })
 
   function goSequence() {
@@ -49,14 +49,15 @@
     // marks the story done, lights the map medal, and arms the colour reveal.
     purakauState.completeActiveStory()
     step = 'celebrate'
-    speak(
+    narrate(
       'Ka rawe! You read the whole story, put it in order, and answered every question. You are a true storyteller! Tap to see your storybook.',
     )
   }
 </script>
 
 {#if story}
-  <div class="player" style:background-image="url({beachScene})">
+  <div class="player">
+    <div class="bg" style:background-image="url({beachScene})" aria-hidden="true"></div>
     <div class="scrim" aria-hidden="true"></div>
 
     <button class="pill btn-book" onclick={() => push('/purakau')}>← Book</button>
@@ -111,19 +112,24 @@
     position: relative;
     min-height: 100vh;
     width: 100%;
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
     display: flex;
     flex-direction: column;
     align-items: center;
     font-family: 'Nunito', 'Baloo 2', system-ui, sans-serif;
     overflow-x: hidden;
   }
-  .scrim {
+  .bg {
     position: fixed;
     inset: 0;
     z-index: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
     background: linear-gradient(180deg, rgba(20, 40, 60, 0.42), rgba(20, 40, 60, 0.62));
   }
 

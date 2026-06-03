@@ -10,7 +10,7 @@
   import { push } from 'svelte-spa-router'
   import { STORIES } from './stories'
   import { purakauState } from '../../lib/purakauState.svelte'
-  import { speak } from '../../lib/settings.svelte'
+  import { narrate } from '../../lib/settings.svelte'
   import {
     openBook,
     woodTable,
@@ -56,7 +56,7 @@
       // Let the grey cover paint first, then animate to colour.
       setTimeout(() => (revealOn = true), 650)
       const s = STORIES.find((x) => x.id === id)
-      speak(
+      narrate(
         `Ka rawe! You finished the story of ${s?.teReo ?? 'the pūrākau'}. Look — your storybook page is filling with colour! You earned the Hei Matau badge.`,
       )
     }
