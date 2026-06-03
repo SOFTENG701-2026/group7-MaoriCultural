@@ -67,10 +67,13 @@
   // Confident must pick the correct answer first.
   const showFinish = $derived(!isConfident || checkPassed)
 
+  // Read to me speaks exactly what is on screen.
   const readText = $derived(
     `Marae Visit Complete! ${kikiSays} ` +
     summary.map(s => s.label).join('. ') + '. ' +
-    (isConfident ? 'Tikanga can depend on people, place, and context.' : reminder)
+    (isConfident
+      ? `Tikanga can depend on… ${checkOptions.map(o => o.label).join('. ')}.`
+      : reminder)
   )
 </script>
 

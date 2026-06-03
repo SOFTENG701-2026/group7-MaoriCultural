@@ -10,7 +10,6 @@
   import needHelp   from '../../assets/tikanga/need help.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
   import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
@@ -54,16 +53,25 @@
   let wrongCount = $state(0)
 
   // Top tooltip — auto-hides after 3 seconds.
-  let feedback = $state<{ type: 'success' | 'error'; hint?: string } | null>(null)
+  let feedback = $state<{ type: 'success' | 'error' | 'hint'; hint?: string } | null>(null)
   let feedbackTimer: ReturnType<typeof setTimeout>
 
-  function showFeedback(type: 'success' | 'error', hint?: string) {
+  function showFeedback(type: 'success' | 'error' | 'hint', hint?: string) {
     feedback = { type, hint }
     clearTimeout(feedbackTimer)
-    feedbackTimer = setTimeout(() => { feedback = null }, 3000)
+    feedbackTimer = setTimeout(() => { feedback = null }, type === 'hint' ? 5000 : 3000)
   }
 
-  const readText = $derived(`Station 1: Entrance. ${quiz.question}`)
+  // Read to me speaks exactly what is on screen: the question and every choice.
+  const readText = $derived(
+    `${quiz.question} ${choices.map(c => c.label).join('. ')}.`
+  )
+
+  // Need help gives a silent hint that points to the answer option.
+  const helpHint = $derived(`Tip: try ${choices.find(c => c.correct)?.label}.`)
+  function showHelp() {
+    showFeedback('hint', helpHint)
+  }
 
   function pick(choice: Choice) {
     if (completed) return
@@ -73,11 +81,9 @@
       shaking = choice.id
       // On the 2nd+ wrong attempt, give the stronger "point to the answer" hint.
       const hint = wrongCount >= 2 ? quiz.repeatHint : choice.hint
-      speak(hint)
       showFeedback('error', hint)
       setTimeout(() => { shaking = null }, 600)
     } else {
-      speak(quiz.success)
       completed = true
       showFeedback('success')
     }
@@ -105,6 +111,13 @@
       <img src={kiwiTry} alt="Try again" class="tooltip-kiwi" />
       <div class="tooltip-text">
         <strong>Try again</strong>
+        <span>{feedback.hint}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'hint'}
+    <div class="top-tooltip hint fade-in">
+      <div class="tooltip-text">
+        <strong>Hint</strong>
         <span>{feedback.hint}</span>
       </div>
     </div>
@@ -148,7 +161,7 @@
     </div>
 
     <!-- Help button -->
-    <button class="help-btn" onclick={() => speak('Wait at the entrance. Good tikanga means you wait until the tangata whenua welcome you in.')} aria-label="Need help?">
+    <button class="help-btn" onclick={showHelp} aria-label="Need help?">
       <img src={needHelp} alt="Need help?" />
     </button>
   </div>
@@ -449,6 +462,10 @@
     background: #fff8ec;
     border: 2.5px solid #F5A623;
   }
+  .top-tooltip.hint {
+    background: #eef4ff;
+    border: 2.5px solid #2255cc;
+  }
   .tooltip-kiwi {
     width: 52px;
     height: 52px;
@@ -473,4 +490,5 @@
   }
   .top-tooltip.success .tooltip-text strong { color: #2e7d32; }
   .top-tooltip.error   .tooltip-text strong { color: #8a5a00; }
+  .top-tooltip.hint    .tooltip-text strong { color: #1a3e9e; }
 </style>

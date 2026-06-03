@@ -34,7 +34,8 @@
   const showTangataCard = $derived(tikangaState.level === 'confident' && clicked.size >= 2)
   const canProceed = $derived(tikangaState.level === 'beginner' ? allClicked : clicked.size >= 2)
 
-  const readText = 'What is Tikanga? Listen first. Watch and wait. Stay calm inside. Share kai and care.'
+  // Read to me speaks exactly what is on screen: title + the four goals.
+  const readText = `What is Tikanga? ${goals.map(g => g.text).join(' ')}`
 
   function clickGoal(i: number) {
     clicked = new Set([...clicked, i])

@@ -23,16 +23,11 @@
   // Fixed bubble text — always the same greeting on the left
   const bubbleText = 'Kia ora! I am visiting a marae. Help me make respectful choices.'
 
-  // Level description shown near the centre buttons
-  const levelDesc = $derived(
-    tikangaState.level === 'beginner'
-      ? 'I am learning about marae and tikanga for the first time.'
-      : 'I have seen or learned some marae tikanga before.'
-  )
-
-  const readText = $derived(
-    `Kia ora! I am visiting a marae. Choose your visit level. ${levelDesc}`
-  )
+  // Read to me speaks exactly what is on screen.
+  const readText =
+    `${bubbleText} Choose your visit level. ` +
+    'Beginner Level: I am learning about marae and tikanga for the first time. ' +
+    'Confident Level: I have seen or learned some marae tikanga before. Start Visit.'
 
   function selectLevel(l: LearnerLevel) {
     tikangaState.setLevel(l)
