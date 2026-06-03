@@ -142,8 +142,24 @@
   const isLast = $derived(qIndex === total - 1)
   const qHintLines = $derived(hintLines(q.hint))
 
+  // Show answer options in a randomised order so the correct answer isn't always
+  // in the same position. Reshuffles only when the question changes.
+  function shuffle(opts: Opt[]): Opt[] {
+    const a = [...opts]
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+  }
+  let shuffledOptions = $state<Opt[]>([])
+  $effect(() => {
+    // Tied to the current question; picking/solving does not reshuffle.
+    shuffledOptions = shuffle(q.options)
+  })
+
   const readText = $derived(
-    `${instruction} ${q.prompt} ` + q.options.map((o, i) => `Sticker ${i + 1}: ${o.text}.`).join(' ')
+    `${instruction} ${q.prompt} ` + shuffledOptions.map((o, i) => `Sticker ${i + 1}: ${o.text}.`).join(' ')
   )
 
   function pick(opt: string) {
@@ -209,11 +225,11 @@
   </div>
 
   <!-- ════ Interaction zone: notebook with the question + sticker options ════ -->
-  <div class="notebook" style="background-image:url({bookImg})">
+  <div class="notebook" class:confident={!isBeginner} style="background-image:url({bookImg})">
     <p class="q-prompt">{q.prompt}</p>
 
     <ul class="opts" class:cards={isBeginner} class:text={!isBeginner} aria-label="Answer stickers">
-      {#each q.options as o (o.text)}
+      {#each shuffledOptions as o (o.text)}
         <li>
           {#if isBeginner}
             <button
@@ -462,6 +478,15 @@
     padding: clamp(14px, 2vw, 26px) clamp(48px, 6vw, 76px);
     box-sizing: border-box;
   }
+  /* Confident: long single-column answers sit close to the prompt, so raise the
+     prompt to the top of the notebook and add a clear gap (~20%) before them. */
+  .notebook.confident {
+    justify-content: flex-start;
+    padding-top: clamp(22px, 4.5vw, 52px);
+  }
+  .notebook.confident .q-prompt {
+    margin-bottom: clamp(20px, 5vw, 56px);
+  }
   .q-prompt {
     margin: 0 0 clamp(8px, 1.4vw, 16px);
     text-align: center;
@@ -481,7 +506,7 @@
     gap: clamp(8px, 1.2vw, 14px);
   }
   .opts.cards { grid-template-columns: 1fr 1fr; }
-  .opts.text  { grid-template-columns: 1fr; gap: clamp(7px, 1vw, 12px); }
+  .opts.text  { grid-template-columns: 1fr; gap: clamp(14px, 2.2vw, 26px); }
   .opts li { display: flex; }
   .opt {
     width: 100%;
