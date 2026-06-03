@@ -6,6 +6,7 @@ const onMapNavigate = (id: string) => {
   if (id === 'waiata')   push('/song');
   if (id === 'tikanga')  push('/tikanga');
   if (id === 'pepeha')   push('/pepeha');
+  if (id === 'purakau')  push('/purakau');
 };
 
 const onSongStart = () => push('/song/learn');
@@ -166,6 +167,22 @@ const routes = {
     asyncComponent: () =>
       import('./pages/PepehaPages/PepehaRewardPage.svelte').then(m => m.default),
     props: { onMap: onBackToMap, onBack: () => push('/pepeha/quiz') },
+  }),
+
+  // ── Purākau module (story-based learning) ─────────────────────────────────
+  // Step 1 — the flippable storybook hub (also where the finished cover is
+  // coloured in on return). Step 6 happens here too.
+  '/purakau': wrap({
+    asyncComponent: () =>
+      import('./pages/PurakauPages/PurakauStorybookPage.svelte').then(m => m.default),
+    props: { onMap: onBackToMap },
+  }),
+
+  // Steps 2–6 — the story player (Kiki intro → interactive scenes → sequencing
+  // → quiz → wrap-up). The active story is read from purakauState.
+  '/purakau/play': wrap({
+    asyncComponent: () =>
+      import('./pages/PurakauPages/PurakauStoryPage.svelte').then(m => m.default),
   }),
 
   // Fallback: unknown paths return to the home map.
