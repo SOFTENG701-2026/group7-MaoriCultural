@@ -179,7 +179,7 @@
     top: 12%;
     right: 12%;
     font-size: 9cqmin;
-    font-family: 'Baloo 2', 'Nunito', sans-serif;
+    font-family: 'Fredoka', 'Nunito', sans-serif;
     font-weight: 800;
     color: #fff;
     text-shadow: 0 1cqmin 2cqmin rgba(0, 0, 0, 0.6);

@@ -127,9 +127,9 @@ const mauiFishesUpTheIsland: Story = {
       interaction: {
         kind: 'prop',
         prompt: 'Help Māui! Which taonga can catch a giant fish?',
-        clue: "Kiki's clue: look for something made of bone, with a sharp, curved point — just right for hooking a big fish!",
+        clue: 'Clue: look for something made of bone, with a sharp, curved point.',
         correctId: 'matau',
-        cheer: "Ka pai! That's the matau — Māui's magic fish hook, carved from his grandmother's jawbone!",
+        cheer: "Ka pai! That's the matau — Māui's magic fish hook!",
       },
     },
     {

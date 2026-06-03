@@ -104,19 +104,21 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: clamp(8px, 1.6vh, 16px);
     width: 100%;
     max-width: 880px;
+    height: 100%;
     margin: 0 auto;
-    padding-bottom: 96px;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
-  .progress { display: flex; gap: 8px; }
+  .progress { flex: 0 0 auto; display: flex; gap: 8px; }
   .pip { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: background 0.3s, transform 0.3s; }
   .pip.on { background: #f5a623; transform: scale(1.25); }
   .pip.seen { background: #4caf50; }
 
-  .slide { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; animation: slideIn 0.32s ease both; }
+  .slide { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: 100%; animation: slideIn 0.32s ease both; }
   .slide.leaving { animation: slideOut 0.26s ease forwards; }
   @keyframes slideIn { from { opacity: 0; transform: translateX(36px); } to { opacity: 1; transform: translateX(0); } }
   @keyframes slideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-36px); } }
@@ -137,28 +139,28 @@
   .card {
     width: 100%;
     background: rgba(255, 255, 255, 0.97);
-    border-radius: 24px;
-    padding: 30px 26px 26px;
+    border-radius: 22px;
+    padding: 22px 22px 20px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.17);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
+    gap: clamp(12px, 2vh, 18px);
     box-sizing: border-box;
   }
-  h1 { font-size: clamp(24px, 3.4vw, 40px); font-weight: 900; color: #111; margin: 0; text-align: center; line-height: 1.2; }
+  h1 { font-size: clamp(20px, 3vw, 36px); font-weight: 900; color: #111; margin: 0; text-align: center; line-height: 1.2; }
 
-  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; width: 100%; }
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
   .opt {
     border: 3px solid transparent;
-    border-radius: 18px;
-    padding: 22px 14px;
+    border-radius: 16px;
+    padding: 12px 10px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    min-height: 150px;
+    gap: 8px;
+    min-height: clamp(92px, 15vh, 132px);
     justify-content: center;
     background: #f7f5ff;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
@@ -170,8 +172,8 @@
   .opt:focus-visible { outline: 3px solid #aa3bff; outline-offset: 2px; }
   .opt.correct { border-color: #4caf50 !important; background: #f0fff4 !important; box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3) !important; }
   .opt.wrong { border-color: #f5a623 !important; background: #fffbf0 !important; box-shadow: 0 4px 16px rgba(245, 166, 35, 0.35) !important; }
-  .emoji { font-size: 52px; line-height: 1; }
-  .word { font-size: clamp(16px, 2vw, 21px); font-weight: 800; color: #111; text-align: center; }
+  .emoji { font-size: clamp(32px, 6vh, 50px); line-height: 1; }
+  .word { font-size: clamp(15px, 1.9vw, 20px); font-weight: 800; color: #111; text-align: center; }
 
   .feedback { display: flex; flex-direction: column; gap: 12px; width: 100%; }
   .funfact {
@@ -183,20 +185,18 @@
     box-shadow: 0 6px 18px rgba(245, 166, 35, 0.25);
     animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
-  .ff-label { font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 900; color: #b3690a; font-size: 16px; }
+  .ff-label { font-family: 'Fredoka', system-ui, sans-serif; font-weight: 900; color: #b3690a; font-size: 16px; }
   .funfact p { margin: 4px 0 0; color: #5a3a00; font-weight: 600; font-size: clamp(15px, 1.8vw, 18px); line-height: 1.5; }
 
   .bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 30;
-    padding: 12px 20px 20px;
+    flex: 0 0 auto;
+    width: 100%;
+    padding: 4px 4px 2px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+    box-sizing: border-box;
   }
   .pill {
     border: none;

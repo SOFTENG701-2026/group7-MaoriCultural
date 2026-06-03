@@ -70,13 +70,13 @@
 <div class="picker">
   <!-- Prompt + clue / feedback from Kiki -->
   {#if solved}
-    <KiwiGuide pose="yes" text={interaction.cheer} />
+    <KiwiGuide pose="yes" text={interaction.cheer} size="sm" />
   {:else if thinking}
-    <KiwiGuide pose="think" text="Hmm… let me think how to help you." />
+    <KiwiGuide pose="think" text="Hmm… let me think how to help you." size="sm" />
   {:else if wrongId && hint}
-    <KiwiGuide pose="tryagain" text={hint} />
+    <KiwiGuide pose="tryagain" text={hint} size="sm" />
   {:else}
-    <KiwiGuide pose="think" text={`${interaction.prompt} ${interaction.clue}`} />
+    <KiwiGuide pose="think" text={`${interaction.prompt} ${interaction.clue}`} size="sm" />
   {/if}
 
   <!-- The tray of five taonga -->
@@ -105,18 +105,21 @@
   .picker {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 10px;
     width: 100%;
+    align-items: center;
   }
 
   .tray {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 12px;
+    gap: 10px;
     width: 100%;
+    max-width: 700px;
+    margin: 0 auto;
   }
   @media (max-width: 720px) {
-    .tray { grid-template-columns: repeat(3, 1fr); }
+    .tray { grid-template-columns: repeat(5, 1fr); max-width: 100%; gap: 6px; }
   }
 
   .slot {
@@ -125,14 +128,14 @@
     background-color: transparent;
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    border-radius: 18px;
-    padding: 14px 8px 10px;
+    border-radius: 16px;
+    padding: 10px 6px 8px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    aspect-ratio: 1 / 1.05;
+    gap: 4px;
+    aspect-ratio: 1 / 0.9;
     transition: transform 0.15s ease, filter 0.2s ease;
     outline: none;
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.22));
@@ -150,7 +153,7 @@
   }
 
   .name {
-    font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+    font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
     font-weight: 800;
     font-size: clamp(12px, 1.5vw, 17px);
     color: #3a2410;

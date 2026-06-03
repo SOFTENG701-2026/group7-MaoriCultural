@@ -98,7 +98,7 @@
       {:else if step === 'celebrate'}
         <!-- Step 6 — Wrap-up, then back to the storybook to colour the page -->
         <div class="celebrate fade-in">
-          <KiwiGuide pose="yes" text="Ka rawe! You finished the whole pūrākau!" size="lg" />
+          <KiwiGuide pose="yes" text="Ka rawe! You finished the whole pūrākau!" size="md" />
           <img class="big-badge" src={heiMatau} alt="Hei Matau badge" />
           <button class="big-cta" onclick={() => push('/purakau')}>See my storybook →</button>
         </div>
@@ -110,13 +110,14 @@
 <style>
   .player {
     position: relative;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh; /* fit the visible viewport exactly — no page scroll */
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-family: 'Nunito', 'Baloo 2', system-ui, sans-serif;
-    overflow-x: hidden;
+    font-family: 'Nunito', 'Fredoka', system-ui, sans-serif;
+    overflow: hidden;
   }
   .bg {
     position: fixed;
@@ -145,40 +146,68 @@
   .stage {
     position: relative;
     z-index: 10;
-    width: 92%;
+    width: 94%;
     max-width: 1000px;
     margin: 0 auto;
-    padding: 72px 0 24px;
+    padding: 54px 6px 8px;
     flex: 1;
+    min-height: 0; /* allow children to fit/shrink instead of growing the page */
     display: flex;
     flex-direction: column;
     align-items: center;
+    box-sizing: border-box;
   }
 
-  /* Intro (Step 2) */
-  .intro { display: flex; flex-direction: column; align-items: center; gap: 26px; margin: auto 0; }
+  /* Intro (Step 2) — fills the content area and centres within it. */
+  .intro {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(14px, 3vh, 26px);
+    width: 100%;
+    overflow: hidden;
+  }
   .intro-kiki {
     background: rgba(255, 255, 255, 0.12);
     border-radius: 28px;
-    padding: 18px;
+    padding: clamp(10px, 2vh, 18px);
     width: min(720px, 92vw);
     box-sizing: border-box;
   }
 
-  .celebrate { display: flex; flex-direction: column; align-items: center; gap: 22px; margin: auto 0; width: min(720px, 92vw); }
+  /* Celebrate (Step 6 wrap-up) — height-fit so "See my storybook" is always
+     fully visible; badge is sized by HEIGHT (the hook art is tall) so it can't
+     balloon and push the button off-screen. */
+  .celebrate {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 2.4vh, 22px);
+    width: min(720px, 92vw);
+    overflow: hidden;
+  }
   .big-badge {
-    width: clamp(110px, 18vw, 170px);
+    height: clamp(72px, 13vh, 132px);
+    width: auto;
+    flex: 0 0 auto;
     filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.4));
     animation: badgePop 0.6s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   @keyframes badgePop { from { opacity: 0; transform: scale(0) rotate(-30deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
 
   .big-cta {
+    flex: 0 0 auto;
     border: none;
     border-radius: 100px;
-    padding: 18px 46px;
-    font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
-    font-size: clamp(18px, 2.6vw, 24px);
+    padding: clamp(12px, 2vh, 18px) clamp(28px, 5vw, 46px);
+    font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+    font-size: clamp(17px, 2.6vw, 24px);
     font-weight: 800;
     color: #2c1600;
     background: linear-gradient(180deg, #ffd24a, #f5a623);

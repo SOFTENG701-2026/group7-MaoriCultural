@@ -292,7 +292,7 @@
     border-radius: 50%;
     background: #d9c3a0;
     color: #6b4a22;
-    font-family: 'Baloo 2', system-ui, sans-serif;
+    font-family: 'Fredoka', system-ui, sans-serif;
     font-weight: 900;
     font-size: 16px;
     box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
@@ -364,7 +364,7 @@
     border: none;
     border-radius: 999px;
     padding: 16px 40px;
-    font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+    font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
     font-size: 20px;
     font-weight: 800;
     color: #2c1600;
@@ -407,7 +407,7 @@
   }
   .play-cap {
     margin: 0;
-    font-family: 'Baloo 2', system-ui, sans-serif;
+    font-family: 'Fredoka', system-ui, sans-serif;
     font-weight: 800;
     font-size: clamp(18px, 2.6vw, 26px);
     color: #3a2410;

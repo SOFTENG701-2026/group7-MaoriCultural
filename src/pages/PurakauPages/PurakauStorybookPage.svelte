@@ -79,6 +79,7 @@
 
   <header class="head">
     <h1>Ngā Pūrākau</h1>
+    <p> </p>
     <p class="sub">Kiki's Book of Māori Stories</p>
   </header>
 
@@ -175,17 +176,20 @@
 <style>
   .page {
     position: relative;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh; /* fit the viewport — book scales so nothing scrolls */
     width: 100%;
     background-size: 480px;
     background-repeat: repeat;
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
-    overflow-x: hidden;
+    justify-content: center;
+    gap: clamp(6px, 1.4vh, 14px);
+    font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+    overflow: hidden;
     box-sizing: border-box;
-    padding: 18px 12px 40px;
+    padding: 12px 12px 14px;
   }
   .page::before {
     content: '';
@@ -217,9 +221,9 @@
     color: #333;
   }
 
-  .head { position: relative; z-index: 2; text-align: center; margin: 6px 0 10px; }
+  .head { position: relative; z-index: 2; flex: 0 0 auto; text-align: center; margin: 0; }
   .head h1 {
-    font-family: 'Baloo 2', system-ui, sans-serif;
+    font-family: 'Fredoka', system-ui, sans-serif;
     font-size: clamp(30px, 5vw, 52px);
     font-weight: 800;
     color: #fff3d6;
@@ -227,13 +231,16 @@
     text-shadow: 0 3px 0 #5a3210, 0 6px 14px rgba(0, 0, 0, 0.5);
     letter-spacing: 0.5px;
   }
-  .sub { margin: 2px 0 0; color: #ffe6b0; font-weight: 600; font-size: clamp(14px, 2vw, 19px); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+  .sub { margin: clamp(20px, 1.8vh, 16px) 0 0; color: #ffe6b0; font-weight: 600; font-size: clamp(14px, 2vw, 19px); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
 
   .book-row {
     position: relative;
     z-index: 2;
+    flex: 0 1 auto;
+    min-height: 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: clamp(4px, 1.5vw, 18px);
     width: 100%;
     max-width: 1040px;
@@ -257,7 +264,10 @@
 
   .book {
     position: relative;
-    flex: 1;
+    flex: 0 1 auto;
+    width: 100%;
+    /* Cap by the available height so the whole book always fits on screen. */
+    max-width: calc((100dvh - 200px) * 1.5);
     aspect-ratio: 384 / 256;
     background-size: 100% 100%;
     background-repeat: no-repeat;
@@ -331,7 +341,7 @@
     text-transform: uppercase;
   }
   .right-page h2 {
-    font-family: 'Baloo 2', system-ui, sans-serif;
+    font-family: 'Fredoka', system-ui, sans-serif;
     color: #3a2410;
     font-size: clamp(16px, 2.6vw, 30px);
     font-weight: 800;
@@ -353,7 +363,7 @@
     border: none;
     border-radius: 100px;
     padding: clamp(10px, 1.4vw, 15px) clamp(20px, 3vw, 34px);
-    font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+    font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
     font-size: clamp(14px, 1.9vw, 20px);
     font-weight: 800;
     color: #2c1600;
@@ -387,7 +397,7 @@
   .confetti span:nth-child(5) { left: 86%; animation-delay: 0.3s; }
   @keyframes fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(380px) rotate(220deg); opacity: 0; } }
 
-  .dots { position: relative; z-index: 2; display: flex; gap: 12px; margin-top: 18px; }
+  .dots { position: relative; z-index: 2; flex: 0 0 auto; display: flex; gap: 12px; margin-top: 0; }
   .dot {
     width: 16px;
     height: 16px;

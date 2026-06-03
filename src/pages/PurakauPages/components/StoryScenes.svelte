@@ -126,6 +126,10 @@
     </div>
   {/if}
 
+  {#if needsSolve}
+    <p class="locked-note">Help Kiki finish this part to keep reading.</p>
+  {/if}
+
   <!-- Bottom nav -->
   <nav class="bottom-nav">
     <button class="pill ghost" onclick={back}>← Back</button>
@@ -134,76 +138,90 @@
       {isLast ? 'Finish reading →' : 'Next →'}
     </button>
   </nav>
-
-  {#if needsSolve}
-    <p class="locked-note">Help Kiki finish this part to keep reading.</p>
-  {/if}
 </div>
 
 <style>
+  /* Fills the player's content area exactly and lays out as a column that
+     never exceeds the viewport — the illustration flexes to absorb spare space
+     so the interaction + nav are always on-screen (no page scroll). */
   .scenes {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: clamp(6px, 1.4vh, 14px);
     width: 100%;
     max-width: 960px;
+    height: 100%;
     margin: 0 auto;
-    padding-bottom: 92px;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
-  .progress { display: flex; gap: 8px; }
+  .progress { flex: 0 0 auto; display: flex; gap: 8px; }
   .pip { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: background 0.3s, transform 0.3s; }
   .pip.on { background: #f5a623; transform: scale(1.25); }
   .pip.seen { background: #4caf50; }
 
-  /* Illustration + narration sit side by side on wide screens so the
-     end-of-scene interaction stays visible without scrolling. */
+  /* Illustration + narration side by side on wide screens; this row takes the
+     leftover height and the art is capped so it shrinks first. */
   .top {
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
-    gap: 16px;
+    gap: 14px;
     width: 100%;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
   }
   @media (max-width: 820px) {
-    .top { flex-direction: column; align-items: stretch; }
+    .top { flex-direction: column; align-items: center; gap: 8px; }
   }
 
   .art-card {
-    flex: 1 1 48%;
-    min-width: 0;
+    flex: 0 0 auto;
+    width: min(52%, calc(44vh * 1.6));
+    aspect-ratio: 16 / 10;
+    max-height: 100%;
     border: 6px solid #9c6b34;
-    border-radius: 20px;
+    border-radius: 18px;
     background: #9c6b34;
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3), inset 0 0 0 3px rgba(255, 255, 255, 0.18);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.3), inset 0 0 0 3px rgba(255, 255, 255, 0.18);
     overflow: hidden;
   }
-  .art-inner { width: 100%; animation: artIn 0.5s ease both; }
+  @media (max-width: 820px) {
+    .art-card { width: min(100%, calc(30vh * 1.6)); }
+  }
+  .art-inner { width: 100%; height: 100%; animation: artIn 0.5s ease both; }
   @keyframes artIn { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: scale(1); } }
 
   .story-page {
     position: relative;
-    flex: 1 1 52%;
+    flex: 1 1 48%;
     min-width: 0;
+    max-height: 100%;
     align-self: stretch;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    gap: 6px;
     background: rgba(255, 252, 245, 0.97);
-    border-radius: 20px;
-    padding: 20px 24px 20px 50px;
+    border-radius: 18px;
+    padding: 14px 18px 14px 44px;
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
     text-align: left;
     box-sizing: border-box;
+    overflow-y: auto; /* long narration scrolls inside the card, not the page */
+  }
+  @media (max-width: 820px) {
+    .story-page { flex: 0 1 auto; align-self: stretch; }
   }
   .story-page .lead {
-    margin: 0 0 10px;
+    margin: 0;
     color: #2c2440;
-    font-size: clamp(16px, 2vw, 22px);
+    font-size: clamp(14px, 1.7vw, 20px);
     font-weight: 600;
-    line-height: 1.55;
+    line-height: 1.45;
   }
-  .story-page .lead:last-child { margin-bottom: 0; }
   .page-read {
     position: absolute;
     top: 16px;
@@ -220,15 +238,15 @@
   .page-read:hover { background: #e4d8ff; }
   .page-read:focus-visible { outline: 3px solid #aa3bff; outline-offset: 2px; }
 
-  .interaction { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+  .interaction { flex: 0 0 auto; width: 100%; display: flex; flex-direction: column; gap: 10px; }
 
   /* Tap-to-pull mini-interaction */
   .tap-game { align-items: center; }
   .pull-target {
     border: none;
     background: radial-gradient(circle at 50% 35%, #fff3d6, #f3c46a);
-    width: 150px;
-    height: 150px;
+    width: clamp(96px, 14vh, 128px);
+    height: clamp(96px, 14vh, 128px);
     border-radius: 50%;
     cursor: pointer;
     display: flex;
@@ -243,8 +261,8 @@
   .pull-target:active { transform: scale(0.92); }
   .pull-target.tug { animation: tug 0.18s ease; }
   .pull-target:focus-visible { outline: 4px solid #aa3bff; outline-offset: 3px; }
-  .rope { font-size: 56px; line-height: 1; }
-  .pull-label { font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 900; color: #8a5a00; font-size: 20px; }
+  .rope { font-size: clamp(36px, 7vh, 50px); line-height: 1; }
+  .pull-label { font-family: 'Fredoka', system-ui, sans-serif; font-weight: 900; color: #8a5a00; font-size: clamp(15px, 2.4vh, 19px); }
   @keyframes tug { 0% { transform: translateY(0) scale(1); } 50% { transform: translateY(6px) scale(0.95); } 100% { transform: translateY(0) scale(1); } }
 
   .tug-meter { display: flex; gap: 8px; }
@@ -252,16 +270,14 @@
   .tug-pip.on { background: #4caf50; }
 
   .bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 30;
-    padding: 12px 20px 20px;
+    flex: 0 0 auto;
+    width: 100%;
+    padding: 4px 4px 2px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+    box-sizing: border-box;
   }
 
   .pill {
@@ -284,17 +300,13 @@
   .cta:disabled { background: #d3cbbe; color: #7c7468; cursor: not-allowed; transform: none; box-shadow: none; }
 
   .locked-note {
-    position: fixed;
-    bottom: 74px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 30;
+    flex: 0 0 auto;
     margin: 0;
     font-size: 13px;
     font-weight: 700;
     color: #fff;
     background: rgba(138, 90, 0, 0.9);
-    padding: 5px 16px;
+    padding: 4px 16px;
     border-radius: 999px;
     pointer-events: none;
   }
