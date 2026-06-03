@@ -23,10 +23,11 @@
   import readImg     from '../../assets/pepeha/page3/a_clean_simple_graphic_gui_scene_a_bright_neon_g_2_batch_2_transparent.png'
   import findMaungaImg from '../../assets/pepeha/page3/a_clean_graphic_ui_image_on_a_solid_bright_green_b_4_batch_4_transparent.png'
   import kikiImg     from '../../assets/kiwihello.png'
+  import settingsImg from '../../assets/settings.png'
 
   import { SCHOOL_PROFILES } from './schools'
   import { pepehaState } from '../../lib/pepehaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
+  import { speak, settings } from '../../lib/settings.svelte'
 
   interface Props {
     onNext: () => void
@@ -73,6 +74,11 @@
   <!-- Back — top-left -->
   <button class="img-btn back-btn" onclick={onBack} aria-label="Back">
     <img src={backImg} alt="Back" />
+  </button>
+
+  <!-- Settings — top-right -->
+  <button class="settings-btn" onclick={() => (settings.open = true)} aria-label="Settings">
+    <img src={settingsImg} alt="Settings" />
   </button>
 
   <!-- Static title with a play button tucked into its bottom-right corner -->
@@ -170,6 +176,27 @@
   /* Back — top-left */
   .back-btn { position: absolute; top: -7%; left: 0%; z-index: 40; }
   .back-btn img { width: min(250px, 25.6vw); }
+
+  /* Settings — top-right */
+  .settings-btn {
+    position: absolute;
+    top: 3%;
+    right: 2%;
+    z-index: 40;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .settings-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .settings-btn:active { transform: scale(0.97); }
+  .settings-btn img {
+    width: min(90px, 11.25vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
+  }
 
   /* Static title — top centre (play button sits in its bottom-right corner) */
   .title-board {
