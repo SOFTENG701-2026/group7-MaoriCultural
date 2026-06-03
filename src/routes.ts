@@ -5,6 +5,7 @@ import { wrap } from 'svelte-spa-router/wrap';
 const onMapNavigate = (id: string) => {
   if (id === 'waiata')   push('/song');
   if (id === 'tikanga')  push('/tikanga');
+  if (id === 'pepeha')   push('/pepeha');
 };
 
 const onSongStart = () => push('/song/learn');
@@ -61,7 +62,7 @@ const routes = {
   '/tikanga': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStartPage.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/what-is') },
+    props: { onNext: () => push('/tikanga/what-is'), onMap: onBackToMap },
   }),
 
   '/tikanga/what-is': wrap({
@@ -104,6 +105,67 @@ const routes = {
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaRewardPage.svelte').then(m => m.default),
     props: { onMap: onBackToMap },
+  }),
+
+  // ── Pepeha module (10 pages) ──────────────────────────────────────────────
+  '/pepeha': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaStartPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/what-is'), onMap: onBackToMap },
+  }),
+
+  '/pepeha/what-is': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaWhatIsPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/school'), onBack: () => push('/pepeha') },
+  }),
+
+  '/pepeha/school': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaSchoolPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/maunga'), onBack: () => push('/pepeha/what-is') },
+  }),
+
+  '/pepeha/maunga': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaMaungaPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/awa'), onBack: () => push('/pepeha/school') },
+  }),
+
+  '/pepeha/awa': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaAwaPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/whanau'), onBack: () => push('/pepeha/maunga') },
+  }),
+
+  '/pepeha/whanau': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaWhanauPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/board'), onBack: () => push('/pepeha/awa') },
+  }),
+
+  '/pepeha/board': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaBoardPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/practise'), onBack: () => push('/pepeha/whanau') },
+  }),
+
+  '/pepeha/practise': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaPractisePage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/quiz'), onBack: () => push('/pepeha/board') },
+  }),
+
+  '/pepeha/quiz': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaQuizPage.svelte').then(m => m.default),
+    props: { onNext: () => push('/pepeha/reward'), onBack: () => push('/pepeha/practise') },
+  }),
+
+  '/pepeha/reward': wrap({
+    asyncComponent: () =>
+      import('./pages/PepehaPages/PepehaRewardPage.svelte').then(m => m.default),
+    props: { onMap: onBackToMap, onBack: () => push('/pepeha/quiz') },
   }),
 
   // Fallback: unknown paths return to the home map.
