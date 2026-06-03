@@ -1,7 +1,9 @@
-// Grace Liao
-// Tracks which activities the child has completed. Persisted to localStorage
-// so progress survives page refreshes. Imported across pages so any component
-// can read or update completion state reactively.
+// Tracks which modules the child has completed.
+// Uses sessionStorage so progress survives tab refresh but resets when:
+//   - the terminal server is stopped and restarted (new session)
+//   - the browser tab is closed and reopened
+// This gives a clean start on each dev server run.
+// Key: 'mca-progress' — Devs A, B, C write to it; Dev D reads from it.
 
 const STORAGE_KEY = 'mca-progress'
 
@@ -9,11 +11,14 @@ class Progress {
   completed = $state<Set<string>>(new Set())
 
   constructor() {
-    if (typeof localStorage === 'undefined') return
+    if (typeof sessionStorage === 'undefined') return
+
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
+      const raw = sessionStorage.getItem(STORAGE_KEY)
       if (!raw) return
+
       const data = JSON.parse(raw) as { completed?: string[] }
+
       if (Array.isArray(data.completed)) {
         this.completed = new Set(data.completed)
       }
@@ -28,17 +33,25 @@ class Progress {
 
   markComplete(id: string): void {
     if (this.completed.has(id)) return
+
     this.completed = new Set([...this.completed, id])
+    this.save()
+  }
+
+  reset(): void {
+    this.completed = new Set()
     this.save()
   }
 
   private save(): void {
     try {
-      localStorage.setItem(
+      sessionStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({ completed: [...this.completed] })
       )
-    } catch { /* storage unavailable */ }
+    } catch {
+      // storage unavailable
+    }
   }
 }
 

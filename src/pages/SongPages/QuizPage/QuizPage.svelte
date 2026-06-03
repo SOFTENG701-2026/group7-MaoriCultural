@@ -1,11 +1,13 @@
-<!-- Grace Liao -->
 <script lang="ts">
   import background   from '../../../assets/common/background.png';
   import kiwiYes      from '../../../assets/quiz-page/kiwiyes.png';
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png';
   import kikiSays     from '../../../assets/quiz-page/kikisays.png';
+  import { onDestroy } from 'svelte';
   import { settings, speak } from '../../../lib/settings.svelte';
   import { push } from 'svelte-spa-router';
+
+
 
   interface Option {
     id: string;
@@ -30,14 +32,97 @@
   }
 
   interface Props {
+    level?:    string;   // 'beginner' | 'confident' | 'easy' | 'normal' | 'hard'
     onFinish?: () => void;
-    onBack?: () => void;
-    onMap?: () => void;
+    onBack?:   () => void;
+    onMap?:    () => void;
   }
 
-  let { onFinish = () => {}, onBack = () => push('/'), onMap = () => push('/') }: Props = $props();
+  let {
+    level    = 'beginner',
+    onFinish = () => {},
+    onBack   = () => push('/'),
+    onMap    = () => push('/'),
+  }: Props = $props();
 
-  const quizzes: Quiz[] = [
+  // ── Beginner quizzes (Colour song — Word Check + Meaning Check) ────────────
+  const beginnerQuizzes: Quiz[] = [
+    {
+      badge: 'Word check',
+      question: 'Which one is a Māori colour word from the song?',
+      readWord: 'Which one is a Māori colour word from the song? whero, kai, whare, kuri',
+      options: [
+        { id: 'whero', icon: '🔴', word: 'whero', isCorrect: true,  bg: '#fde8ee' },
+        { id: 'kai',   icon: '🍽️', word: 'kai',   isCorrect: false, bg: '#f0f4ff' },
+        { id: 'whare', icon: '🏠', word: 'whare', isCorrect: false, bg: '#f9f9f9' },
+        { id: 'kuri',  icon: '🐕', word: 'kuri',  isCorrect: false, bg: '#fef6e4' },
+      ],
+      correctTitle: 'Ka pai!',
+      correctBody:  'Whero is a colour word from the song — it means red!',
+      wrongTitle:   'Try again',
+      wrongBody:    'Look for a colour word from the song.',
+      kikiCorrect:  'Ka pai! Whero is the Māori word for red.',
+      kikiWrong:    'Hint: we sang about colours. Which word is a colour?',
+    },
+    {
+      badge: 'Meaning check',
+      question: 'What colour does "whero" mean?',
+      readWord: 'What colour does whero mean? red, white, green, black',
+      options: [
+        { id: 'red',   icon: '🔴', word: 'red',   isCorrect: true,  bg: '#fde8ee' },
+        { id: 'white', icon: '⬜', word: 'white', isCorrect: false, bg: '#f9f9f9' },
+        { id: 'green', icon: '🟢', word: 'green', isCorrect: false, bg: '#e8f5e9' },
+        { id: 'black', icon: '⬛', word: 'black', isCorrect: false, bg: '#f0f0f0' },
+      ],
+      correctTitle: 'Ka pai!',
+      correctBody:  'Whero means red. You remembered!',
+      wrongTitle:   'Try again',
+      wrongBody:    'Try again. Whero means red.',
+      kikiCorrect:  'Ka pai! Whero means red. Tino pai!',
+      kikiWrong:    'Whero is the colour of strawberries and tomatoes!',
+    },
+  ];
+
+  // ── Confident quizzes (Te Aroha — Word Check + Meaning Check) ─────────────
+  const confidentQuizzes: Quiz[] = [
+    {
+      badge: 'Word check',
+      question: 'Which word is from Te Aroha?',
+      readWord: 'Which word is from Te Aroha? aroha, kai, whare, kuri',
+      options: [
+        { id: 'aroha', icon: '💚', word: 'aroha', isCorrect: true,  bg: '#e8f5e9' },
+        { id: 'kai',   icon: '🍽️', word: 'kai',   isCorrect: false, bg: '#f0f4ff' },
+        { id: 'whare', icon: '🏠', word: 'whare', isCorrect: false, bg: '#f9f9f9' },
+        { id: 'kuri',  icon: '🐕', word: 'kuri',  isCorrect: false, bg: '#fef6e4' },
+      ],
+      correctTitle: 'Ka pai!',
+      correctBody:  'Aroha is a word from Te Aroha — it means love!',
+      wrongTitle:   'Try again',
+      wrongBody:    'Listen for a word from the song.',
+      kikiCorrect:  'Ka pai! Aroha is a word from Te Aroha.',
+      kikiWrong:    'Think about the words we sang. Which one is from Te Aroha?',
+    },
+    {
+      badge: 'Meaning check',
+      question: 'What does "rangimārie" mean in Te Aroha?',
+      readWord: 'What does rangimārie mean in Te Aroha? peace, food, house, dog',
+      options: [
+        { id: 'peace', icon: '🕊️', word: 'peace', isCorrect: true,  bg: '#e8f5e9' },
+        { id: 'food',  icon: '🍽️', word: 'food',  isCorrect: false, bg: '#fef6e4' },
+        { id: 'house', icon: '🏠', word: 'house', isCorrect: false, bg: '#f9f9f9' },
+        { id: 'dog',   icon: '🐕', word: 'dog',   isCorrect: false, bg: '#f0f4ff' },
+      ],
+      correctTitle: 'Ka pai!',
+      correctBody:  'Rangimārie means peace. Tino pai!',
+      wrongTitle:   'Try again',
+      wrongBody:    'Try again. Rangimārie is about peace.',
+      kikiCorrect:  'Ka pai! Rangimārie means peace.',
+      kikiWrong:    'Rangimārie is a beautiful word. It means peace and calm.',
+    },
+  ];
+
+  // ── Easy quizzes (Ngā Tae — colours song) ─────────────────────────────────
+  const easyQuizzes: Quiz[] = [
     {
       // FR10: recognise the Māori colour word from Ngā Tae
       badge: 'Word check',
@@ -76,6 +161,93 @@
     },
   ];
 
+  // ── Normal quizzes (Ngā Tau — numbers song) ───────────────────────────────
+  const normalQuizzes: Quiz[] = [
+    {
+      badge: 'Word check',
+      question: 'Which number is "rua" in Māori?',
+      readWord: 'Which number is rua in Māori? 1, 2, 3, 4',
+      options: [
+        { id: '1', icon: '1️⃣', word: 'tahi', isCorrect: false, bg: '#f9f9f9' },
+        { id: '2', icon: '2️⃣', word: 'rua',  isCorrect: true,  bg: '#fde8ee' },
+        { id: '3', icon: '3️⃣', word: 'toru', isCorrect: false, bg: '#fef6e4' },
+        { id: '4', icon: '4️⃣', word: 'whā',  isCorrect: false, bg: '#f0f4ff' },
+      ],
+      correctTitle: 'Āe!',
+      correctBody:  'Ka pai! "Rua" means 2 in te reo Māori.',
+      wrongTitle:   'Try again',
+      wrongBody:    'Listen again — which number word did you hear second in the song?',
+      kikiCorrect:  '"Rua" is 2. Tahi, rua, toru, whā — 1, 2, 3, 4!',
+      kikiWrong:    'The numbers go: tahi (1), rua (2), toru (3), whā (4).',
+    },
+    {
+      badge: 'Word check',
+      question: 'What does "tekau" mean?',
+      readWord: 'What does tekau mean? Five, Eight, Ten, Six',
+      options: [
+        { id: 'five',  icon: '5️⃣',  word: 'Five',  isCorrect: false, bg: '#f9f9f9' },
+        { id: 'eight', icon: '8️⃣',  word: 'Eight', isCorrect: false, bg: '#fde8ee' },
+        { id: 'ten',   icon: '🔟',  word: 'Ten',   isCorrect: true,  bg: '#fef6e4' },
+        { id: 'six',   icon: '6️⃣',  word: 'Six',   isCorrect: false, bg: '#f0f4ff' },
+      ],
+      correctTitle: 'Āe!',
+      correctBody:  'Ka pai! "Tekau" is 10 in te reo Māori.',
+      wrongTitle:   'Try again',
+      wrongBody:    'Listen for the last number in the song — tekau is at the end!',
+      kikiCorrect:  '"Tekau" means 10. You know your numbers now!',
+      kikiWrong:    'Tekau is the biggest number in the song. Count to the end!',
+    },
+  ];
+
+  // ── Hard quizzes (Ngā Kararehe — animals song) ────────────────────────────
+  const hardQuizzes: Quiz[] = [
+    {
+      badge: 'Word check',
+      question: 'What is the Māori word for "dog"?',
+      readWord: 'What is the Māori word for dog? Ngeru, Kurī, Hipi, Hōiho',
+      options: [
+        { id: 'ngeru', icon: '🐈', word: 'Ngeru', isCorrect: false, bg: '#f9f9f9' },
+        { id: 'kuri',  icon: '🐕', word: 'Kurī',  isCorrect: true,  bg: '#fde8ee' },
+        { id: 'hipi',  icon: '🐑', word: 'Hipi',  isCorrect: false, bg: '#fef6e4' },
+        { id: 'hoiho', icon: '🐴', word: 'Hōiho', isCorrect: false, bg: '#f0f4ff' },
+      ],
+      correctTitle: 'Āe!',
+      correctBody:  'Ka pai! "Kurī" is the Māori word for dog.',
+      wrongTitle:   'Try again',
+      wrongBody:    'Listen for the dog in the song — what word did you hear first?',
+      kikiCorrect:  '"Kurī" means dog. Woof woof — kurī!',
+      kikiWrong:    'Kurī is the dog. Ngeru is cat, hipi is sheep, hōiho is horse.',
+    },
+    {
+      badge: 'Word check',
+      question: 'Which animal is "rakiraki"?',
+      readWord: 'Which animal is rakiraki? Chicken, Pig, Duck, Cow',
+      options: [
+        { id: 'chicken', icon: '🐔', word: 'Chicken', isCorrect: false, bg: '#f9f9f9' },
+        { id: 'pig',     icon: '🐷', word: 'Pig',     isCorrect: false, bg: '#fde8ee' },
+        { id: 'duck',    icon: '🦆', word: 'Duck',    isCorrect: true,  bg: '#fef6e4' },
+        { id: 'cow',     icon: '🐄', word: 'Cow',     isCorrect: false, bg: '#f0f4ff' },
+      ],
+      correctTitle: 'Āe!',
+      correctBody:  'Ka pai! "Rakiraki" is the Māori word for duck.',
+      wrongTitle:   'Try again',
+      wrongBody:    'Think about which animal says "quack" — that is rakiraki!',
+      kikiCorrect:  '"Rakiraki" is duck. Quack quack — rakiraki!',
+      kikiWrong:    'Rakiraki is the duck. Heihei is chicken, poaka is pig, kau is cow.',
+    },
+  ];
+
+  // ── Select quiz set based on level ───────────────────────────────────────
+  function getQuizzes(): Quiz[] {
+    if (level === 'beginner')  return beginnerQuizzes;
+    if (level === 'confident') return confidentQuizzes;
+    if (level === 'normal')    return normalQuizzes;
+    if (level === 'hard')      return hardQuizzes;
+    return easyQuizzes;
+  }
+
+  const quizzes = getQuizzes();
+
   let currentIdx = $state(0);
   let selected   = $state<string | null>(null);
   let leaving    = $state(false);
@@ -89,16 +261,34 @@
     selected = opt.id;
   }
 
-  function goNext() {
-    if (!isCorrect) return;
-    if (isLast) { onFinish(); push('/reward'); return; }
-    leaving = true;
-    setTimeout(() => {
-      currentIdx++;
-      selected = null;
-      leaving  = false;
-    }, 280);
+function goNext() {
+  if (!isCorrect) return;
+
+  speechSynthesis.cancel();
+
+  if (isLast) {
+    onFinish();
+    return;
   }
+
+  leaving = true;
+  setTimeout(() => {
+    currentIdx++;
+    selected = null;
+    leaving = false;
+  }, 280);
+}
+
+
+function handleBack() {
+  speechSynthesis.cancel()
+  onBack()
+}
+
+function handleMap() {
+  speechSynthesis.cancel()
+  onMap()
+}
 
   // Routed through the shared helper so Sound on/off and Volume settings apply.
   function readToMe() {
@@ -111,13 +301,18 @@
     quiz.readWord; // track so it re-reads when the question changes
     if (settings.readMode === 'auto') speak(quiz.readWord);
   });
+
+
+  onDestroy(() => {
+  speechSynthesis.cancel();
+});
 </script>
 
 <div class="page">
   <div class="bg-image" style:background-image="url({background})" aria-hidden="true"></div>
 
   <!-- MAP BUTTON -->
-  <button class="pill btn-map" onclick={onMap}>← Map</button>
+<button class="pill btn-map" onclick={handleMap}>← Back to Map</button>
 
   <!-- MAIN QUIZ CARD + FEEDBACK -->
   <div class="content-wrap">
@@ -194,8 +389,7 @@
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="pill btn-back" onclick={onBack}>← Back</button>
-    <button class="pill btn-read" onclick={readToMe}>🔊 Read to me</button>
+<button class="pill btn-back" onclick={handleBack}>← Back</button>    <button class="pill btn-read" onclick={readToMe}>🔊 Read to me</button>
     <button class="pill btn-next" onclick={goNext} disabled={!isCorrect}>
       {isLast ? 'Finish →' : 'Next →'}
     </button>
@@ -210,7 +404,7 @@
     min-height: 100vh;
     width: 100%;
     overflow-x: hidden;
-    font-family: 'Nunito', 'Varela Round', 'Trebuchet MS', system-ui, sans-serif;
+    font-family: 'Nunito', 'Varela Round', system-ui, sans-serif; 
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -282,12 +476,29 @@
     display: flex; flex-direction: column; align-items: center;
     gap: 18px; box-sizing: border-box;
   }
+h1 {
+  font-size: clamp(30px, 4vw, 52px);
+  font-weight: 900;
+  color: #111827;
+  margin: 0;
+  text-align: center;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
 
-  h1 {
-    font-size: clamp(28px, 3.8vw, 46px);
-    font-weight: 900; color: #111; margin: 0;
-    text-align: center; line-height: 1.2; letter-spacing: -.5px;
-  }
+.word {
+  font-size: 24px;
+  font-weight: 900;
+  color: #111827;
+  letter-spacing: -0.3px;
+  text-align: center;
+}
+
+.lbl {
+  display: block;
+  font-size: 18px;
+  font-weight: 900;
+}
 
   /* ── Options ── */
   .opts {
