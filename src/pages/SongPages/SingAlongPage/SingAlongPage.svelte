@@ -26,15 +26,19 @@
   import kiwiYes from '../../../assets/quiz-page/kiwiyes.png'
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png'
 
-  const {
-    level = 'beginner',
-    onBack = () => push('/'),
-    onNext = () => push('/'),
-  } = $props<{
+  interface Props {
     level?: string
+    completed?: boolean
     onBack?: () => void
     onNext?: () => void
-  }>()
+  }
+
+  const {
+    level = 'beginner',
+    completed = false,
+    onBack = () => push('/'),
+    onNext = () => push('/'),
+  }: Props = $props()
 
   type SongLine = {
     maori: string
