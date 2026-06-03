@@ -6,6 +6,7 @@ const onMapNavigate = (id: string) => {
   if (id === 'waiata')   push('/song');
   if (id === 'tikanga')  push('/tikanga');
   if (id === 'pepeha')   push('/pepeha');
+  if (id === 'purakau')  push('/purakau');
 };
 
 const onSongFinish = () => push('/quiz');
@@ -71,37 +72,37 @@ const routes = {
   '/tikanga/what-is': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaWhatIsPage.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/station1'), onBack: () => push('/tikanga') },
+    props: { onNext: () => push('/tikanga/station1'), onBack: onBackToMap },
   }),
 
   '/tikanga/station1': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStation1Page.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/station2'), onBack: () => push('/tikanga/what-is') },
+    props: { onNext: () => push('/tikanga/station2'), onBack: onBackToMap },
   }),
 
   '/tikanga/station2': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStation2Page.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/station3'), onBack: () => push('/tikanga/station1') },
+    props: { onNext: () => push('/tikanga/station3'), onBack: onBackToMap },
   }),
 
   '/tikanga/station3': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStation3Page.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/station4'), onBack: () => push('/tikanga/station2') },
+    props: { onNext: () => push('/tikanga/station4'), onBack: onBackToMap },
   }),
 
   '/tikanga/station4': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStation4Page.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/review'), onBack: () => push('/tikanga/station3') },
+    props: { onNext: () => push('/tikanga/review'), onBack: onBackToMap },
   }),
 
   '/tikanga/review': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaReviewPage.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/reward'), onBack: () => push('/tikanga/station4') },
+    props: { onNext: () => push('/tikanga/reward'), onBack: onBackToMap },
   }),
 
   '/tikanga/reward': wrap({
@@ -169,6 +170,22 @@ const routes = {
     asyncComponent: () =>
       import('./pages/PepehaPages/PepehaRewardPage.svelte').then(m => m.default),
     props: { onMap: onBackToMap, onBack: () => push('/pepeha/quiz') },
+  }),
+
+  // ── Purākau module (story-based learning) ─────────────────────────────────
+  // Step 1 — the flippable storybook hub (also where the finished cover is
+  // coloured in on return). Step 6 happens here too.
+  '/purakau': wrap({
+    asyncComponent: () =>
+      import('./pages/PurakauPages/PurakauStorybookPage.svelte').then(m => m.default),
+    props: { onMap: onBackToMap },
+  }),
+
+  // Steps 2–6 — the story player (Kiki intro → interactive scenes → sequencing
+  // → quiz → wrap-up). The active story is read from purakauState.
+  '/purakau/play': wrap({
+    asyncComponent: () =>
+      import('./pages/PurakauPages/PurakauStoryPage.svelte').then(m => m.default),
   }),
 
   // Fallback: unknown paths return to the home map.

@@ -1,13 +1,18 @@
 <!-- Tikanga Module — Page 6: Station 4 Kai & Care -->
 <script lang="ts">
+  import bgImg1     from '../../assets/tikanga/p6 background1.png'
+  import bgImg2     from '../../assets/tikanga/p6 background2.png'
   import kiwiListen from '../../assets/tikanga/kiwiListenCarefully.png'
   import kiwiYes    from '../../assets/tikanga/kiwiyes.png'
   import kiwiTry    from '../../assets/tikanga/kiwitryagain.png'
   import needHelp   from '../../assets/tikanga/need help.png'
+  import lockedBtn  from '../../assets/tikanga/p6 locked next button.png'
+  import nextBtn    from '../../assets/tikanga/p6 next button.png'
+  import miniMapImg from '../../assets/tikanga/p6 map 4亮.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
+  import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
   interface Props {
     onNext: () => void
@@ -16,41 +21,113 @@
   let { onNext, onBack }: Props = $props()
 
   type Choice = { id: string; label: string; correct: boolean; hint: string }
+  type Quiz = {
+    title: string
+    support: string[]
+    kaiQuestion: string
+    kaiSuccess: string
+    careQuestion: string
+    finalSuccess: string
+    repeatHint: string
+    helpText: string
+    kaiChoices: Choice[]
+    careChoices: Choice[]
+  }
 
-  const kaiChoices: Choice[] = [
-    { id: 'karakia', label: '🙏 Wait for the karakia (grace) before eating', correct: true,  hint: '' },
-    { id: 'start',   label: '🍽️ Start eating right away',                    correct: false, hint: 'Always wait for the karakia (blessing) before eating at the marae.' },
-    { id: 'best',    label: '🥘 Take the best food first',                    correct: false, hint: 'Respect means waiting and not taking the best portions first.' },
-  ]
+  const beginnerQuiz: Quiz = {
+    title: 'Kai and Care',
+    support: [],
+    kaiQuestion: 'It is kai time. What should I do?',
+    kaiSuccess: 'You waited and said thank you.',
+    careQuestion: 'After kai, how can I care for this place?',
+    finalSuccess: 'Ka pai! You cared for people and place.',
+    repeatHint: 'Look for the safe caring choice.',
+    helpText: 'Wait, share, and say thank you. Then help care for this place safely.',
+    kaiChoices: [
+      { id: 'wait', label: '🍽️ Wait and say thank you', correct: true,  hint: '' },
+      { id: 'push', label: '🏃 Push in',                 correct: false, hint: 'Try again. Pushing is not fair to others.' },
+      { id: 'all',  label: '🍰 Take all the kai',        correct: false, hint: 'Try again. Sharing kai is kind.' },
+    ],
+    careChoices: [
+      { id: 'tidy',    label: '🌿 Tell an adult or tidy safely', correct: true,  hint: '' },
+      { id: 'rubbish', label: '🗑️ Leave rubbish',               correct: false, hint: 'Try again. We care for this place.' },
+      { id: 'plants',  label: '👟 Step on plants',               correct: false, hint: 'Try again. Plants need care too.' },
+    ],
+  }
 
-  const careChoices: Choice[] = [
-    { id: 'clean',  label: '🧹 Help clean up before you leave',                 correct: true,  hint: '' },
-    { id: 'leave',  label: '🚶 Leave quietly without saying goodbye',           correct: false, hint: 'Saying thank you and farewell is an important part of tikanga.' },
-    { id: 'rubbish',label: '🗑️ Leave your rubbish behind — they will clean it', correct: false, hint: 'Always clean up after yourself. Kaitiakitanga means caring for the space.' },
-  ]
+  const confidentQuiz: Quiz = {
+    title: 'Kai and Care',
+    support: ['Manaakitanga = care for people.', 'Kaitiakitanga = care for place.'],
+    kaiQuestion: 'What shows manaakitanga?',
+    kaiSuccess: 'You cared for people.',
+    careQuestion: 'What shows kaitiakitanga?',
+    finalSuccess: 'Ka pai! You cared for people and the place.',
+    repeatHint: 'Look for the safe caring choice.',
+    helpText: 'Manaakitanga means caring for people. Kaitiakitanga means caring for the place. Wait, share, and help safely.',
+    kaiChoices: [
+      { id: 'share',     label: '🍽️ Wait and share',            correct: true,  hint: '' },
+      { id: 'favourite', label: '🍰 Take favourite food first',  correct: false, hint: 'Try again. Manaakitanga means thinking about others too.' },
+      { id: 'before',    label: '🧃 Eat before others',          correct: false, hint: 'Try again. Wait until it is time to eat.' },
+    ],
+    careChoices: [
+      { id: 'care',    label: '🌿 Help care for the place',     correct: true,  hint: '' },
+      { id: 'move',    label: '🛠️ Move things without asking',  correct: false, hint: 'Try again. Helping is good, but Kiki should not move things unless it is okay.' },
+      { id: 'rubbish', label: '🗑️ Leave rubbish',               correct: false, hint: 'Try again. Visitors can still help care for the place.' },
+    ],
+  }
 
-  const termCards = [
-    { term: 'Manaakitanga', meaning: 'Showing kindness and hospitality to others' },
-    { term: 'Kaitiakitanga', meaning: 'Guardianship and care for people and the environment' },
-  ]
+  const quiz = $derived(tikangaState.level === 'beginner' ? beginnerQuiz : confidentQuiz)
+  const kaiChoices  = $derived(quiz.kaiChoices)
+  const careChoices = $derived(quiz.careChoices)
 
   let kaiAnswer  = $state<string | null>(null)
   let careAnswer = $state<string | null>(null)
   let part       = $state(1)   // 1 = kai, 2 = care
   let completed  = $state(false)
   let shaking    = $state<string | null>(null)
+  let wrongCount = $state(0)
 
-  const readText = 'Station 4: Kai and Care. Wait for the karakia before eating. Help clean up when you leave.'
+  const bgImg = $derived(part >= 2 ? bgImg2 : bgImg1)
+
+  // Top tooltip — auto-hides after 3 seconds (same as Station 1–3).
+  let feedback = $state<{ type: 'success' | 'error' | 'hint'; title: string; msg: string } | null>(null)
+  let feedbackTimer: ReturnType<typeof setTimeout>
+
+  function showFeedback(type: 'success' | 'error' | 'hint', title: string, msg: string) {
+    feedback = { type, title, msg }
+    clearTimeout(feedbackTimer)
+    feedbackTimer = setTimeout(() => { feedback = null }, type === 'hint' ? 5000 : 3000)
+  }
+
+  // Read to me speaks exactly what is on screen for the current step.
+  const readText = $derived(
+    part >= 2
+      ? `${quiz.title}. ${quiz.careQuestion} ${careChoices.map(c => c.label).join('. ')}.`
+      : `${quiz.title}. ${quiz.support.join(' ')} ${quiz.kaiQuestion} ${kaiChoices.map(c => c.label).join('. ')}.`
+  )
+
+  // Need help gives a silent hint that points to the current step's answer.
+  const helpHint = $derived(
+    part >= 2
+      ? `Tip: try ${careChoices.find(c => c.correct)?.label}.`
+      : `Tip: try ${kaiChoices.find(c => c.correct)?.label}.`
+  )
+  function showHelp() {
+    showFeedback('hint', 'Hint', helpHint)
+  }
 
   function pickKai(c: Choice) {
     if (part !== 1) return
     kaiAnswer = c.id
     if (!c.correct) {
+      wrongCount += 1
       shaking = c.id
-      speak(c.hint)
+      const hint = wrongCount >= 2 ? quiz.repeatHint : c.hint
+      showFeedback('error', 'Try again', hint)
       setTimeout(() => { shaking = null; kaiAnswer = null }, 700)
     } else {
-      speak('Ka pai! You waited for the karakia. Now think about how to care for the marae when you leave.')
+      wrongCount = 0
+      showFeedback('success', 'Ka pai!', quiz.kaiSuccess)
       setTimeout(() => { part = 2 }, 800)
     }
   }
@@ -59,12 +136,14 @@
     if (completed) return
     careAnswer = c.id
     if (!c.correct) {
+      wrongCount += 1
       shaking = c.id
-      speak(c.hint)
+      const hint = wrongCount >= 2 ? quiz.repeatHint : c.hint
+      showFeedback('error', 'Try again', hint)
       setTimeout(() => { shaking = null; careAnswer = null }, 700)
     } else {
-      speak('Ka pai! Station 4 complete! You showed manaakitanga and kaitiakitanga.')
       completed = true
+      showFeedback('success', 'Station 4 complete! ✓', quiz.finalSuccess)
     }
   }
 
@@ -74,175 +153,213 @@
   }
 </script>
 
-<div class="page">
-  <div class="bg" aria-hidden="true"></div>
+<div class="page" style="background-image:url({bgImg})">
 
-  <div class="station-pill">Station 4 — Kai &amp; Care</div>
-  <button class="pill btn-back" onclick={onBack}>← Back</button>
+  <!-- Top tooltip: correct / wrong feedback (auto-hides after 3s) -->
+  {#if feedback?.type === 'success'}
+    <div class="top-tooltip success fade-in">
+      <img src={kiwiYes} alt="Ka pai" class="tooltip-kiwi" />
+      <div class="tooltip-text">
+        <strong>{feedback.title}</strong>
+        <span>{feedback.msg}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'error'}
+    <div class="top-tooltip error fade-in">
+      <img src={kiwiTry} alt="Try again" class="tooltip-kiwi" />
+      <div class="tooltip-text">
+        <strong>{feedback.title}</strong>
+        <span>{feedback.msg}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'hint'}
+    <div class="top-tooltip hint fade-in">
+      <div class="tooltip-text">
+        <strong>{feedback.title}</strong>
+        <span>{feedback.msg}</span>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Mini-map top-right -->
+  <img src={miniMapImg} alt="Marae Visit Map — Station 4 lit" class="mini-map" />
+
+  <!-- Back button -->
+  <button class="map-btn" onclick={onBack} aria-label="Back to map">
+    <img src={backToMapImg} alt="Back to Map" />
+  </button>
 
   <div class="content">
 
+    <!-- Kiwi guide — fixed at top of content -->
     <img src={completed ? kiwiYes : kiwiListen} alt="Kiwi guide" class="kiwi-img" />
 
-    <!-- Part A: Kai tikanga -->
-    <div class="card fade-in">
-      <div class="badge">Kai time!</div>
-      <h2>What is the correct tikanga for kai (food)?</h2>
+    <!-- Scrollable question area -->
+    <div class="scroll-area">
 
-      <div class="choices">
-        {#each kaiChoices as c}
-          <button
-            class="choice"
-            class:correct={kaiAnswer === c.id && c.correct}
-            class:wrong={kaiAnswer === c.id && !c.correct}
-            class:shake={shaking === c.id}
-            onclick={() => pickKai(c)}
-            disabled={part > 1}
-            aria-pressed={kaiAnswer === c.id}
-          >
-            {c.label}
-          </button>
-        {/each}
-      </div>
+      <!-- Part A: Kai time (hidden once answered) -->
+      {#if part === 1}
+        <div class="card fade-in">
+          <h2 class="station-title">{quiz.title}</h2>
+          {#if quiz.support.length}
+            <div class="support">
+              {#each quiz.support as line}<p>{line}</p>{/each}
+            </div>
+          {/if}
+          <div class="badge">Kai time</div>
+          <p class="question">{quiz.kaiQuestion}</p>
 
-      {#if kaiAnswer && kaiChoices.find(c => c.id === kaiAnswer && !c.correct)}
-        <div class="hint-box fade-in">
-          <img src={kiwiTry} alt="" class="hint-kiwi" />
-          <p>{kaiChoices.find(c => c.id === kaiAnswer)?.hint}</p>
+          <div class="choices">
+            {#each kaiChoices as c}
+              <button
+                class="choice"
+                class:correct={kaiAnswer === c.id && c.correct}
+                class:wrong={kaiAnswer === c.id && !c.correct}
+                class:shake={shaking === c.id}
+                onclick={() => pickKai(c)}
+                aria-pressed={kaiAnswer === c.id}
+              >
+                {c.label}
+              </button>
+            {/each}
+          </div>
         </div>
       {/if}
 
-      {#if part > 1}
-        <p class="step-done">✓ You waited for the karakia. Tino pai!</p>
+      <!-- Part B: After kai (fades in after Part A) -->
+      {#if part >= 2}
+        <div class="card fade-in">
+          <h2 class="station-title">{quiz.title}</h2>
+          {#if quiz.support.length}
+            <div class="support">
+              {#each quiz.support as line}<p>{line}</p>{/each}
+            </div>
+          {/if}
+          <div class="badge">After kai</div>
+          <p class="question">{quiz.careQuestion}</p>
+
+          <div class="choices">
+            {#each careChoices as c}
+              <button
+                class="choice"
+                class:correct={careAnswer === c.id && c.correct}
+                class:wrong={careAnswer === c.id && !c.correct}
+                class:shake={shaking === c.id}
+                onclick={() => pickCare(c)}
+                disabled={completed}
+                aria-pressed={careAnswer === c.id}
+              >
+                {c.label}
+              </button>
+            {/each}
+          </div>
+        </div>
       {/if}
+
     </div>
 
-    <!-- Part B: Care / leaving -->
-    {#if part >= 2}
-      <div class="card fade-in">
-        <div class="badge">Before you leave</div>
-        <h2>How do you care for the marae when it's time to go?</h2>
-
-        <div class="choices">
-          {#each careChoices as c}
-            <button
-              class="choice"
-              class:correct={careAnswer === c.id && c.correct}
-              class:wrong={careAnswer === c.id && !c.correct}
-              class:shake={shaking === c.id}
-              onclick={() => pickCare(c)}
-              disabled={completed}
-              aria-pressed={careAnswer === c.id}
-            >
-              {c.label}
-            </button>
-          {/each}
-        </div>
-
-        {#if careAnswer && careChoices.find(c => c.id === careAnswer && !c.correct)}
-          <div class="hint-box fade-in">
-            <img src={kiwiTry} alt="" class="hint-kiwi" />
-            <p>{careChoices.find(c => c.id === careAnswer)?.hint}</p>
-          </div>
-        {/if}
-
-        {#if completed}
-          <div class="success-box fade-in">
-            <span class="station-complete">Station 4 complete! ✓</span>
-            <p>Ka pai! You showed care and respect for the marae and its people.</p>
-          </div>
-        {/if}
-      </div>
-    {/if}
-
-    <!-- Confident extra: Māori term cards -->
-    {#if completed && tikangaState.level === 'confident'}
-      <div class="terms-section fade-in">
-        <h3>Māori terms you used today:</h3>
-        <div class="terms-grid">
-          {#each termCards as t}
-            <div class="term-card">
-              <span class="term-word">{t.term}</span>
-              <span class="term-meaning">{t.meaning}</span>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
-
-    <button class="help-btn" onclick={() => speak('Wait for the karakia before eating. When you leave, always help clean up and say goodbye. This shows manaakitanga and kaitiakitanga.')} aria-label="Need help?">
-      <img src={needHelp} alt="Need help?" />
+    <!-- Next button (image) — last item inside content -->
+    <button
+      class="next-img-btn"
+      onclick={handleNext}
+      disabled={!completed}
+      aria-disabled={!completed}
+      aria-label={completed ? 'Next: Review' : 'Complete the challenge to continue'}
+    >
+      <img src={completed ? nextBtn : lockedBtn} alt={completed ? 'Next' : 'Locked'} />
     </button>
-
   </div>
 
-  <nav class="bottom-nav">
-    <button class="pill btn-back-bottom" onclick={onBack}>← Back</button>
-    <button class="pill btn-next" onclick={handleNext} disabled={!completed}>Next →</button>
-  </nav>
+  <button class="help-btn" onclick={showHelp} aria-label="Need help?">
+    <img src={needHelp} alt="Need help?" />
+  </button>
+
   <nav class="rtm-nav"><ReadToMe text={readText} /></nav>
 </div>
 
 <style>
   .page {
-    position: relative;
-    min-height: 100vh;
-    width: 100%;
+    position: fixed;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     flex-direction: column;
     align-items: center;
     font-family: 'Nunito', system-ui, sans-serif;
-    padding: 80px 16px 120px;
+    padding: 80px 16px 24px;
     box-sizing: border-box;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
-  .bg {
+  .mini-map {
     position: fixed;
-    inset: 0;
-    z-index: 0;
-    background: linear-gradient(155deg, #7a2600 0%, #c05000 40%, #e87820 70%, #f5b44a 100%);
+    top: 14px;
+    right: 16px;
+    z-index: 40;
+    width: min(140px, 18vw);
+    height: auto;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
   }
 
-  .station-pill {
+  .map-btn {
     position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 12px;
+    left: 12px;
     z-index: 50;
-    background: #F5A623;
-    color: #2c1600;
-    font-weight: 800;
-    font-size: 15px;
-    padding: 8px 24px;
-    border-radius: 100px;
-    box-shadow: 0 4px 12px rgba(245,166,35,.4);
-    white-space: nowrap;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
   }
-
-  .btn-back {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 50;
+  .map-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .map-btn:active { transform: scale(0.97); }
+  .map-btn img {
+    width: min(160px, 16vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
   .content {
     position: relative;
     z-index: 10;
     width: 90%;
-    max-width: 800px;
+    max-width: 620px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
   }
 
+  /* Kiwi guide — fixed, never scrolls */
   .kiwi-img {
     width: min(110px, 18vw);
-    height: auto;
+    height: min(110px, 18vw);
+    object-fit: contain;
+    flex-shrink: 0;
     filter: drop-shadow(0 4px 10px rgba(0,0,0,.2));
   }
+
+  /* Scrollable question area */
+  .scroll-area {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 4px 6px;
+    box-sizing: border-box;
+  }
+  .scroll-area::-webkit-scrollbar { width: 8px; }
+  .scroll-area::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); border-radius: 8px; }
 
   .card {
     width: 100%;
@@ -267,12 +384,37 @@
     align-self: flex-start;
   }
 
-  h2 {
-    font-size: clamp(18px, 2.6vw, 26px);
+  .station-title {
+    font-size: clamp(20px, 3vw, 30px);
+    font-weight: 900;
+    color: #b85400;
+    text-align: center;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: 0.3px;
+  }
+
+  .support {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+  }
+  .support p {
+    margin: 0;
+    font-size: clamp(13px, 1.8vw, 16px);
+    font-weight: 700;
+    color: #555;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .question {
+    margin: 0;
+    font-size: clamp(17px, 2.5vw, 24px);
     font-weight: 900;
     color: #111;
-    margin: 0;
-    line-height: 1.35;
+    line-height: 1.3;
   }
 
   .choices {
@@ -288,92 +430,44 @@
     font-family: inherit;
     font-size: clamp(15px, 2.2vw, 20px);
     font-weight: 700;
+    color: #000;
     cursor: pointer;
     background: #fafafa;
     text-align: left;
-    transition: transform .15s, border-color .2s;
+    transition: transform .15s, border-color .2s, box-shadow .2s;
     outline: none;
   }
   .choice:hover:not(:disabled) { transform: translateX(4px); border-color: #aaa; }
-  .choice:disabled { cursor: not-allowed; opacity: .5; }
-  .choice.correct { border-color: #4caf50 !important; background: #f0fff4 !important; }
-  .choice.wrong   { border-color: #e53935 !important; background: #fff0f0 !important; }
+  .choice:disabled { cursor: not-allowed; opacity: .55; }
+  /* Correct — soft warm green glow */
+  .choice.correct {
+    border-color: #6fcf78 !important;
+    background: #f0fff4 !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 0 3px rgba(111,207,120,.35), 0 0 18px 4px rgba(111,207,120,.55) !important;
+    animation: softGlow 1.8s ease-in-out infinite;
+  }
+  @keyframes softGlow {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(111,207,120,.30), 0 0 14px 3px rgba(111,207,120,.45); }
+    50%       { box-shadow: 0 0 0 3px rgba(111,207,120,.45), 0 0 24px 7px rgba(111,207,120,.7); }
+  }
+  /* Wrong — gentle amber tint only */
+  .choice.wrong { border-color: #F5C97B !important; background: #fffbf0 !important; }
 
-  .hint-box {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: #fff8ec;
-    border: 2px solid #F5A623;
-    border-radius: 14px;
-    padding: 12px 16px;
-  }
-  .hint-kiwi { width: 50px; height: 50px; object-fit: contain; flex-shrink: 0; }
-  .hint-box p { margin: 0; font-size: 15px; font-weight: 600; color: #5a3a00; line-height: 1.4; }
-
-  .step-done { margin: 0; font-size: 15px; font-weight: 700; color: #2e7d32; }
-
-  .success-box {
-    background: #f0fff4;
-    border: 2.5px solid #4caf50;
-    border-radius: 14px;
-    padding: 14px 18px;
-    text-align: center;
-  }
-  .station-complete { display: block; font-size: 18px; font-weight: 900; color: #2e7d32; margin-bottom: 4px; }
-  .success-box p { margin: 0; font-size: 15px; color: #2c5e32; font-weight: 600; }
-
-  /* Confident term cards */
-  .terms-section {
-    position: relative;
-    z-index: 10;
-    width: 90%;
-    max-width: 800px;
-  }
-  .terms-section h3 {
-    color: #fff;
-    font-size: 18px;
-    font-weight: 800;
-    margin: 0 0 12px;
-    text-shadow: 0 2px 6px rgba(0,0,0,.3);
-  }
-  .terms-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  .term-card {
-    background: rgba(255,255,255,.95);
-    border: 2.5px solid #e67e00;
-    border-radius: 16px;
-    padding: 16px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    box-shadow: 0 4px 14px rgba(0,0,0,.15);
-  }
-  .term-word { font-size: 18px; font-weight: 900; color: #8a3a00; }
-  .term-meaning { font-size: 14px; font-weight: 600; color: #3a2000; line-height: 1.4; }
-
+  /* Help button — fixed bottom-right */
   .help-btn {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 50;
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
     transition: transform .15s;
   }
-  .help-btn:hover { transform: scale(1.05); }
-  .help-btn img { width: min(90px, 14vw); height: auto; }
-
-  .bottom-nav {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    z-index: 30;
-    padding: 10px 18px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
+  .help-btn:hover { transform: scale(1.08) translateY(-3px); }
+  .help-btn img { width: min(160px, 18vw); height: auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,.25)); }
 
   .pill {
     border: none;
@@ -390,25 +484,60 @@
   }
   .pill:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
 
-  .btn-back, .btn-back-bottom { background: #fff; color: #333; }
 
-  .btn-next {
-    background: #F5A623;
-    color: #2c1600;
-    font-weight: 800;
-    animation: breathe 2s ease-in-out infinite;
+  /* Next button (image) */
+  .next-img-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform .15s, filter .15s;
   }
-  .btn-next:disabled {
-    background: #d0d0d0;
-    color: #888;
-    animation: none;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+  .next-img-btn img {
+    width: min(260px, 40vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
   }
-  @keyframes breathe {
-    0%,100% { transform: scale(1);    box-shadow: 0 4px 12px rgba(245,166,35,.35); }
-    50%      { transform: scale(1.05); box-shadow: 0 8px 24px rgba(245,166,35,.6);  }
+  .next-img-btn:not(:disabled) { animation: nextBreathe 2s ease-in-out infinite; }
+  .next-img-btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.03); animation: none; }
+  .next-img-btn:disabled { cursor: not-allowed; opacity: .9; }
+  @keyframes nextBreathe {
+    0%,100% { transform: scale(1);    filter: drop-shadow(0 4px 12px rgba(0,0,0,.3)); }
+    50%      { transform: scale(1.04); filter: drop-shadow(0 8px 22px rgba(245,166,35,.6)); }
   }
+
   .rtm-nav { position: fixed; bottom: 18px; left: 18px; z-index: 50; }
+
+  /* Top tooltip — same as Station 1–3 */
+  .top-tooltip {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px 12px 14px;
+    border-radius: 100px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.22);
+    max-width: min(560px, 80vw);
+    animation: slideDown .35s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-24px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .top-tooltip.success { background: #e8f9ee; border: 2.5px solid #4caf50; }
+  .top-tooltip.error   { background: #fff8ec; border: 2.5px solid #F5A623; }
+  .top-tooltip.hint    { background: #eef4ff; border: 2.5px solid #2255cc; }
+  .tooltip-kiwi { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
+  .tooltip-text { display: flex; flex-direction: column; gap: 2px; }
+  .tooltip-text strong { font-size: 15px; font-weight: 900; color: #111; }
+  .tooltip-text span { font-size: 14px; font-weight: 600; color: #333; line-height: 1.4; }
+  .top-tooltip.success .tooltip-text strong { color: #2e7d32; }
+  .top-tooltip.error   .tooltip-text strong { color: #8a5a00; }
+  .top-tooltip.hint    .tooltip-text strong { color: #1a3e9e; }
 </style>

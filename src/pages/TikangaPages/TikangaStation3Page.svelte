@@ -5,10 +5,13 @@
   import kiwiYes    from '../../assets/tikanga/kiwiyes.png'
   import kiwiTry    from '../../assets/tikanga/kiwitryagain.png'
   import needHelp   from '../../assets/tikanga/need help.png'
+  import lockedBtn  from '../../assets/tikanga/p5 locked next button.png'
+  import nextBtn    from '../../assets/tikanga/p5 next button.png'
+  import miniMapImg from '../../assets/tikanga/p5 map 3 亮.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
+  import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
   interface Props {
     onNext: () => void
@@ -17,35 +20,81 @@
   let { onNext, onBack }: Props = $props()
 
   type Option = { id: string; label: string; correct: boolean; hint: string }
+  type Quiz = {
+    title: string
+    intro: string
+    question: string
+    success: string
+    repeatHint: string
+    helpText: string
+    options: Option[]
+  }
 
-  const alwaysOptions: Option[] = [
-    { id: 'shoes',  label: '👟 Take off your shoes',       correct: true,  hint: '' },
-    { id: 'quiet',  label: '🤫 Speak quietly',              correct: true,  hint: '' },
-  ]
+  const beginnerQuiz: Quiz = {
+    title: 'Wharenui',
+    intro: 'Wharenui = meeting house / special meeting space.',
+    question: 'Inside, what shows respect?',
+    success: 'Ka pai! Calm body, listening ears.',
+    repeatHint: 'Inside, calm body and careful hands help.',
+    helpText: 'Look respectfully. Keep hands to yourself. Follow the group.',
+    options: [
+      { id: 'listen', label: '👂 Sit and listen',     correct: true,  hint: '' },
+      { id: 'watch',  label: '👀 Watch the speaker',   correct: true,  hint: '' },
+      { id: 'run',    label: '🏃 Run around',          correct: false, hint: 'Try again. Running inside can disturb others.' },
+      { id: 'eat',    label: '🍪 Eat inside',          correct: false, hint: 'Try again. Kai belongs in the right place.' },
+      { id: 'climb',  label: '🪑 Climb on furniture',  correct: false, hint: 'Try again. We look after special places.' },
+    ],
+  }
 
-  const beginnerExtra: Option[] = [
-    { id: 'photo',  label: '📸 Take a photo of everything', correct: false, hint: 'Always ask permission before taking photos inside the wharenui.' },
-    { id: 'touch',  label: '🖐️ Touch the carvings to feel them', correct: false, hint: 'The carvings are tapu (sacred). Do not touch without permission.' },
-  ]
+  const confidentQuiz: Quiz = {
+    title: 'Wharenui',
+    intro: 'Wharenui = special meeting space.',
+    question: 'Inside the wharenui, choose two respectful actions.',
+    success: 'Ka pai! Calm body, careful hands.',
+    repeatHint: 'Inside, calm body and careful hands help.',
+    helpText: 'Look respectfully. Keep hands to yourself. Follow the group.',
+    options: [
+      { id: 'listen', label: '👂 Sit and listen',    correct: true,  hint: '' },
+      { id: 'watch',  label: '👀 Watch the speaker',  correct: true,  hint: '' },
+      { id: 'photos', label: '📸 Take photos',        correct: false, hint: 'Try again. Kiki should not take photos unless the group is told it is okay.' },
+      { id: 'touch',  label: '✋ Touch carvings',      correct: false, hint: 'Try again. Looking respectfully is safer than touching.' },
+      { id: 'bags',   label: '🎒 Put bags anywhere',  correct: false, hint: 'Try again. Kiki should follow where the group puts their things.' },
+    ],
+  }
 
-  const confidentExtra: Option[] = [
-    { id: 'photo',  label: '📷 Take a photo of the carvings', correct: false, hint: 'Always ask permission before photographing — even just the carvings.' },
-    { id: 'luck',   label: '🤲 Touch the carvings for good luck', correct: false, hint: 'The carvings are tapu. Touching without permission is disrespectful.' },
-  ]
+  const quiz = $derived(tikangaState.level === 'beginner' ? beginnerQuiz : confidentQuiz)
+  const options = $derived(quiz.options)
 
-  const options = $derived<Option[]>([
-    ...alwaysOptions,
-    ...(tikangaState.level === 'beginner' ? beginnerExtra : confidentExtra),
-  ])
-
-  let selected   = $state<Set<string>>(new Set())
-  let checked    = $state(false)
-  let completed  = $state(false)
-  let shaking    = $state<string | null>(null)
+  let selected    = $state<Set<string>>(new Set())
+  let checked     = $state(false)
+  let completed   = $state(false)
+  let shaking     = $state<string | null>(null)
+  let wrongChecks = $state(0)
 
   const canCheck = $derived(selected.size === 2)
 
-  const readText = 'Station 3: Wharenui. Inside the meeting house, which two behaviours are correct?'
+  // Top tooltip — auto-hides after 3 seconds (same as Station 1 & 2).
+  let feedback = $state<{ type: 'success' | 'error' | 'hint'; hint?: string } | null>(null)
+  let feedbackTimer: ReturnType<typeof setTimeout>
+
+  function showFeedback(type: 'success' | 'error' | 'hint', hint?: string) {
+    feedback = { type, hint }
+    clearTimeout(feedbackTimer)
+    feedbackTimer = setTimeout(() => { feedback = null }, type === 'hint' ? 5000 : 3000)
+  }
+
+  // Read to me speaks exactly what is on screen: title, intro, question, every option.
+  const readText = $derived(
+    `${quiz.title}. ${quiz.intro} ${quiz.question} ${options.map(o => o.label).join('. ')}.`
+  )
+
+  // Need help gives a silent hint that points to the two correct options.
+  const helpHint = $derived(
+    `Tip: try ${options.filter(o => o.correct).map(o => o.label).join(' and ')}.`
+  )
+  function showHelp() {
+    showFeedback('hint', helpHint)
+  }
 
   function toggle(opt: Option) {
     if (completed) return
@@ -63,13 +112,16 @@
     checked = true
     const wrongPicks = [...selected].filter(id => options.find(o => o.id === id && !o.correct))
     if (wrongPicks.length === 0 && selected.size === 2) {
-      speak('Ka pai! You know the correct way to behave in the wharenui. Station 3 complete!')
       completed = true
+      showFeedback('success')
     } else {
+      wrongChecks += 1
       const wrongOpt = options.find(o => wrongPicks.includes(o.id))
       if (wrongOpt) {
         shaking = wrongOpt.id
-        speak(wrongOpt.hint)
+        // On the 2nd+ wrong check, give the stronger "calm body, careful hands" hint.
+        const hint = wrongChecks >= 2 ? quiz.repeatHint : wrongOpt.hint
+        showFeedback('error', hint)
         setTimeout(() => { shaking = null }, 600)
       }
     }
@@ -83,83 +135,99 @@
 
 <div class="page" style="background-image:url({bgImg})">
 
+  <!-- Top tooltip: correct / wrong feedback (auto-hides after 3s) -->
+  {#if feedback?.type === 'success'}
+    <div class="top-tooltip success fade-in">
+      <img src={kiwiYes} alt="Ka pai" class="tooltip-kiwi" />
+      <div class="tooltip-text">
+        <strong>Station 3 complete! ✓</strong>
+        <span>{quiz.success}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'error'}
+    <div class="top-tooltip error fade-in">
+      <img src={kiwiTry} alt="Try again" class="tooltip-kiwi" />
+      <div class="tooltip-text">
+        <strong>Try again</strong>
+        <span>{feedback.hint}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'hint'}
+    <div class="top-tooltip hint fade-in">
+      <div class="tooltip-text">
+        <strong>Hint</strong>
+        <span>{feedback.hint}</span>
+      </div>
+    </div>
+  {/if}
 
-  <div class="station-pill">Station 3 — Wharenui</div>
-  <button class="pill btn-back" onclick={onBack}>← Back</button>
+  <!-- Mini-map top-right -->
+  <img src={miniMapImg} alt="Marae Visit Map — Station 3 lit" class="mini-map" />
+
+  <!-- Back button -->
+  <button class="map-btn" onclick={onBack} aria-label="Back to map">
+    <img src={backToMapImg} alt="Back to Map" />
+  </button>
 
   <div class="content">
 
+    <!-- Kiwi guide — fixed at top of content -->
     <img src={completed ? kiwiYes : kiwiThink} alt="Kiwi guide" class="kiwi-img" />
 
-    <div class="card">
-      <div class="badge">Inside the Wharenui (meeting house)</div>
-      <h1>Which <em>two</em> behaviours are correct?</h1>
+    <!-- Scrollable question area -->
+    <div class="scroll-area">
+      <div class="card fade-in">
+        <h2 class="station-title">{quiz.title}</h2>
+        <p class="intro">{quiz.intro}</p>
+        <p class="question">{quiz.question}</p>
 
-      <div class="options-grid">
-        {#each options as opt}
-          <button
-            class="option"
-            class:selected={selected.has(opt.id)}
-            class:correct={checked && selected.has(opt.id) && opt.correct}
-            class:wrong={checked && selected.has(opt.id) && !opt.correct}
-            class:shake={shaking === opt.id}
-            onclick={() => toggle(opt)}
-            disabled={completed}
-            aria-pressed={selected.has(opt.id)}
-          >
-            <span class="opt-icon">{opt.label.split(' ')[0]}</span>
-            <span class="opt-text">{opt.label.substring(opt.label.indexOf(' ')+1)}</span>
-            {#if selected.has(opt.id)}
-              <span class="tick" aria-hidden="true">{checked && opt.correct ? '✓' : checked && !opt.correct ? '✗' : '●'}</span>
-            {/if}
-          </button>
-        {/each}
-      </div>
-
-      <p class="select-hint">Select 2 ({selected.size}/2)</p>
-
-      <!-- Wrong answer hints -->
-      {#if checked && !completed}
-        {#each [...selected] as id}
-          {@const opt = options.find(o => o.id === id && !o.correct)}
-          {#if opt}
-            <div class="hint-box fade-in">
-              <img src={kiwiTry} alt="Kiwi try again" class="hint-kiwi" />
-              <p>{opt.hint}</p>
-            </div>
-          {/if}
-        {/each}
-      {/if}
-
-      <!-- Success -->
-      {#if completed}
-        <div class="success-box fade-in">
-          <span class="station-complete">Station 3 complete! ✓</span>
-          <p>Ka pai! Shoes off and quiet voices — great tikanga!</p>
+        <div class="choices">
+          {#each options as opt}
+            <button
+              class="choice"
+              class:selected={selected.has(opt.id)}
+              class:correct={checked && selected.has(opt.id) && opt.correct}
+              class:wrong={checked && selected.has(opt.id) && !opt.correct}
+              class:shake={shaking === opt.id}
+              onclick={() => toggle(opt)}
+              disabled={completed}
+              aria-pressed={selected.has(opt.id)}
+            >
+              <span class="choice-label">{opt.label}</span>
+              {#if selected.has(opt.id)}
+                <span class="tick" aria-hidden="true">{checked && opt.correct ? '✓' : '●'}</span>
+              {/if}
+            </button>
+          {/each}
         </div>
-      {/if}
 
-      <!-- Check answers button -->
-      {#if !completed}
-        <button
-          class="pill check-btn"
-          onclick={checkAnswers}
-          disabled={!canCheck}
-        >
-          Check answers
-        </button>
-      {/if}
+        <p class="select-hint">Select 2 ({selected.size}/2)</p>
+
+        <!-- Check answers button -->
+        {#if !completed}
+          <button class="check-btn" onclick={checkAnswers} disabled={!canCheck}>
+            Check answers
+          </button>
+        {/if}
+      </div>
     </div>
 
-    <button class="help-btn" onclick={() => speak('Remember: always remove your shoes and speak quietly inside the wharenui. The carvings are tapu — sacred — so never touch or photograph them without asking.')} aria-label="Need help?">
-      <img src={needHelp} alt="Need help?" />
+    <!-- Next button (image) — last item inside content -->
+    <button
+      class="next-img-btn"
+      onclick={handleNext}
+      disabled={!completed}
+      aria-disabled={!completed}
+      aria-label={completed ? 'Next: Station 4' : 'Complete the challenge to continue'}
+    >
+      <img src={completed ? nextBtn : lockedBtn} alt={completed ? 'Next' : 'Locked'} />
     </button>
   </div>
 
-  <nav class="bottom-nav">
-    <button class="pill btn-back-bottom" onclick={onBack}>← Back</button>
-    <button class="pill btn-next" onclick={handleNext} disabled={!completed}>Next →</button>
-  </nav>
+  <button class="help-btn" onclick={showHelp} aria-label="Need help?">
+    <img src={needHelp} alt="Need help?" />
+  </button>
+
   <nav class="rtm-nav"><ReadToMe text={readText} /></nav>
 </div>
 
@@ -174,57 +242,85 @@
     flex-direction: column;
     align-items: center;
     font-family: 'Nunito', system-ui, sans-serif;
-    padding: 80px 16px 120px;
+    padding: 80px 16px 24px;
     box-sizing: border-box;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
-  .station-pill {
+  .mini-map {
     position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 50;
-    background: #F5A623;
-    color: #2c1600;
-    font-weight: 800;
-    font-size: 15px;
-    padding: 8px 24px;
-    border-radius: 100px;
-    box-shadow: 0 4px 12px rgba(245,166,35,.4);
-    white-space: nowrap;
+    top: 14px;
+    right: 16px;
+    z-index: 40;
+    width: min(140px, 18vw);
+    height: auto;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
   }
 
-  .btn-back {
+  .map-btn {
     position: fixed;
-    top: 16px;
-    left: 16px;
+    top: 12px;
+    left: 12px;
     z-index: 50;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .map-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .map-btn:active { transform: scale(0.97); }
+  .map-btn img {
+    width: min(160px, 16vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
   .content {
     position: relative;
     z-index: 10;
     width: 90%;
-    max-width: 800px;
+    max-width: 620px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
   }
 
+  /* Kiwi guide — fixed, never scrolls */
   .kiwi-img {
     width: min(110px, 18vw);
-    height: auto;
+    height: min(110px, 18vw);
+    object-fit: contain;
+    flex-shrink: 0;
     filter: drop-shadow(0 4px 10px rgba(0,0,0,.3));
   }
+
+  /* Scrollable question area */
+  .scroll-area {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 4px 6px;
+    box-sizing: border-box;
+  }
+  .scroll-area::-webkit-scrollbar { width: 8px; }
+  .scroll-area::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); border-radius: 8px; }
 
   .card {
     width: 100%;
     background: rgba(255,255,255,.96);
-    border-radius: 24px;
-    padding: 28px 24px 22px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.2);
+    border-radius: 22px;
+    padding: 24px 24px 20px;
+    box-shadow: 0 10px 32px rgba(0,0,0,.15);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -232,103 +328,104 @@
     box-sizing: border-box;
   }
 
-  .badge {
-    background: #8B4513;
-    color: #fff;
-    font-weight: 800;
-    font-size: 14px;
-    padding: 7px 22px;
-    border-radius: 100px;
-    box-shadow: 0 3px 10px rgba(0,0,0,.25);
+  .station-title {
+    font-size: clamp(20px, 3vw, 30px);
+    font-weight: 900;
+    color: #8B4513;
+    text-align: center;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: 0.3px;
   }
-
-  h1 {
-    font-size: clamp(22px, 3.2vw, 34px);
+  .intro {
+    margin: 0;
+    font-size: clamp(13px, 1.8vw, 16px);
+    font-weight: 700;
+    color: #555;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .question {
+    margin: 0;
+    font-size: clamp(17px, 2.5vw, 24px);
     font-weight: 900;
     color: #111;
     text-align: center;
-    margin: 0;
     line-height: 1.3;
   }
-  h1 em { font-style: normal; color: #c0392b; }
 
-  .options-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+  /* Choices — vertical rows, same as Station 2 */
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     width: 100%;
   }
 
-  .option {
+  .choice {
     position: relative;
-    border: 3px solid #ddd;
-    border-radius: 16px;
-    padding: 18px 14px 14px;
+    border: 3px solid #e0e0e0;
+    border-radius: 14px;
+    padding: 16px 44px 16px 20px;
     font-family: inherit;
     cursor: pointer;
     background: #fafafa;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    min-height: 120px;
-    justify-content: center;
-    transition: transform .15s, border-color .2s, background .2s;
+    text-align: left;
+    transition: transform .15s ease, border-color .2s ease, background .2s ease;
     outline: none;
   }
-  .option:hover:not(:disabled) { transform: translateY(-3px); border-color: #aaa; }
-  .option:disabled { cursor: not-allowed; opacity: .6; }
-  .option.selected { border-color: #2255cc; background: #f0f4ff; }
-  .option.correct  { border-color: #4caf50 !important; background: #f0fff4 !important; }
-  .option.wrong    { border-color: #e53935 !important; background: #fff0f0 !important; }
+  .choice:hover:not(:disabled) { transform: translateX(4px); border-color: #aaa; }
+  .choice:disabled { cursor: not-allowed; opacity: .55; }
+  .choice.selected { border-color: #2255cc; background: #f0f4ff; }
+  /* Correct hotspot — soft warm green glow */
+  .choice.correct {
+    border-color: #6fcf78 !important;
+    background: #f0fff4 !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 0 3px rgba(111,207,120,.35), 0 0 18px 4px rgba(111,207,120,.55) !important;
+    animation: softGlow 1.8s ease-in-out infinite;
+  }
+  @keyframes softGlow {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(111,207,120,.30), 0 0 14px 3px rgba(111,207,120,.45); }
+    50%       { box-shadow: 0 0 0 3px rgba(111,207,120,.45), 0 0 24px 7px rgba(111,207,120,.7); }
+  }
+  /* Wrong pick — gentle amber tint only */
+  .choice.wrong { border-color: #F5C97B !important; background: #fffbf0 !important; }
 
-  .opt-icon { font-size: 36px; }
-  .opt-text { font-size: clamp(13px, 1.8vw, 16px); font-weight: 700; color: #222; text-align: center; line-height: 1.3; }
+  .choice-label {
+    font-size: clamp(15px, 2.2vw, 20px);
+    font-weight: 700;
+    color: #000;
+  }
 
   .tick {
     position: absolute;
-    top: 8px;
-    right: 12px;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
     font-size: 18px;
     font-weight: 900;
     color: #2255cc;
   }
-  .option.correct .tick { color: #4caf50; }
-  .option.wrong   .tick { color: #e53935; }
+  .choice.correct .tick { color: #4caf50; }
+  .choice.wrong   .tick { color: #d9a441; }
 
   .select-hint { margin: 0; font-size: 15px; font-weight: 700; color: #555; }
 
-  .hint-box {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: #fff8ec;
-    border: 2px solid #F5A623;
-    border-radius: 14px;
-    padding: 12px 16px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .hint-kiwi { width: 50px; height: 50px; object-fit: contain; flex-shrink: 0; }
-  .hint-box p { margin: 0; font-size: 15px; font-weight: 600; color: #5a3a00; line-height: 1.4; }
-
-  .success-box {
-    background: #f0fff4;
-    border: 2.5px solid #4caf50;
-    border-radius: 14px;
-    padding: 14px 18px;
-    width: 100%;
-    box-sizing: border-box;
-    text-align: center;
-  }
-  .station-complete { display: block; font-size: 18px; font-weight: 900; color: #2e7d32; margin-bottom: 4px; }
-  .success-box p { margin: 0; font-size: 15px; color: #2c5e32; font-weight: 600; }
-
   .check-btn {
+    border: none;
+    border-radius: 100px;
+    padding: 14px 30px;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
     background: #2255cc;
     color: #fff;
-    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(34,85,204,.35);
+    transition: transform .12s, box-shadow .12s;
   }
+  .check-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(34,85,204,.45); }
   .check-btn:disabled {
     background: #d0d0d0;
     color: #888;
@@ -337,25 +434,20 @@
     box-shadow: none;
   }
 
+  /* Help button — fixed bottom-right */
   .help-btn {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 50;
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
     transition: transform .15s;
   }
-  .help-btn:hover { transform: scale(1.05); }
-  .help-btn img { width: min(90px, 14vw); height: auto; }
-
-  .bottom-nav {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    z-index: 30;
-    padding: 10px 18px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
+  .help-btn:hover { transform: scale(1.08) translateY(-3px); }
+  .help-btn img { width: min(160px, 18vw); height: auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,.25)); }
 
   .pill {
     border: none;
@@ -372,25 +464,60 @@
   }
   .pill:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
 
-  .btn-back, .btn-back-bottom { background: #fff; color: #333; }
 
-  .btn-next {
-    background: #F5A623;
-    color: #2c1600;
-    font-weight: 800;
-    animation: breathe 2s ease-in-out infinite;
+  /* Next button (image) */
+  .next-img-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform .15s, filter .15s;
   }
-  .btn-next:disabled {
-    background: #d0d0d0;
-    color: #888;
-    animation: none;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+  .next-img-btn img {
+    width: min(260px, 40vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
   }
-  @keyframes breathe {
-    0%,100% { transform: scale(1);    box-shadow: 0 4px 12px rgba(245,166,35,.35); }
-    50%      { transform: scale(1.05); box-shadow: 0 8px 24px rgba(245,166,35,.6);  }
+  .next-img-btn:not(:disabled) { animation: nextBreathe 2s ease-in-out infinite; }
+  .next-img-btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.03); animation: none; }
+  .next-img-btn:disabled { cursor: not-allowed; opacity: .9; }
+  @keyframes nextBreathe {
+    0%,100% { transform: scale(1);    filter: drop-shadow(0 4px 12px rgba(0,0,0,.3)); }
+    50%      { transform: scale(1.04); filter: drop-shadow(0 8px 22px rgba(245,166,35,.6)); }
   }
+
   .rtm-nav { position: fixed; bottom: 18px; left: 18px; z-index: 50; }
+
+  /* Top tooltip — same as Station 1 & 2 */
+  .top-tooltip {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px 12px 14px;
+    border-radius: 100px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.22);
+    max-width: min(560px, 80vw);
+    animation: slideDown .35s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-24px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .top-tooltip.success { background: #e8f9ee; border: 2.5px solid #4caf50; }
+  .top-tooltip.error   { background: #fff8ec; border: 2.5px solid #F5A623; }
+  .top-tooltip.hint    { background: #eef4ff; border: 2.5px solid #2255cc; }
+  .tooltip-kiwi { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
+  .tooltip-text { display: flex; flex-direction: column; gap: 2px; }
+  .tooltip-text strong { font-size: 15px; font-weight: 900; color: #111; }
+  .tooltip-text span { font-size: 14px; font-weight: 600; color: #333; line-height: 1.4; }
+  .top-tooltip.success .tooltip-text strong { color: #2e7d32; }
+  .top-tooltip.error   .tooltip-text strong { color: #8a5a00; }
+  .top-tooltip.hint    .tooltip-text strong { color: #1a3e9e; }
 </style>

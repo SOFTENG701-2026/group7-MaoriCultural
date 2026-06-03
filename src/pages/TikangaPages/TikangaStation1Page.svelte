@@ -10,8 +10,8 @@
   import needHelp   from '../../assets/tikanga/need help.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
+  import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
   interface Props {
     onNext: () => void
@@ -20,46 +20,72 @@
   let { onNext, onBack }: Props = $props()
 
   type Choice = { id: string; label: string; correct: boolean; hint: string }
+  type Quiz = { question: string; success: string; repeatHint: string; choices: Choice[] }
 
-  const beginnerChoices: Choice[] = [
-    { id: 'listen',  label: '🤫 Listen quietly',      correct: true,  hint: '' },
-    { id: 'run',     label: '🏃 Run inside',           correct: false, hint: 'Wait at the entrance — it\'s polite to be welcomed first.' },
-    { id: 'shout',   label: '📢 Shout hello',          correct: false, hint: 'Stay calm and quiet. Wait for the welcome call.' },
-  ]
+  const beginnerQuiz: Quiz = {
+    question: 'We are arriving. What should I do first?',
+    success: 'Ka pai! Listening first shows respect.',
+    repeatHint: 'Look for the choice where we listen first.',
+    choices: [
+      { id: 'listen', label: '👂 Listen to the guide', correct: true,  hint: '' },
+      { id: 'run',    label: '🏃 Run inside',           correct: false, hint: 'Try again. We listen before going in.' },
+      { id: 'shout',  label: '📢 Shout loudly',         correct: false, hint: 'Try again. Quiet listening shows respect.' },
+    ],
+  }
 
-  const confidentChoices: Choice[] = [
-    { id: 'stay',    label: '🧍 Stay and wait to be welcomed', correct: true,  hint: '' },
-    { id: 'walk',    label: '🚶 Walk in slowly',               correct: false, hint: 'Wait to be invited — entering without welcome is not tikanga.' },
-    { id: 'lead',    label: '🫅 Lead the group in',            correct: false, hint: 'Let the tangata whenua lead. Wait for their welcome.' },
-  ]
+  const confidentQuiz: Quiz = {
+    question: 'Kiki is manuhiri. What should he do first?',
+    success: 'Ka pai! Manuhiri wait and listen.',
+    repeatHint: 'Look for the choice that keeps Kiki with the group.',
+    choices: [
+      { id: 'stay', label: '👂 Stay with the group', correct: true,  hint: '' },
+      { id: 'walk', label: '🚶 Walk ahead',          correct: false, hint: 'Try again. Kiki should stay with the group.' },
+      { id: 'lead', label: '🗣️ Lead the class',      correct: false, hint: 'Try again. Even if Kiki has visited before, he should follow the people leading this visit.' },
+    ],
+  }
 
-  const choices = $derived(
-    tikangaState.level === 'beginner' ? beginnerChoices : confidentChoices
-  )
+  const quiz = $derived(tikangaState.level === 'beginner' ? beginnerQuiz : confidentQuiz)
+  const choices = $derived(quiz.choices)
 
   let selected   = $state<string | null>(null)
   let shaking    = $state<string | null>(null)
   let completed  = $state(false)
+  let wrongCount = $state(0)
 
-  const isCorrect = $derived(
-    selected !== null && (choices.find(c => c.id === selected)?.correct ?? false)
-  )
-  const currentHint = $derived(
-    selected && !isCorrect ? (choices.find(c => c.id === selected)?.hint ?? '') : ''
+  // Top tooltip — auto-hides after 3 seconds.
+  let feedback = $state<{ type: 'success' | 'error' | 'hint'; hint?: string } | null>(null)
+  let feedbackTimer: ReturnType<typeof setTimeout>
+
+  function showFeedback(type: 'success' | 'error' | 'hint', hint?: string) {
+    feedback = { type, hint }
+    clearTimeout(feedbackTimer)
+    feedbackTimer = setTimeout(() => { feedback = null }, type === 'hint' ? 5000 : 3000)
+  }
+
+  // Read to me speaks exactly what is on screen: the question and every choice.
+  const readText = $derived(
+    `${quiz.question} ${choices.map(c => c.label).join('. ')}.`
   )
 
-  const readText = 'Station 1: Entrance. You arrive at the marae entrance. What do you do?'
+  // Need help gives a silent hint that points to the answer option.
+  const helpHint = $derived(`Tip: try ${choices.find(c => c.correct)?.label}.`)
+  function showHelp() {
+    showFeedback('hint', helpHint)
+  }
 
   function pick(choice: Choice) {
     if (completed) return
     selected = choice.id
     if (!choice.correct) {
+      wrongCount += 1
       shaking = choice.id
-      speak(choice.hint)
+      // On the 2nd+ wrong attempt, give the stronger "point to the answer" hint.
+      const hint = wrongCount >= 2 ? quiz.repeatHint : choice.hint
+      showFeedback('error', hint)
       setTimeout(() => { shaking = null }, 600)
     } else {
-      speak('Ka pai! You waited respectfully at the entrance.')
       completed = true
+      showFeedback('success')
     }
   }
 
@@ -71,11 +97,39 @@
 
 <div class="page" style="background-image:url({bgImg})">
 
+  <!-- Top tooltip: correct / wrong feedback (auto-hides after 3s) -->
+  {#if feedback?.type === 'success'}
+    <div class="top-tooltip success fade-in">
+      <img src={kiwiYes} alt="Ka pai" class="tooltip-kiwi" />
+      <div class="tooltip-text">
+        <strong>Station 1 complete! ✓</strong>
+        <span>{quiz.success}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'error'}
+    <div class="top-tooltip error fade-in">
+      <img src={kiwiTry} alt="Try again" class="tooltip-kiwi" />
+      <div class="tooltip-text">
+        <strong>Try again</strong>
+        <span>{feedback.hint}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'hint'}
+    <div class="top-tooltip hint fade-in">
+      <div class="tooltip-text">
+        <strong>Hint</strong>
+        <span>{feedback.hint}</span>
+      </div>
+    </div>
+  {/if}
+
   <!-- Mini-map top-right -->
   <img src={miniMapImg} alt="Marae Visit Map — Station 1 lit" class="mini-map" />
 
   <!-- Back button -->
-  <button class="pill btn-back" onclick={onBack}>← Back</button>
+  <button class="map-btn" onclick={onBack} aria-label="Back to map">
+    <img src={backToMapImg} alt="Back to Map" />
+  </button>
 
   <!-- Main content card -->
   <div class="content">
@@ -85,8 +139,7 @@
 
     <!-- Question card -->
     <div class="card">
-      <div class="badge">Station 1 — Entrance</div>
-      <h1>You arrive at the marae entrance.<br>What do you do?</h1>
+      <h1>{quiz.question}</h1>
 
       <!-- Choices -->
       <div class="choices">
@@ -105,25 +158,10 @@
         {/each}
       </div>
 
-      <!-- Hint for wrong answer -->
-      {#if currentHint}
-        <div class="hint-box fade-in">
-          <img src={kiwiTry} alt="Kiwi try again" class="hint-kiwi" />
-          <p>{currentHint}</p>
-        </div>
-      {/if}
-
-      <!-- Success message -->
-      {#if completed}
-        <div class="success-box fade-in">
-          <span class="station-complete">Station 1 complete! ✓</span>
-          <p>Ka pai! You waited respectfully at the entrance.</p>
-        </div>
-      {/if}
     </div>
 
     <!-- Help button -->
-    <button class="help-btn" onclick={() => speak('Wait at the entrance. Good tikanga means you wait until the tangata whenua welcome you in.')} aria-label="Need help?">
+    <button class="help-btn" onclick={showHelp} aria-label="Need help?">
       <img src={needHelp} alt="Need help?" />
     </button>
   </div>
@@ -170,28 +208,43 @@
     filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
   }
 
-  .btn-back {
+  .map-btn {
     position: fixed;
-    top: 16px;
-    left: 16px;
+    top: 12px;
+    left: 12px;
     z-index: 50;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .map-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .map-btn:active { transform: scale(0.97); }
+  .map-btn img {
+    width: min(160px, 16vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
   .content {
     position: relative;
     z-index: 10;
     width: 90%;
-    max-width: 860px;
+    max-width: 560px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 16px;
     margin-top: 60px;
+    margin-left: 400px;
   }
 
   .kiwi-img {
     width: min(140px, 22vw);
-    height: auto;
+    height: min(140px, 22vw);
+    object-fit: contain;
     filter: drop-shadow(0 4px 10px rgba(0,0,0,.2));
     animation: bounce .6s ease-in-out;
   }
@@ -247,6 +300,7 @@
     font-family: inherit;
     font-size: clamp(16px, 2.4vw, 22px);
     font-weight: 700;
+    color: #000;
     cursor: pointer;
     background: #fafafa;
     text-align: left;
@@ -254,9 +308,21 @@
     outline: none;
   }
   .choice:hover:not(:disabled) { transform: translateX(4px); border-color: #aaa; }
-  .choice:disabled { cursor: not-allowed; opacity: .5; }
-  .choice.correct  { border-color: #4caf50 !important; background: #f0fff4 !important; }
-  .choice.wrong    { border-color: #F5A623 !important; background: #fffbf0 !important; }
+  .choice:disabled { cursor: not-allowed; opacity: .55; }
+  /* Correct answer — soft, warm green glow (no harsh marks) */
+  .choice.correct {
+    border-color: #6fcf78 !important;
+    background: #f0fff4 !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 0 3px rgba(111,207,120,.35), 0 0 18px 4px rgba(111,207,120,.55) !important;
+    animation: softGlow 1.8s ease-in-out infinite;
+  }
+  @keyframes softGlow {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(111,207,120,.30), 0 0 14px 3px rgba(111,207,120,.45); }
+    50%       { box-shadow: 0 0 0 3px rgba(111,207,120,.45), 0 0 24px 7px rgba(111,207,120,.7); }
+  }
+  /* Wrong choice — gentle amber tint only, no red, no cross */
+  .choice.wrong { border-color: #F5C97B !important; background: #fffbf0 !important; }
 
   .hint-box {
     display: flex;
@@ -307,19 +373,24 @@
   }
 
   .help-btn {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 50;
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
     transition: transform .15s;
   }
-  .help-btn:hover { transform: scale(1.05); }
-  .help-btn img { width: min(100px, 16vw); height: auto; }
+  .help-btn:hover { transform: scale(1.08) translateY(-3px); }
+  .help-btn img { width: min(160px, 18vw); height: auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,.25)); }
 
   .next-wrap {
     position: relative;
     z-index: 10;
     margin-top: 16px;
+    margin-left: 400px;
   }
   .next-img-btn {
     background: none;
@@ -353,4 +424,62 @@
   }
   .pill:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
   .rtm-nav { position: fixed; bottom: 18px; left: 18px; z-index: 50; }
+
+  /* Top tooltip */
+  .top-tooltip {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px 12px 14px;
+    border-radius: 100px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.22);
+    max-width: min(560px, 80vw);
+    animation: slideDown .35s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-24px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .top-tooltip.success {
+    background: #e8f9ee;
+    border: 2.5px solid #4caf50;
+  }
+  .top-tooltip.error {
+    background: #fff8ec;
+    border: 2.5px solid #F5A623;
+  }
+  .top-tooltip.hint {
+    background: #eef4ff;
+    border: 2.5px solid #2255cc;
+  }
+  .tooltip-kiwi {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .tooltip-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tooltip-text strong {
+    font-size: 15px;
+    font-weight: 900;
+    color: #111;
+  }
+  .tooltip-text span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+  }
+  .top-tooltip.success .tooltip-text strong { color: #2e7d32; }
+  .top-tooltip.error   .tooltip-text strong { color: #8a5a00; }
+  .top-tooltip.hint    .tooltip-text strong { color: #1a3e9e; }
 </style>
