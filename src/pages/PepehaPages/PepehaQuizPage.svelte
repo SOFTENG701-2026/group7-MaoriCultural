@@ -125,6 +125,13 @@
         ]
   )
 
+  /** Split hint into two lines when it has more than three words. */
+  function hintLines(hint: string): [string, string?] {
+    const words = hint.trim().split(/\s+/)
+    if (words.length <= 3) return [hint]
+    return [words.slice(0, 3).join(' '), words.slice(3).join(' ')]
+  }
+
   let qIndex = $state(0)
   let picked = $state<string | null>(null)
   let solved = $state(false)   // current question answered correctly
@@ -133,6 +140,7 @@
   const q = $derived(questions[qIndex])
   const total = $derived(questions.length)
   const isLast = $derived(qIndex === total - 1)
+  const qHintLines = $derived(hintLines(q.hint))
 
   const readText = $derived(
     `${instruction} ${q.prompt} ` + q.options.map((o, i) => `Sticker ${i + 1}: ${o.text}.`).join(' ')
@@ -240,7 +248,10 @@
   {#if showHint}
     <div class="hint-board" role="status">
       <img src={hintImg} alt="Try again. Look at Kiki’s board." />
-      <span class="hint-text">{q.hint}</span>
+      <span class="hint-text" class:two-lines={qHintLines[1] != null}>
+        {qHintLines[0]}
+        {#if qHintLines[1]}<br />{qHintLines[1]}{/if}
+      </span>
     </div>
   {/if}
 
@@ -596,6 +607,13 @@
     font-weight: 800;
     color: #6a4a18;
     line-height: 1.3;
+    white-space: normal;
+    word-break: break-word;
+  }
+  .hint-text.two-lines {
+    top: 58%;
+    font-size: clamp(11px, 1.35vw, 15px);
+    line-height: 1.25;
   }
   @keyframes popIn {
     from { opacity: 0; transform: scale(0.85); }
