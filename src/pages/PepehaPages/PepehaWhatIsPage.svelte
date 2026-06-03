@@ -26,9 +26,10 @@
   import noteIcon    from '../../assets/pepeha/page2/page2_bottom_notebook_small_icon_transparent.png'
   import starIcon    from '../../assets/pepeha/page2/page2_bottom_star_icon_transparent.png'
   import kikiImg     from '../../assets/kiwihello.png'
+  import settingsImg from '../../assets/settings.png'
 
   import { pepehaState } from '../../lib/pepehaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
+  import { speak, settings } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
 
   interface Props {
@@ -135,6 +136,11 @@
 
   <!-- Back — top-left -->
   <button class="btn-back" onclick={onBack} aria-label="Back">← Back</button>
+
+  <!-- Settings — top-right -->
+  <button class="settings-btn" onclick={() => (settings.open = true)} aria-label="Settings">
+    <img src={settingsImg} alt="Settings" />
+  </button>
 
   <!-- Read the title / Kiki line aloud — next to the baked-in title -->
   <button class="title-speak" onclick={() => speak('What is a Pepeha? ' + kikiLine)} aria-label="Read the title">
@@ -275,6 +281,27 @@
   }
   .btn-back:hover  { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.24); }
   .btn-back:active { transform: translateY(0); }
+
+  /* Settings — top-right */
+  .settings-btn {
+    position: absolute;
+    top: 3%;
+    right: 2%;
+    z-index: 40;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .settings-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .settings-btn:active { transform: scale(0.97); }
+  .settings-btn img {
+    width: min(90px, 11.25vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
+  }
 
   /* Speaker beside the baked-in title */
   /* Speaker tucked into the title's lower-right corner */
