@@ -9,7 +9,6 @@
   import finishImg    from '../../assets/tikanga/p7 finish.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
   import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
@@ -55,10 +54,8 @@
     checkAnswer = opt.id
     if (opt.correct) {
       checkPassed = true
-      speak('Ka pai! Tikanga is respect in the right context.')
     } else {
       shaking = opt.id
-      speak('Try again. Tikanga depends on people, place, and context.')
       setTimeout(() => { shaking = null }, 600)
     }
   }
