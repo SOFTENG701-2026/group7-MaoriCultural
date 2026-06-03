@@ -1,9 +1,10 @@
 <!-- Tikanga Module — Page 8: Reward -->
 <script lang="ts">
-  import youDidIt   from '../../assets/tikanga/youdidit.png'
-  import awardBadge from '../../assets/Navpage/award-polite.png'
-  import badgeCard  from '../../assets/quiz-page/badgecard.png'
-  import backToMap  from '../../assets/quiz-page/badgebacktomap.png'
+  import badgeCard      from '../../assets/tikanga/p8 badge card.png'
+  import beginnerBadge  from '../../assets/tikanga/p8 tikanga badge for beginners.png'
+  import confidentBadge from '../../assets/tikanga/p8 tikanga badge for confident.png'
+  import backToMap      from '../../assets/quiz-page/badgebacktomap.png'
+  import backToMapImg   from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
   import { progress } from '../../lib/progress.svelte'
@@ -16,6 +17,10 @@
   let { onMap }: Props = $props()
 
   let showModal = $state(false)
+
+  const levelBadge = $derived(
+    tikangaState.level === 'confident' ? confidentBadge : beginnerBadge
+  )
 
   const badgeLabel = $derived(
     tikangaState.level === 'confident' ? 'Navigator Badge' : 'Explorer Badge'
@@ -45,18 +50,20 @@
 <div class="page">
   <div class="bg" aria-hidden="true"></div>
 
-  <button class="pill btn-map" onclick={goToMap}>← Map</button>
+  <button class="map-btn" onclick={goToMap} aria-label="Back to home map">
+    <img src={backToMapImg} alt="Back to Map" />
+  </button>
   <div class="deco" aria-hidden="true">🌿 ✨ 🎉 ⭐</div>
 
   <!-- Two-card layout -->
   <div class="cards-row">
 
-    <!-- Left: celebration -->
+    <!-- Left: badge card with the level badge overlaid on the coin -->
     <div class="left-wrap">
       <div class="reward-badge">Reward time!</div>
-      <div class="left-card">
-        <img src={youDidIt} alt="You did it!" class="youdidit-img" />
-        <img src={awardBadge} alt={badgeLabel} class="overlap-badge" />
+      <div class="card-img-wrap">
+        <img src={badgeCard} alt="Tikanga badge earned" class="card-img" />
+        <img src={levelBadge} alt={badgeLabel} class="coin-overlay" />
       </div>
     </div>
 
@@ -87,7 +94,7 @@
       <div class="modal-content">
         <div class="badge-card-wrap">
           <img src={badgeCard}  alt="Tikanga badge earned" class="badge-card-img" />
-          <img src={awardBadge} alt="" class="award-overlay" aria-hidden="true" />
+          <img src={levelBadge} alt="" class="award-overlay" aria-hidden="true" />
         </div>
         <button class="back-map-btn" onclick={goToMap} aria-label="Back to the map">
           <img src={backToMap} alt="Back to the map" class="back-map-img" />
@@ -121,13 +128,24 @@
     background: linear-gradient(170deg, #6a0dad 0%, #9b59b6 25%, #f39c12 60%, #f5d76e 100%);
   }
 
-  .btn-map {
+  .map-btn {
     position: fixed;
-    top: 16px;
-    left: 16px;
+    top: 12px;
+    left: 12px;
     z-index: 50;
-    background: #fff;
-    color: #333;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .map-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .map-btn:active { transform: scale(0.97); }
+  .map-btn img {
+    width: min(160px, 16vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
   .deco {
@@ -174,41 +192,37 @@
     white-space: nowrap;
   }
 
-  .left-card {
+  /* Badge card image + coin overlay */
+  .card-img-wrap {
     position: relative;
     width: 100%;
-    background: #fef8e8;
-    border-radius: 28px;
-    box-shadow: 0 8px 30px rgba(0,0,0,.12);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 500px;
+    max-width: 460px;
+    animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both;
   }
-
-  .youdidit-img {
+  .card-img {
     width: 100%;
-    max-width: 740px;
     height: auto;
     object-fit: contain;
-    animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both;
+    border-radius: 24px;
+    filter: drop-shadow(0 10px 30px rgba(0,0,0,.2));
+    display: block;
+  }
+  /* The level badge sits over the coin in the card art */
+  .coin-overlay {
+    position: absolute;
+    top: 12.5%;
+    left: 37%;
+    width: 38%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 50%;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
+    animation: popIn .55s .15s cubic-bezier(.34,1.56,.64,1) both;
   }
 
   @keyframes popIn {
     from { opacity: 0; transform: scale(0.85); }
     to   { opacity: 1; transform: scale(1); }
-  }
-
-  .overlap-badge {
-    position: absolute;
-    top: -24px;
-    right: -24px;
-    width: 100px;
-    height: 100px;
-    object-fit: contain;
-    z-index: 30;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
-    animation: popIn .55s .1s cubic-bezier(.34,1.56,.64,1) both;
   }
 
   .right-card {
@@ -305,12 +319,12 @@
 
   .award-overlay {
     position: absolute;
-    top: 11%;
-    left: 41%;
-    transform: translateX(-10%);
-    width: 32%;
+    top: 12.5%;
+    left: 37%;
+    width: 38%;
     height: auto;
     object-fit: contain;
+    border-radius: 50%;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
     pointer-events: none;
   }

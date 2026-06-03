@@ -69,37 +69,37 @@ const routes = {
   '/tikanga/what-is': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaWhatIsPage.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/station1'), onBack: () => push('/tikanga') },
+    props: { onNext: () => push('/tikanga/station1'), onBack: onBackToMap },
   }),
 
   '/tikanga/station1': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStation1Page.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/station2'), onBack: () => push('/tikanga/what-is') },
+    props: { onNext: () => push('/tikanga/station2'), onBack: onBackToMap },
   }),
 
   '/tikanga/station2': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStation2Page.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/station3'), onBack: () => push('/tikanga/station1') },
+    props: { onNext: () => push('/tikanga/station3'), onBack: onBackToMap },
   }),
 
   '/tikanga/station3': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStation3Page.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/station4'), onBack: () => push('/tikanga/station2') },
+    props: { onNext: () => push('/tikanga/station4'), onBack: onBackToMap },
   }),
 
   '/tikanga/station4': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStation4Page.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/review'), onBack: () => push('/tikanga/station3') },
+    props: { onNext: () => push('/tikanga/review'), onBack: onBackToMap },
   }),
 
   '/tikanga/review': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaReviewPage.svelte').then(m => m.default),
-    props: { onNext: () => push('/tikanga/reward'), onBack: () => push('/tikanga/station4') },
+    props: { onNext: () => push('/tikanga/reward'), onBack: onBackToMap },
   }),
 
   '/tikanga/reward': wrap({
