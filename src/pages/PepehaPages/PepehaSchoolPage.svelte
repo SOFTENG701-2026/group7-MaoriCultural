@@ -53,19 +53,76 @@
   }
 
   const selectedId = $derived(pepehaState.selectedSchoolId)
-  const canProceed = $derived(selectedId !== null)
+
+  // Confident-level cultural-safety check. The learner must answer this before
+  // Find Maunga unlocks; Beginner only needs to pick a school.
+  const QUIZ = {
+    question: 'Why do we use a school example for Kiki?',
+    options: [
+      'So Kiki can practise safely',
+      'So everyone copies Kiki',
+      'So Kiki can guess any place',
+    ],
+    correctIndex: 0,
+  }
+
+  // Confident-level quiz state.
+  let showQuiz = $state(pepehaState.level === 'confident' && pepehaState.selectedSchoolId !== null)
+  let pickedOption = $state<number | null>(null)
+  let checked = $state(false)
+  let quizPassed = $state(false)
+
+  // Find Maunga unlocks once the level's task is complete: Beginner just picks a
+  // school; Confident must also answer the safety check correctly.
+  const canProceed = $derived(selectedId !== null && (isBeginner || quizPassed))
+
+  // Bottom feedback banner — shown once the level's task is complete.
+  const feedbackMsg = $derived(
+    isBeginner
+      ? (selectedId !== null ? 'Ka pai! Kiki will learn this school example.' : '')
+      : (quizPassed ? 'Ka pai! This is a safe practice example for Kiki.' : '')
+  )
 
   function pickSchool(id: string) {
     pepehaState.selectSchool(id)
     const s = SCHOOL_PROFILES.find(p => p.id === id)
-    speak(`${s?.schoolName}. ${s?.maungaLine} ${s?.awaLine}`)
+    if (isBeginner) {
+      speak(`${s?.schoolName}. ${s?.maungaLine} ${s?.awaLine} Ka pai! Kiki will learn this school example.`)
+    } else {
+      // Re-open the safety check for the newly chosen example and reset answers.
+      showQuiz = true
+      pickedOption = null
+      checked = false
+      quizPassed = false
+      speak(`${s?.schoolName}. ${QUIZ.question}`)
+    }
+  }
+
+  function pickOption(i: number) {
+    pickedOption = i
+    checked = false // hide any previous hint while they reconsider
+  }
+
+  function checkAnswer() {
+    if (pickedOption === null) return
+    checked = true
+    if (pickedOption === QUIZ.correctIndex) {
+      quizPassed = true
+      showQuiz = false
+      speak("Ka pai! Kiki's example helps us learn without guessing our own pepeha.")
+    } else {
+      speak('Not quite. We use a school example so Kiki can practise safely. Try again.')
+    }
   }
 
   const readText = $derived(
-    `${title}. ${kikiLine} ` +
-    (isBeginner
-      ? "This is Kiki's practice example."
-      : 'Remember, this is a safe practice example, not your own pepeha.')
+    !isBeginner && showQuiz
+      ? `${QUIZ.question} ` +
+        QUIZ.options.map((o, i) => `Option ${i + 1}: ${o}.`).join(' ')
+      : `${title}. ${kikiLine} ` +
+        (isBeginner
+          ? "This is Kiki's practice example."
+          : 'Remember, this is a safe practice example, not your own pepeha.')
   )
 </script>
 
@@ -130,6 +187,42 @@
     <div class="bubble"><p>{kikiLine}</p></div>
     <img src={kikiImg} alt="Kiki the kiwi" class="kiki-img" />
   </div>
+
+  <!-- Confident-level cultural-safety check (must pass before Find Maunga) -->
+  {#if !isBeginner && selectedId && showQuiz && !quizPassed}
+    <div class="quiz-overlay" role="dialog" aria-modal="true" aria-label={QUIZ.question}>
+      <div class="quiz-card">
+        <p class="quiz-q">{QUIZ.question}</p>
+        <div class="quiz-options">
+          {#each QUIZ.options as opt, i}
+            <button
+              class="quiz-opt"
+              class:picked={pickedOption === i}
+              class:wrong={checked && pickedOption === i && i !== QUIZ.correctIndex}
+              onclick={() => pickOption(i)}
+              aria-pressed={pickedOption === i}
+            >
+              {opt}
+            </button>
+          {/each}
+        </div>
+        {#if checked && pickedOption !== QUIZ.correctIndex}
+          <p class="quiz-hint">Not quite — have another try.</p>
+        {/if}
+        <div class="quiz-actions">
+          <button class="text-btn" onclick={() => (showQuiz = false)}>Choose a different school</button>
+          <button class="check-btn" disabled={pickedOption === null} onclick={checkAnswer}>
+            Check answer
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Feedback banner — shown once the level's task is complete -->
+  {#if feedbackMsg}
+    <div class="feedback" role="status">{feedbackMsg}</div>
+  {/if}
 
   <!-- Bottom bar: Read to me (left) · Find Maunga (right) -->
   <div class="bottom-bar">
@@ -398,5 +491,132 @@
     display: block;
     filter: grayscale(0.7) brightness(0.85);
     opacity: 0.6;
+  }
+
+  /* Confident-level safety-check overlay */
+  .quiz-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 16px;
+  }
+  .quiz-card {
+    width: min(540px, 90vw);
+    background: #fffdf3;
+    border: 4px solid #F5A623;
+    border-radius: 24px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    padding: clamp(18px, 3vw, 30px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 1.8vw, 18px);
+    text-align: center;
+  }
+  .quiz-q {
+    margin: 0;
+    font-size: clamp(18px, 2.2vw, 26px);
+    font-weight: 900;
+    color: #1a5c00;
+    line-height: 1.3;
+  }
+  .quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.2vw, 12px);
+  }
+  .quiz-opt {
+    font-family: inherit;
+    font-size: clamp(15px, 1.7vw, 20px);
+    font-weight: 800;
+    color: #2a3a1a;
+    background: #ffffff;
+    border: 3px solid #2f8a3e;
+    border-radius: 16px;
+    padding: clamp(10px, 1.4vw, 16px);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .quiz-opt:hover  { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18); }
+  .quiz-opt:active { transform: translateY(0); }
+  .quiz-opt:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; }
+  .quiz-opt.picked {
+    background: #eafbe7;
+    box-shadow: 0 0 0 4px #ffd54a;
+  }
+  .quiz-opt.wrong {
+    border-color: #c0392b;
+    background: #fdecea;
+    animation: wiggle 0.4s ease;
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  .quiz-hint {
+    margin: 0;
+    font-size: clamp(14px, 1.5vw, 18px);
+    font-weight: 800;
+    color: #c0392b;
+  }
+  .quiz-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .text-btn {
+    font-family: inherit;
+    font-size: clamp(13px, 1.4vw, 16px);
+    font-weight: 800;
+    color: #5a6a4a;
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 6px;
+  }
+  .text-btn:hover { color: #2f8a3e; }
+  .text-btn:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; border-radius: 8px; }
+  .check-btn {
+    font-family: inherit;
+    font-size: clamp(15px, 1.7vw, 20px);
+    font-weight: 900;
+    color: #ffffff;
+    background: #2f8a3e;
+    border: none;
+    border-radius: 18px;
+    padding: clamp(10px, 1.4vw, 14px) clamp(18px, 2.4vw, 28px);
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(47, 138, 62, 0.45);
+    transition: transform 0.12s ease, box-shadow 0.2s ease;
+  }
+  .check-btn:hover:not(:disabled)  { transform: translateY(-2px); }
+  .check-btn:active:not(:disabled) { transform: translateY(0); }
+  .check-btn:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; }
+  .check-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+  /* Feedback banner — bottom centre, above the bottom bar */
+  .feedback {
+    position: absolute;
+    bottom: 9%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 45;
+    background: #1a5c00;
+    color: #ffffff;
+    font-size: clamp(14px, 1.6vw, 20px);
+    font-weight: 900;
+    padding: clamp(8px, 1.2vw, 14px) clamp(16px, 2.4vw, 28px);
+    border-radius: 999px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+    border: 3px solid #ffd54a;
+    text-align: center;
+    max-width: 80vw;
   }
 </style>
