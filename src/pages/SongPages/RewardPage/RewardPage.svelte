@@ -1,118 +1,260 @@
-<!-- Grace Liao — FR12: Reward Page -->
+<!-- Dev D — Waiata Reward Page (Page 6) -->
 <script lang="ts">
-  import youDidIt   from '../../../assets/quiz-page/youdidit.png';
-  import awardBadge from '../../../assets/Navpage/award-music.png';
-  import badgeCard      from '../../../assets/quiz-page/badgecard.png';
-  import badgeBackToMap from '../../../assets/quiz-page/badgebacktomap.png';
-  import { push } from 'svelte-spa-router';
-  import { progress } from '../../../lib/progress.svelte';
+  import { onDestroy } from 'svelte'
+  import { push } from 'svelte-spa-router'
+  import { progress } from '../../../lib/progress.svelte'
+  import { settings } from '../../../lib/settings.svelte'
+
+  import waiataCard from '../../../assets/waiata_badge_card.png'
+  import badgeBackToMap from '../../../assets/quiz-page/badgebacktomap.png'
+  import beginnerBadge from '../../../assets/badges/waiata badge for beginners.png'
+  import confidentBadge from '../../../assets/badges/waiata badge for confident.png'
 
   interface Props {
-    onMap?: () => void;
+    level?: string
+    onMap?: () => void
   }
 
-  let { onMap = () => push('/') }: Props = $props();
+  const { level = 'beginner', onMap = () => push('/') }: Props = $props()
 
-  function goToMap() {
-    onMap();
-    push('/');
-  }
+  let lvl = $derived(level)
+  let isConfident = $derived(lvl === 'confident' || lvl === 'hard')
 
-  let showModal = $state(false);
+  let CONTENT = $derived.by(() => ({
+    title: 'Waiata Complete!',
 
-  function handleDone() {
-    progress.markComplete('waiata');
-    showModal = true;
-  }
+    kikiSays: isConfident
+      ? 'Ka pai! You listened and tried Te Aroha.'
+      : 'Ka pai! You listened and tried the colour song.',
 
-  const stats = [
-    { label: 'Participation', value: 'Joined in'  },
-    { label: 'Key word',      value: 'tātou'       },
-    { label: 'Meaning',       value: 'Understood'  },
-  ];
+    badgeLabel: isConfident
+      ? 'Waiata Navigator Badge'
+      : 'Waiata Explorer Badge',
 
-  function readToMe() {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(
-        'Waiata complete! You joined in, learned the key word tātou, and understood its meaning. Tap Done to collect your badge.'
-      );
-      utt.rate = 0.8;
-      window.speechSynthesis.speak(utt);
+    badgeImg: isConfident
+      ? confidentBadge
+      : beginnerBadge,
+
+    levelTag: isConfident
+      ? '🌺 Confident Level completed!'
+      : '🌿 Beginner Level completed!',
+
+    summary: isConfident
+      ? [
+          'aroha = love',
+          'rangimārie = peace',
+          'tātou = all of us',
+          'You completed the Te Aroha word and meaning checks',
+        ]
+      : [
+          'mā = white',
+          'whero = red',
+          'kākāriki = green',
+          'pango / mangu = black',
+          'You completed the colour word and meaning checks',
+        ],
+  }))
+
+  const BADGE_KEY = 'mca-waiata-badge'
+
+  function getSavedBadge() {
+    try {
+      return localStorage.getItem(BADGE_KEY)
+    } catch {
+      return null
     }
   }
+
+  function saveBadge(t: string) {
+    try {
+      sessionStorage.setItem(BADGE_KEY, t)
+
+      const current = getSavedBadge()
+      if (current === 'confident' && t === 'beginner') return
+
+      localStorage.setItem(BADGE_KEY, t)
+    } catch {}
+  }
+
+  let isUpgrade = $state(false)
+  let showModal = $state(false)
+
+  function handleDone() {
+    speechSynthesis.cancel()
+
+    progress.markComplete('waiata')
+
+    const badgeType = isConfident ? 'confident' : 'beginner'
+    isUpgrade = getSavedBadge() === 'beginner' && badgeType === 'confident'
+
+    saveBadge(badgeType)
+
+    console.log(`[Dev D] awardBadge('waiata', '${badgeType}')`)
+
+    showModal = true
+  }
+
+  function goToMap() {
+    speechSynthesis.cancel()
+    onMap()
+    push('/')
+  }
+
+  function readToMe() {
+    if (!soundIsOn()) return
+
+    speechSynthesis.cancel()
+
+    const text = `${CONTENT.title}. ${CONTENT.kikiSays}. You learned: ${CONTENT.summary.join('. ')}. ${CONTENT.badgeLabel} unlocked!`
+
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'en-NZ'
+    u.rate = getSpeechRate()
+
+    speechSynthesis.speak(u)
+  }
+
+  function soundIsOn() {
+    const s: any = settings
+
+    if (s.sound === 'off') return false
+    if (s.sound === false) return false
+    if (s.soundOn === false) return false
+    if (s.muted === true) return false
+
+    return true
+  }
+
+  function getSpeechRate() {
+    const s: any = settings
+    const volume = s.volume ?? s.volumeLevel ?? 'medium'
+
+    if (volume === 'low') return 0.8
+    if (volume === 'high') return 0.9
+    return 0.85
+  }
+
+  onDestroy(() => {
+    speechSynthesis.cancel()
+  })
 </script>
 
 <div class="page">
-
-  <!-- Gradient background -->
   <div class="bg" aria-hidden="true"></div>
 
-  <!-- Map button: fixed top-left -->
-  <button class="pill btn-map" onclick={goToMap}>← Map</button>
+  <button class="btn-corner" onclick={goToMap}>← Back to Map</button>
 
-  <!-- Decorations top-right -->
-  <div class="deco" aria-hidden="true">🎵 🌸 ⭐ ✨</div>
-
-  <!-- Two separate cards -->
   <div class="cards-row">
-
-    <!-- LEFT card (larger) — "Reward time!" badge straddles its top -->
     <div class="left-wrap">
-      <div class="reward-badge">Reward time!</div>
+      <div class="reward-banner">🎉 Reward time!</div>
+
       <div class="left-card">
-        <img src={youDidIt} alt="You did it!" class="youdidit-img" />
-        <!-- Medal badge: top-right corner of the left card -->
-        <img src={awardBadge} alt="Waiata badge" class="overlap-badge" />
+        <img src={waiataCard} alt="Waiata badge card" class="youdidit-img" />
+
+        <!-- Badge now sits inside the big coin/circle area on the certificate -->
+        <img
+          src={CONTENT.badgeImg}
+          alt={CONTENT.badgeLabel}
+          class="coin-badge"
+          class:glow={isConfident}
+        />
       </div>
     </div>
 
-    <!-- RIGHT card (smaller) -->
     <div class="right-card">
-      <h1>⭐ Waiata complete!</h1>
+      <div class="level-tag">{CONTENT.levelTag}</div>
+
+      <h1>{CONTENT.title}</h1>
+
+      <p class="kiki-says">{CONTENT.kikiSays}</p>
+
+      <p class="learned-title">You learned:</p>
 
       <div class="stats">
-        {#each stats as s, i}
+        {#each CONTENT.summary as item, i}
           <div class="stat-row" style:animation-delay="{i * 0.1}s">
-            <span class="stat-label">{s.label}</span>
-            <span class="stat-value">{s.value}</span>
+            <span class="stat-label">✓ {item}</span>
           </div>
         {/each}
       </div>
 
+      <div class="badge-pill">
+        🏅 {CONTENT.badgeLabel} unlocked!
+      </div>
+
       <div class="hint-box">
-        <b>Next step:</b> Tap Done to collect your badge.
+        <b>Next step:</b> Tap Done to collect your {CONTENT.badgeLabel}.
       </div>
     </div>
-
   </div>
 
-  <!-- Badge card modal -->
-  {#if showModal}
-    <div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Badge earned">
-      <div class="modal-content">
-        <!-- badgecard with award-music overlaid on the coin -->
-        <div class="badge-card-wrap">
-          <img src={badgeCard}  alt="Waiata badge earned" class="badge-card-img" />
-          <img src={awardBadge} alt=""                    class="award-overlay" aria-hidden="true" />
-        </div>
-        <!-- badgebacktomap.png as the button -->
-        <button class="back-map-btn" onclick={goToMap} aria-label="Back to the map">
-          <img src={badgeBackToMap} alt="Back to the map" class="back-map-img" />
-        </button>
-      </div>
-    </div>
-  {/if}
-
-  <!-- Bottom nav -->
   <nav class="bottom-nav">
     <button class="pill btn-read" onclick={readToMe}>🔊 Read to me</button>
+    <button class="pill btn-show" onclick={handleDone}>Show Badge</button>
     <button class="pill btn-done" onclick={handleDone}>Done →</button>
   </nav>
-
 </div>
 
+{#if showModal}
+  <div
+    class="modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Badge earned"
+  >
+    <div class="modal-box" role="document">
+      <button
+        class="modal-close"
+        onclick={() => {
+          speechSynthesis.cancel()
+          showModal = false
+        }}
+        aria-label="Close badge popup"
+      >
+        ×
+      </button>
+
+      <p class="modal-title">
+        {isUpgrade ? '⬆️ Badge Upgraded!' : 'Ka rawe! 🎉'}
+      </p>
+
+      <p class="modal-badge-name">
+        {CONTENT.badgeLabel} unlocked!
+      </p>
+
+      <img
+        src={CONTENT.badgeImg}
+        alt={CONTENT.badgeLabel}
+        class="modal-badge"
+        class:shimmer={isConfident}
+      />
+
+      <p class="modal-desc">
+        {#if isUpgrade}
+          ✨ You completed the Confident level — your Waiata badge has been upgraded to Navigator!
+        {:else if isConfident}
+          🌺 You earned the Waiata Navigator Badge for completing Te Aroha!
+        {:else}
+          🌿 You earned the Waiata Explorer Badge for completing the colour waiata!
+        {/if}
+      </p>
+
+      <button class="back-map-btn" onclick={goToMap}>
+        <img src={badgeBackToMap} alt="Back to the map" class="back-map-img" />
+      </button>
+    </div>
+  </div>
+{/if}
+
 <style>
+  :global(html, body) {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
   .page {
     position: relative;
     min-height: 100vh;
@@ -121,10 +263,9 @@
     flex-direction: column;
     align-items: center;
     font-family: 'Nunito', 'Varela Round', system-ui, sans-serif;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
-  /* Gradient background */
   .bg {
     position: fixed;
     inset: 0;
@@ -139,60 +280,59 @@
     );
   }
 
-  /* ← Map: fixed top-left */
-  .btn-map {
+  .btn-corner {
     position: fixed;
     top: 16px;
     left: 16px;
     z-index: 50;
+    border: none;
+    border-radius: 999px;
+    padding: 10px 22px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
     background: #fff;
     color: #333;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    transition: transform 0.12s;
   }
 
-  /* Decorations: fixed top-right */
-  .deco {
-    position: fixed;
-    top: 20px;
-    right: 24px;
-    z-index: 40;
-    font-size: 30px;
-    letter-spacing: 10px;
-    opacity: .85;
+  .btn-corner:hover {
+    transform: translateY(-2px);
   }
 
-  /* ── Two-card row ── */
   .cards-row {
     position: relative;
     z-index: 20;
-    width: 96%;
-    max-width: 1500px;
+    width: 92%;
+    max-width: 1400px;
+    height: calc(100vh - 115px);
     display: flex;
     align-items: flex-start;
     gap: 24px;
-    margin-top: 56px;
-    margin-bottom: 100px;
+    margin-top: 48px;
+    margin-bottom: 0;
   }
 
-  /* ── LEFT wrap (badge + card) ── */
   .left-wrap {
-    flex: 2;                  /* left is larger than right */
+    flex: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
     position: relative;
   }
 
-  /* "Reward time!" straddles the top of the left card */
-  .reward-badge {
+  .reward-banner {
     position: relative;
-    z-index: 2;
-    background: #F5A623;
+    z-index: 5;
+    background: #f5a623;
     color: #2c1600;
     font-weight: 800;
     font-size: 30px;
     padding: 16px 48px;
     border-radius: 100px;
-    box-shadow: 0 4px 14px rgba(245,166,35,.45);
+    box-shadow: 0 4px 14px rgba(245, 166, 35, 0.45);
     margin-bottom: -24px;
     white-space: nowrap;
   }
@@ -202,13 +342,12 @@
     width: 100%;
     background: #fef8e8;
     border-radius: 28px;
-    box-shadow: 0 8px 30px rgba(0,0,0,.12);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
-    box-sizing: border-box;
-    min-height: 560px;
+    min-height: 650px;
+    overflow: hidden;
   }
 
   .youdidit-img {
@@ -216,41 +355,55 @@
     max-width: 780px;
     height: auto;
     object-fit: contain;
-    animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
-  @keyframes popIn {
-    from { opacity: 0; transform: scale(0.85); }
-    to   { opacity: 1; transform: scale(1); }
+  /* Updated: badge is inside the big coin/circle area */
+.coin-badge {
+  position: absolute;
+  top: 12%;
+  left: 40%;
+  transform: translate(-50%, 0);
+  width: clamp(155px, 15vw, 220px);
+  height: auto;
+  border-radius: 50%;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.28));
+  animation: popIn 0.6s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  z-index: 30;
+}
+
+  .coin-badge.glow {
+    animation:
+      popIn 0.6s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+      badgeGlow 2s 1s ease-in-out infinite alternate;
   }
 
-  /* Medal badge: top-right corner of left-card */
-  .overlap-badge {
-    position: absolute;
-    top: -24px;
-    right: -24px;
-    width: 110px;
-    height: 110px;
-    object-fit: contain;
-    z-index: 30;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
-    animation: popIn .55s .1s cubic-bezier(.34,1.56,.64,1) both;
-  }
-
-  /* ── RIGHT card ── */
   .right-card {
-    flex: 1;                  /* smaller than left */
+    flex: 1;
     background: #fff;
-    border: 3px solid #F5A623;
+    border: 3px solid #f5a623;
     border-radius: 24px;
-    box-shadow: 0 8px 30px rgba(0,0,0,.12);
-    padding: 36px 36px 32px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    padding: 24px 32px 22px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    box-sizing: border-box;
+    gap: 14px;
     align-self: flex-start;
-    margin-top: 64px;         /* match left card top (reward-badge height ≈ 64px) */
+    margin-top: 20px;
+    max-height: calc(100vh - 145px);
+    box-sizing: border-box;
+  }
+
+  .level-tag {
+    display: inline-block;
+    align-self: flex-start;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 6px 18px;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
   }
 
   h1 {
@@ -261,7 +414,20 @@
     line-height: 1.2;
   }
 
-  /* Stats */
+  .kiki-says {
+    font-size: clamp(16px, 1.8vw, 20px);
+    font-weight: 700;
+    color: #1e6e40;
+    margin: 0;
+  }
+
+  .learned-title {
+    margin: 0;
+    font-size: clamp(14px, 1.5vw, 18px);
+    font-weight: 900;
+    color: #78350f;
+  }
+
   .stats {
     display: flex;
     flex-direction: column;
@@ -273,137 +439,246 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 22px 0;
+    padding: 11px 0;
     border-bottom: 1.5px dashed #ddd;
-    animation: fadeIn .4s ease both;
+    animation: fadeIn 0.4s ease both;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+  .stat-label {
+    font-size: clamp(15px, 1.7vw, 20px);
+    color: #555;
+    font-weight: 500;
   }
 
-  .stat-label { font-size: 20px; color: #555; font-weight: 500; }
-  .stat-value { font-size: 22px; font-weight: 800; color: #27ae60; }
+  .badge-pill {
+    background: linear-gradient(180deg, #fde68a, #f59e0b);
+    border-radius: 14px;
+    padding: 12px 18px;
+    text-align: center;
+    font-size: clamp(15px, 1.6vw, 19px);
+    font-weight: 900;
+    color: #78350f;
+    box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35);
+  }
 
-  /* Hint box */
   .hint-box {
     background: #e8f8f0;
     border-radius: 14px;
-    padding: 18px 22px;
-    font-size: 18px;
+    padding: 12px 18px;
+    font-size: clamp(13px, 1.4vw, 16px);
     color: #1e6e40;
-    line-height: 1.5;
+    line-height: 1.35;
   }
-  .hint-box b { color: #155d34; }
 
-  /* ── Badge card modal ── */
+  .hint-box b {
+    color: #155d34;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    padding: 8px 24px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pill {
+    border: none;
+    border-radius: 100px;
+    padding: 13px 26px;
+    font-family: inherit;
+    font-size: clamp(14px, 1.5vw, 17px);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+    transition:
+      transform 0.12s,
+      box-shadow 0.12s;
+    white-space: nowrap;
+  }
+
+  .pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  }
+
+  .btn-read {
+    background: #fff;
+    color: #2255cc;
+  }
+
+  .btn-show {
+    background: linear-gradient(180deg, #818cf8, #4f46e5);
+    color: #fff;
+  }
+
+  .btn-done {
+    background: #f5a623;
+    color: #2c1600;
+    font-weight: 800;
+    animation: breathe 2s ease-in-out infinite;
+  }
+
   .modal-overlay {
     position: fixed;
     inset: 0;
     z-index: 100;
-    background: rgba(0,0,0,.55);
+    background: rgba(0, 0, 0, 0.55);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 28px;
-    animation: fadeIn .25s ease both;
+    animation: fadeIn 0.25s ease;
   }
 
-  .modal-content {
+  .modal-box {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 28px;
-  }
-
-  /* Card + overlay wrapper */
-  .badge-card-wrap {
+    gap: 20px;
+    background: #fff;
+    border-radius: 28px;
+    padding: 36px 40px;
+    max-width: 440px;
+    width: 90%;
     position: relative;
-    width: min(480px, 88vw);
-    animation: popIn .4s cubic-bezier(.34,1.56,.64,1) both;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+    animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
-  .badge-card-img {
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-    border-radius: 24px;
-    filter: drop-shadow(0 12px 32px rgba(0,0,0,.4));
-    display: block;
-  }
-
-  /* award-music.png overlaid on the coin — top-center area of badgecard */
-  .award-overlay {
+  .modal-close {
     position: absolute;
-    top: 11%;
-    left: 41%;
-    transform: translateX(-10%);
-    width: 32%;
-    height: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
-    pointer-events: none;
+    top: 16px;
+    right: 18px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #374151;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  /* badgebacktomap.png as clickable image button */
+  .modal-close:hover {
+    background: #fef3c7;
+    color: #92400e;
+    transform: scale(1.05);
+  }
+
+  .modal-title {
+    margin: 0;
+    font-size: clamp(22px, 3vmin, 30px);
+    font-weight: 900;
+    color: #15803d;
+  }
+
+  .modal-badge-name {
+    margin: 0;
+    font-size: clamp(16px, 2vmin, 20px);
+    font-weight: 800;
+    color: #78350f;
+    text-align: center;
+  }
+
+  .modal-badge {
+    width: clamp(140px, 28vmin, 220px);
+    height: auto;
+    filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.3));
+    animation: popIn 0.5s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .modal-badge.shimmer {
+    animation:
+      popIn 0.5s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+      badgeGlow 1.8s 1s ease-in-out infinite alternate;
+  }
+
+  .modal-desc {
+    margin: 0;
+    font-size: clamp(13px, 1.6vmin, 15px);
+    font-weight: 600;
+    color: #4b5563;
+    text-align: center;
+    line-height: 1.5;
+  }
+
   .back-map-btn {
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
-    animation: popIn .4s .1s cubic-bezier(.34,1.56,.64,1) both;
-    transition: transform .12s, filter .12s;
+    transition: transform 0.12s;
   }
-  .back-map-btn:hover  { transform: translateY(-3px) scale(1.03); }
-  .back-map-btn:active { transform: translateY(0) scale(1); }
+
+  .back-map-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+  }
 
   .back-map-img {
-    width: min(340px, 72vw);
+    width: clamp(200px, 40vmin, 300px);
     height: auto;
     display: block;
-    filter: drop-shadow(0 6px 16px rgba(0,0,0,.35));
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
   }
 
-  /* ── Bottom nav ── */
-  .bottom-nav {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    z-index: 30;
-    padding: 12px 24px 22px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  @keyframes badgeGlow {
+    from {
+      filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.35));
+    }
+
+    to {
+      filter:
+        drop-shadow(0 0 22px rgba(245, 158, 11, 0.85))
+        drop-shadow(0 4px 14px rgba(0, 0, 0, 0.3));
+    }
   }
 
-  /* ── Pill buttons ── */
-  .pill {
-    border: none;
-    border-radius: 100px;
-    padding: 16px 36px;
-    font-family: inherit;
-    font-size: 18px;
-    font-weight: 700;
-    cursor: pointer;
-    outline: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,.22);
-    transition: transform .12s, box-shadow .12s;
-    white-space: nowrap;
-  }
-  .pill:hover  { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
-  .pill:active { transform: translateY(0); }
+  @keyframes popIn {
+    from {
+      opacity: 0;
+      transform: scale(0.7);
+    }
 
-  .btn-read { background: #fff; color: #2255cc; }
-
-  .btn-done {
-    background: #F5A623;
-    color: #2c1600;
-    font-weight: 800;
-    animation: breathe 2s ease-in-out infinite;
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   @keyframes breathe {
-    0%, 100% { transform: scale(1);    box-shadow: 0 4px 12px rgba(245,166,35,.35); }
-    50%       { transform: scale(1.06); box-shadow: 0 8px 24px rgba(245,166,35,.6);  }
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow: 0 4px 12px rgba(245, 166, 35, 0.35);
+    }
+
+    50% {
+      transform: scale(1.06);
+      box-shadow: 0 8px 24px rgba(245, 166, 35, 0.6);
+    }
   }
 </style>

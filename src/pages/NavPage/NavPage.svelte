@@ -1,73 +1,138 @@
 <script lang="ts">
-  // Author: Shirley
-
   import { bg, titleImg, explorerImg, settingImg, rewardImg } from './assets'
   import { LOCATIONS, type Pt, type Loc } from './locations'
+
   import MapMarker from './components/MapMarker.svelte'
   import KiwiCharacter from './components/KiwiCharacter.svelte'
   import ReadAloudButton from './components/ReadAloudButton.svelte'
   import LocationInfoModal from './components/LocationInfoModal.svelte'
-  import GuideTour from './components/GuideTour.svelte'
   import AwardPanel from './components/AwardPanel.svelte'
+  import OnboardingSpotlight from './components/OnboardingSpotlight.svelte'
+  import GuideTour from './components/GuideTour.svelte'
+
   import { settings } from '../../lib/settings.svelte'
   import { progress } from '../../lib/progress.svelte'
 
   let { onnavigate = (_id: string) => {} }: { onnavigate?: (id: string) => void } = $props()
 
-  // --- Kiwi character state -------------------------------------------------
-  let kiwi = $state<Pt>({ x: 41, y: 32 }) // starts on the central island
-  let facing = $state(1) // 1 = facing right, -1 = facing left
+  let kiwi = $state<Pt>({ x: 41, y: 32 })
+  let facing = $state(1)
   let walking = $state(false)
-  let walkDur = $state(1.2) // seconds for the current walk (scales with distance)
-  let active = $state<string | null>(null) // location the kiwi is visiting
-  let dest = $state<Pt | null>(null) // current walk target (for the ring)
-  let hinted = $state(true) // show the "how to play" hint until first move
-  let infoLoc = $state<Loc | null>(null) // place whose intro popup is open
-  let showAwards = $state(false) // reward/award collection panel
+  let walkDur = $state(1.2)
+  let active = $state<string | null>(null)
+  let dest = $state<Pt | null>(null)
+  let hinted = $state(true)
+  let infoLoc = $state<Loc | null>(null)
+  let showAwards = $state(false)
 
-  // New-player guide banner: shown only the first time ever. Once dismissed the
-  // flag is saved to localStorage so it never reappears on later map visits or
-  // page reloads (matches the settings/progress persistence pattern).
-  const GUIDE_SEEN_KEY = 'mca-guide-seen'
-  function guideSeen(): boolean {
-    try {
-      return localStorage.getItem(GUIDE_SEEN_KEY) === '1'
-    } catch {
-      return false // storage disabled — treat as first-time
-    }
-  }
-  let showGuide = $state(!guideSeen())
-  function dismissGuide() {
-    showGuide = false
-    try {
-      localStorage.setItem(GUIDE_SEEN_KEY, '1')
-    } catch {
-      // Private mode / storage disabled — guide will simply show again next time.
-    }
+  const UNLOCK_ORDER = ['waiata', 'purakau', 'pepeha', 'tikanga']
+
+  const PREREQUISITES: Record<string, string | null> = {
+    waiata: null,
+    purakau: 'waiata',
+    pepeha: 'purakau',
+    tikanga: 'purakau'
   }
 
-  // Friendly one-line tips, kept short for young readers. Tap to advance.
+  function isLocked(id: string): boolean {
+    const prereqId = PREREQUISITES[id]
+    if (!prereqId) return false
+    return !progress.isComplete(prereqId)
+  }
+
+  function prerequisiteLabel(id: string): string {
+    const prereqId = PREREQUISITES[id]
+    if (!prereqId) return ''
+
+    const prereqLoc = LOCATIONS.find((l) => l.id === prereqId)
+    return prereqLoc?.label ?? prereqId
+  }
+
+  let _dismissedThisLoad = false
+  const _needsOnboarding = !progress.isComplete('waiata')
+  let showOnboarding = $state(_needsOnboarding && !_dismissedThisLoad)
+
+  $effect(() => {
+    if (progress.isComplete('waiata')) showOnboarding = false
+  })
+
+  function dismissOnboarding() {
+    _dismissedThisLoad = true
+    showOnboarding = false
+    // Only show guide if they haven't seen it before
+    if (!hasSeenGuide()) showGuide = true
+  }
+
+  const GUIDE_KEY = 'mca-guide-seen'
+
+  function hasSeenGuide(): boolean {
+    try {
+      return !!localStorage.getItem(GUIDE_KEY)
+    } catch {
+      return false
+    }
+  }
+
+  function markGuideSeen(): void {
+    try {
+      localStorage.setItem(GUIDE_KEY, '1')
+    } catch {}
+  }
+
+  let showGuide = $state(!_needsOnboarding && !hasSeenGuide())
+
   const GUIDE_LINES = [
     'Kia ora! Welcome to Kiwi’s big adventure!',
     'This is a map of Aotearoa, my home.',
     'Tap a place and I will walk there.',
     'Or use the arrow keys to move me.',
     'Tap the place again to play and learn.',
-    'Now let’s go, explorer!',
+    'Now let’s go, explorer!'
   ]
 
+  const waiataLoc = LOCATIONS.find((l) => l.id === 'waiata')!
+
+  let unlockingId = $state<string | null>(null)
+
+  $effect(() => {
+    const completedSnap = [...progress.completed]
+
+    for (const completedId of completedSnap) {
+      const idx = UNLOCK_ORDER.indexOf(completedId)
+      const nextId = UNLOCK_ORDER[idx + 1]
+
+      if (nextId && !progress.isComplete(nextId) && !isLocked(nextId)) {
+        if (unlockingId !== nextId) {
+          unlockingId = nextId
+
+          setTimeout(() => {
+            unlockingId = null
+          }, 2400)
+        }
+
+        break
+      }
+    }
+  })
+
+  let lockedToast = $state<string | null>(null)
+  let toastTimer: ReturnType<typeof setTimeout>
   let walkTimer: ReturnType<typeof setTimeout>
   let stepTimer: ReturnType<typeof setTimeout>
 
   function walkTo(target: Pt) {
     const dist = Math.hypot(target.x - kiwi.x, target.y - kiwi.y)
+
     if (dist < 0.5) return
+
     facing = target.x >= kiwi.x ? 1 : -1
     walkDur = Math.min(2.6, Math.max(0.55, dist * 0.05))
     walking = true
     dest = target
     kiwi = { ...target }
+
     clearTimeout(walkTimer)
+
     walkTimer = setTimeout(() => {
       walking = false
       dest = null
@@ -76,11 +141,24 @@
 
   function selectLocation(loc: Loc) {
     hinted = false
-    // Tapping a place the kiwi has already reached opens its intro popup.
+
+    if (isLocked(loc.id)) {
+      clearTimeout(toastTimer)
+
+      lockedToast = `You need to complete ${prerequisiteLabel(loc.id)} first! 🔒`
+
+      toastTimer = setTimeout(() => {
+        lockedToast = null
+      }, 2200)
+
+      return
+    }
+
     if (active === loc.id && !walking) {
       infoLoc = loc
       return
     }
+
     active = loc.id
     walkTo(loc.stand)
   }
@@ -91,33 +169,42 @@
   }
 
   const STEP = 3
+
   function nudge(dx: number, dy: number) {
     hinted = false
+
     if (dx !== 0) facing = dx > 0 ? 1 : -1
+
     active = null
     dest = null
     walkDur = 0.2
     walking = true
+
     kiwi = {
       x: Math.min(96, Math.max(4, kiwi.x + dx)),
-      y: Math.min(96, Math.max(10, kiwi.y + dy)),
+      y: Math.min(96, Math.max(10, kiwi.y + dy))
     }
+
     clearTimeout(stepTimer)
-    stepTimer = setTimeout(() => (walking = false), 230)
+
+    stepTimer = setTimeout(() => {
+      walking = false
+    }, 230)
   }
 
   function onKey(e: KeyboardEvent) {
-    // While a popup is open it owns the keyboard: Escape closes it, everything
-    // else is ignored so the kiwi doesn't walk behind the dialog.
     if (infoLoc) {
       if (e.key === 'Escape') infoLoc = null
       return
     }
+
     if (showAwards) {
       if (e.key === 'Escape') showAwards = false
       return
     }
+
     const k = e.key.toLowerCase()
+
     if (k === 'arrowleft' || k === 'a') nudge(-STEP, 0)
     else if (k === 'arrowright' || k === 'd') nudge(STEP, 0)
     else if (k === 'arrowup' || k === 'w') nudge(0, -STEP)
@@ -127,10 +214,41 @@
       if (idx >= 0) selectLocation(LOCATIONS[idx])
       return
     }
+
     e.preventDefault()
   }
 
   const activeLoc = $derived(LOCATIONS.find((l) => l.id === active) ?? null)
+
+ const ORDERED_LOCATIONS = UNLOCK_ORDER
+  .map((id) => LOCATIONS.find((l) => l.id === id))
+  .filter(Boolean) as Loc[]
+
+const TRAIL_PTS = ORDERED_LOCATIONS.map((l) => l.icon)
+
+  function buildPath(pts: Pt[]): string {
+    if (pts.length < 2) return ''
+
+    const d: string[] = [`M ${pts[0].x} ${pts[0].y}`]
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)]
+      const p1 = pts[i]
+      const p2 = pts[i + 1]
+      const p3 = pts[Math.min(pts.length - 1, i + 2)]
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6
+      const cp1y = p1.y + (p2.y - p0.y) / 6
+      const cp2x = p2.x - (p3.x - p1.x) / 6
+      const cp2y = p2.y - (p3.y - p1.y) / 6
+
+      d.push(`C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`)
+    }
+
+    return d.join(' ')
+  }
+
+  const fullTrail = buildPath(TRAIL_PTS)
 </script>
 
 <svelte:window onkeydown={onKey} />
@@ -139,31 +257,87 @@
   <div class="stage" style="background-image:url({bg})">
     <div class="vignette" aria-hidden="true"></div>
 
-    <!-- Top banner -->
     <img class="title" src={titleImg} alt="Map of Kiwi's Aotearoa Adventure" draggable="false" />
 
-    <!-- Player card -->
     <img class="explorer" src={explorerImg} alt="Kia ora! Explorer" draggable="false" />
 
-    <!-- Top-right utilities -->
     <button class="util setting" onclick={() => (settings.open = true)} aria-label="Settings">
       <img src={settingImg} alt="" draggable="false" />
     </button>
+
     <button class="util reward" onclick={() => (showAwards = true)} aria-label="Reward">
       <img src={rewardImg} alt="" draggable="false" />
     </button>
 
-    <!-- Location markers -->
+    <svg class="trail-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <filter id="trail-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="0.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <path d={fullTrail} class="trail-base" />
+
+      {#each ORDERED_LOCATIONS.slice(0, -1) as loc, i}
+        {#if progress.isComplete(loc.id)}
+          <path d={buildPath([TRAIL_PTS[i], TRAIL_PTS[i + 1]])} class="trail-lit" />
+        {/if}
+      {/each}
+
+      {#each TRAIL_PTS as pt, i}
+        <circle
+          cx={pt.x}
+          cy={pt.y}
+          r="1.1"
+          class="waypoint-dot"
+          class:done={progress.isComplete(ORDERED_LOCATIONS[i].id)}
+          class:locked-dot={isLocked(ORDERED_LOCATIONS[i].id)}
+        />
+      {/each}
+
+      {#each TRAIL_PTS as pt, i}
+        {#if !progress.isComplete(ORDERED_LOCATIONS[i].id)}
+          <text
+            x={pt.x + 2.2}
+            y={pt.y - 2.8}
+            class="step-label"
+            class:locked-label={isLocked(ORDERED_LOCATIONS[i].id)}
+          >
+            {i + 1}
+          </text>
+        {/if}
+      {/each}
+    </svg>
+
     {#each LOCATIONS as loc, i (loc.id)}
-      <MapMarker {loc} index={i} active={active === loc.id} completed={progress.isComplete(loc.id)} onpick={selectLocation} />
+      <MapMarker
+        {loc}
+        index={i}
+        active={active === loc.id}
+        completed={progress.isComplete(loc.id)}
+        locked={isLocked(loc.id)}
+        onpick={selectLocation}
+      />
     {/each}
 
-    <!-- Walk destination ring -->
+    {#if unlockingId}
+      {@const ul = LOCATIONS.find((l) => l.id === unlockingId)}
+
+      {#if ul}
+        <div class="unlock-burst" style="left:{ul.icon.x}%; top:{ul.icon.y}%" aria-hidden="true">
+          🎉
+        </div>
+      {/if}
+    {/if}
+
     {#if dest}
       <span class="ring" style="left:{dest.x}%; top:{dest.y}%" aria-hidden="true"></span>
     {/if}
 
-    <!-- "Tap again to explore" tag -->
     {#if activeLoc && !walking}
       <div
         class="tag"
@@ -174,32 +348,40 @@
       </div>
     {/if}
 
-    <!-- The kiwi character -->
     <KiwiCharacter pos={kiwi} {facing} {walking} {walkDur} />
 
-    <!-- Read to me -->
     <ReadAloudButton />
 
-    <!-- How-to-play hint (suppressed while the new-player guide is open) -->
-    {#if hinted && !showGuide}
+    {#if lockedToast}
+      <div class="locked-toast" role="status" aria-live="polite">
+        {lockedToast}
+      </div>
+    {/if}
+
+    {#if infoLoc}
+      <LocationInfoModal loc={infoLoc} onstart={startLocation} onclose={() => (infoLoc = null)} />
+    {/if}
+
+    {#if showAwards}
+      <AwardPanel onclose={() => (showAwards = false)} />
+    {/if}
+
+    {#if hinted && !showOnboarding && !showGuide}
       <div class="hint" aria-hidden="true">
         Tap a place — or use the arrow keys — to walk Kiwi
       </div>
     {/if}
 
-    <!-- New-player guide banner -->
     {#if showGuide}
-      <GuideTour lines={GUIDE_LINES} onfinish={dismissGuide} />
+      <GuideTour lines={GUIDE_LINES} onfinish={() => { showGuide = false; markGuideSeen() }} />
     {/if}
 
-    <!-- Teaching-intro popup for the tapped place -->
-    {#if infoLoc}
-      <LocationInfoModal loc={infoLoc} onstart={startLocation} onclose={() => (infoLoc = null)} />
-    {/if}
-
-    <!-- Award collection panel -->
-    {#if showAwards}
-      <AwardPanel onclose={() => (showAwards = false)} />
+    {#if showOnboarding}
+      <OnboardingSpotlight
+        waiataIcon={waiataLoc.icon}
+        waiataW={waiataLoc.w}
+        onDismiss={dismissOnboarding}
+      />
     {/if}
   </div>
 </div>
@@ -213,8 +395,7 @@
     place-items: center;
     padding: var(--pad);
     box-sizing: border-box;
-    background:
-      radial-gradient(120% 90% at 50% 18%, #1f6f8b 0%, #103447 55%, #081b27 100%);
+    background: radial-gradient(120% 90% at 50% 18%, #1f6f8b 0%, #103447 55%, #081b27 100%);
     font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
     overflow: hidden;
   }
@@ -222,10 +403,6 @@
   .stage {
     position: relative;
     z-index: 1;
-    /* The map is stretched to exactly fill the viewport (background-size:
-       100% 100%). Because the markers and the kiwi are positioned by the same
-       percentages, they stay locked to their spots on the map even when the
-       1280×832 art is stretched to a wider screen. */
     width: 100vw;
     height: 100svh;
     background-size: 100% 100%;
@@ -235,14 +412,12 @@
     user-select: none;
   }
 
-  /* Soft atmospheric edge so the painted map sits inside a frame. */
   .vignette {
     position: absolute;
     inset: 0;
     pointer-events: none;
     z-index: 2;
-    background:
-      radial-gradient(130% 100% at 50% 45%, transparent 60%, rgba(4, 18, 26, 0.45) 100%);
+    background: radial-gradient(130% 100% at 50% 45%, transparent 60%, rgba(4, 18, 26, 0.45) 100%);
     box-shadow: inset 0 0 60px rgba(4, 18, 26, 0.35);
   }
 
@@ -250,7 +425,6 @@
     -webkit-user-drag: none;
   }
 
-  /* ---- Static overlays ---- */
   .title {
     position: absolute;
     left: 50%;
@@ -282,30 +456,92 @@
     transition: transform 0.18s ease, filter 0.18s ease;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.32));
   }
+
   .util img {
     width: 100%;
     display: block;
   }
+
   .util:hover {
     transform: translateY(-3px) scale(1.05);
     filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.4));
   }
+
   .util:active {
     transform: translateY(-1px) scale(0.98);
   }
+
   .util:focus-visible {
     outline: 3px solid #ffe9a8;
     outline-offset: 3px;
     border-radius: 12px;
   }
+
   .setting {
     right: 11.5%;
   }
+
   .reward {
     right: 1.6%;
   }
 
-  /* ---- Walk destination ring ---- */
+  .trail-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9;
+    pointer-events: none;
+  }
+
+  :global(.trail-base) {
+    fill: none;
+    stroke: rgba(255, 235, 160, 0.28);
+    stroke-width: 0.8;
+    stroke-dasharray: 2.2 2.8;
+    stroke-linecap: round;
+  }
+
+  :global(.trail-lit) {
+    fill: none;
+    stroke: rgba(255, 210, 60, 0.9);
+    stroke-width: 1.1;
+    stroke-dasharray: 2.2 2.8;
+    stroke-linecap: round;
+    filter: url(#trail-glow);
+  }
+
+  :global(.waypoint-dot) {
+    fill: rgba(255, 235, 160, 0.45);
+    stroke: rgba(255, 235, 160, 0.7);
+    stroke-width: 0.3;
+  }
+
+  :global(.waypoint-dot.done) {
+    fill: rgba(255, 210, 60, 0.95);
+    stroke: #fff;
+    stroke-width: 0.4;
+  }
+
+  :global(.waypoint-dot.locked-dot) {
+    fill: rgba(160, 160, 160, 0.35);
+    stroke: rgba(160, 160, 160, 0.5);
+  }
+
+  :global(.step-label) {
+    fill: rgba(255, 240, 180, 0.72);
+    font-size: 2.4px;
+    font-family: 'Baloo 2', system-ui, sans-serif;
+    font-weight: 800;
+    paint-order: stroke fill;
+    stroke: rgba(20, 20, 20, 0.5);
+    stroke-width: 0.5px;
+  }
+
+  :global(.step-label.locked-label) {
+    fill: rgba(180, 180, 180, 0.5);
+  }
+
   .ring {
     position: absolute;
     width: 5.5%;
@@ -317,12 +553,7 @@
     z-index: 11;
     animation: ripple 1s ease-out infinite;
   }
-  @keyframes ripple {
-    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
-  }
 
-  /* ---- "Tap again" tag ---- */
   .tag {
     position: absolute;
     transform: translate(-50%, -100%);
@@ -338,6 +569,7 @@
     pointer-events: none;
     animation: pop 0.25s ease-out both;
   }
+
   .tag::after {
     content: '';
     position: absolute;
@@ -347,12 +579,7 @@
     border: 5px solid transparent;
     border-top-color: rgba(31, 18, 8, 0.85);
   }
-  @keyframes pop {
-    from { opacity: 0; transform: translate(-50%, -90%) scale(0.85); }
-    to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
-  }
 
-  /* ---- Hint ---- */
   .hint {
     position: absolute;
     left: 50%;
@@ -371,15 +598,120 @@
     pointer-events: none;
     animation: floatHint 2.6s ease-in-out infinite;
   }
+
+  .locked-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 12%;
+    transform: translateX(-50%);
+    z-index: 50;
+    background: rgba(30, 20, 10, 0.88);
+    color: #ffe9c2;
+    font-size: clamp(11px, 1.8vmin, 16px);
+    font-weight: 700;
+    padding: 0.55em 1.2em;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    border: 1.5px solid rgba(255, 200, 80, 0.4);
+    animation: toastIn 0.22s ease-out both, toastOut 0.28s 1.9s ease-in forwards;
+  }
+
+  .unlock-burst {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 45;
+    font-size: clamp(20px, 4vmin, 36px);
+    pointer-events: none;
+    animation: burstPop 2.2s ease-out forwards;
+  }
+
+  @keyframes ripple {
+    0% {
+      transform: translate(-50%, -50%) scale(0.5);
+      opacity: 1;
+    }
+
+    100% {
+      transform: translate(-50%, -50%) scale(1.4);
+      opacity: 0;
+    }
+  }
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -90%) scale(0.85);
+    }
+
+    to {
+      opacity: 1;
+      transform: translate(-50%, -100%) scale(1);
+    }
+  }
+
   @keyframes floatHint {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-4px); }
+    0%,
+    100% {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    50% {
+      transform: translateX(-50%) translateY(-4px);
+    }
+  }
+
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  @keyframes toastOut {
+    to {
+      opacity: 0;
+      transform: translateX(-50%) translateY(6px);
+    }
+  }
+
+  @keyframes burstPop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.4);
+    }
+
+    18% {
+      opacity: 1;
+      transform: translate(-50%, -80%) scale(1.3);
+    }
+
+    55% {
+      opacity: 1;
+      transform: translate(-50%, -100%) scale(1);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -130%) scale(0.8);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .ring,
-    .hint {
+    .hint,
+    .unlock-burst {
       animation: none !important;
+    }
+
+    .locked-toast {
+      animation: none !important;
+      opacity: 1;
     }
   }
 </style>

@@ -3,60 +3,95 @@ import { wrap } from 'svelte-spa-router/wrap';
 
 // When the child taps a module on the map, route into the correct flow.
 const onMapNavigate = (id: string) => {
-  if (id === 'waiata')   push('/song');
-  if (id === 'tikanga')  push('/tikanga');
-  if (id === 'pepeha')   push('/pepeha');
-  if (id === 'purakau')  push('/purakau');
+  if (id === 'waiata') push('/song');
+  if (id === 'tikanga') push('/tikanga');
+  if (id === 'pepeha') push('/pepeha');
+  if (id === 'purakau') push('/purakau');
 };
 
-const onSongStart = () => push('/song/learn');
 const onSongFinish = () => push('/quiz');
-const onBackToMap = () => push('/');
+const onBackToMap  = () => push('/');
 
 const routes = {
-  // Home / map — "Map of Kiwi's Aotearoa Adventure".
   '/': wrap({
     asyncComponent: () =>
       import('./pages/NavPage/NavPage.svelte').then(m => m.default),
     props: { onnavigate: onMapNavigate },
   }),
 
-  // Waiata intro page (FR1) — child reads/listens to what's coming, then taps
-  // ▶ Start to go to the play-along.
   '/song': wrap({
     asyncComponent: () =>
-      import('./pages/SongPages/IntroductionPage/IntroductionPage.svelte').then(
-        m => m.default,
-      ),
-    props: { onStart: () => push('/song/play') },
+      import('./pages/SongPages/IntroductionPage/IntroductionPage.svelte').then(m => m.default),
+    props: { onback: onBackToMap },
   }),
 
-  // Waiata play-along — listen to the full song with synced lyrics, then
-  // Next → the line-by-line sing-along.
-  '/song/play': wrap({
+  // Dev D fix: extract :level from route params and pass it as a prop
+  '/song/play/:level': wrap({
     asyncComponent: () =>
-      import('./pages/SongPages/PlayMusicPage').then(m => m.default),
-    props: { onBack: onBackToMap, onNext: onSongStart },
+      import('./pages/SongPages/PlayMusicPage/PlayMusicPage.svelte').then(m => m.default),
+    props: ((detail: { params: { level?: string } }) => ({
+      level:  detail.params?.level ?? 'easy',
+      onBack: () => push('/song/select'),
+      // Pass level forward so QuizPage and RewardPage can use it
+      onNext: () => push(`/sing/${detail.params?.level ?? 'easy'}`),
+    })) as any,
   }),
 
-  // Line-by-line sing-along with AI help (FR3 – FR9).
   '/song/learn': wrap({
     asyncComponent: () =>
-      import(
-        './pages/SongPages/LearningSongWithAIPage/LearningSongWithAIPage.svelte'
-      ).then(m => m.default),
-    props: { onback: () => push('/song/play'), onfinish: onSongFinish },
+      import('./pages/SongPages/LearningSongWithAIPage/LearningSongWithAIPage.svelte')
+        .then(m => m.default),
+    props: { onback: () => push('/song'), onfinish: onSongFinish },
   }),
 
+  // Dev D: singing practice page (after PlayMusicPage, before QuizPage)
+  '/sing/:level': wrap({
+    asyncComponent: () =>
+      import('./pages/SongPages/SingAlongPage/SingAlongPage.svelte').then(m => m.default),
+    props: ((detail: { params: { level?: string } }) => ({
+      level:  detail.params?.level ?? 'easy',
+      onBack: () => push(`/song/play/${detail.params?.level ?? 'easy'}`),
+      onNext: () => push(`/quiz/${detail.params?.level ?? 'easy'}`),
+    })) as any,
+  }),
+
+  // Dev D: level-aware quiz route
+  '/quiz/:level': wrap({
+    asyncComponent: () =>
+      import('./pages/SongPages/QuizPage/QuizPage.svelte').then(m => m.default),
+    props: ((detail: { params: { level?: string } }) => ({
+      level:    detail.params?.level ?? 'easy',
+      onBack:   () => push('/song/select'),
+      onMap:    onBackToMap,
+      onFinish: () => push(`/reward/${detail.params?.level ?? 'easy'}`),
+    })) as any,
+  }),
+
+  // Keep original /quiz route as fallback (for any existing links)
   '/quiz': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/QuizPage/QuizPage.svelte').then(m => m.default),
-    props: { onBack: () => push('/song/learn'), onMap: onBackToMap, onFinish: onBackToMap },
+    props: { level: 'easy', onBack: () => push('/song/select'), onMap: onBackToMap, onFinish: () => push('/reward/easy') },
+  }),
+
+  // Dev D: level-aware reward route
+  '/reward/:level': wrap({
+    asyncComponent: () =>
+      import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
+    props: ((detail: { params: { level?: string } }) => ({
+      level: detail.params?.level ?? 'easy',
+    })) as any,
   }),
 
   '/reward': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
+    props: { level: 'easy' },
+  }),
+
+  '/coming-soon': wrap({
+    asyncComponent: () =>
+      import('./lib/ComingSoon.svelte').then(m => m.default),
   }),
 
   // ── Tikanga module (8 pages) ──────────────────────────────────────────────

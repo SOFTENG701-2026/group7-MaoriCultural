@@ -1,5 +1,4 @@
 <!--
-  Author: Ethan
   The Waiata sing-along page (FR3 - FR9). The child learns Ngā Tae one line at
   a time: a single lyric and matching colour swatch are shown on screen, the
   Kiwi character replays just that line on click, Try singing records the

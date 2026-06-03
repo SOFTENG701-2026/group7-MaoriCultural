@@ -1,227 +1,364 @@
 <script lang="ts">
-  // Author: Shirley
-  // The "Reward" collection panel, opened from the map's trophy button. It shows
-  // Kiwi's achievement medals on the carved wooden board (award-bg). A medal
-  // lights up (swaps to its colourful art) once the matching module is finished
-  // — e.g. completing the Waiata song unlocks the music medal. Medals not yet
-  // earned stay greyed-out, and a "Locked"/"Earned" caption states the status in
-  // words so it never relies on the art (or colour) alone.
-  import {
-    awardBg,
-    awardLockMusic,
-    awardLockLanguage,
-    awardLockMyth,
-    awardLockPolite,
-    awardMusic,
-    awardLanguage,
-    awardMyth,
-    awardPolite,
-  } from '../assets'
+  import { awardBg } from '../assets'
   import { progress } from '../../../lib/progress.svelte'
+
+  // ── Badge images — exact filenames from src/assets/badges/ ──────────────
+  import waiataLocked     from '../../../assets/badges/灰waiata badge.png'
+  import waiataBeginner   from '../../../assets/badges/waiata badge for beginners.png'
+  import waiataConfident  from '../../../assets/badges/waiata badge for confident.png'
+
+  import purakauLocked    from '../../../assets/badges/灰purakau badge.png'
+  import purakauBeginner  from '../../../assets/badges/Purakau badge for beginners.png'
+  import purakauConfident from '../../../assets/badges/purakau badge for confident.png'
+
+  import tikangaLocked    from '../../../assets/badges/灰tikanga badge.png'
+  import tikangaBeginner  from '../../../assets/badges/p8 tikanga badge for beginners.png'
+  import tikangaConfident from '../../../assets/badges/p8 tikanga badge for confident.png'
+
+  import pepehaLocked     from '../../../assets/badges/灰pepeha badge.png'
+  import pepehaBeginner   from '../../../assets/badges/pepeha badge for beginners.png'
+  import pepehaConfident  from '../../../assets/badges/pepeha badge for confident.png'
 
   let { onclose }: { onclose: () => void } = $props()
 
-  // `progressId` is the completion flag this medal watches in the shared
-  // `progress` store. RewardPage marks 'waiata' when the song module is done.
-  type Award = { id: string; name: string; locked: string; unlocked: string; progressId: string }
+  let showDetails = $state(false)
 
-  // Two round medals first, then the two shield medals — keeps the shelf tidy.
-  const AWARDS: Award[] = [
-    { id: 'waiata', name: 'Waiata', locked: awardLockMusic, unlocked: awardMusic, progressId: 'waiata' },
-    { id: 'korero', name: 'Kōrero', locked: awardLockLanguage, unlocked: awardLanguage, progressId: 'korero' },
-    { id: 'purakau', name: 'Pūrākau', locked: awardLockMyth, unlocked: awardMyth, progressId: 'purakau' },
-    { id: 'pepeha', name: 'Pepeha', locked: awardLockPolite, unlocked: awardPolite, progressId: 'pepeha' },
+  // ── Badge level: reads sessionStorage first, then localStorage ───────────
+  // Never downgrades: confident > beginner > none
+  function getBadgeLevel(key: string): 'confident' | 'beginner' | 'none' {
+    try {
+      const s = sessionStorage.getItem(key)
+      if (s === 'confident') return 'confident'
+      if (s === 'beginner')  return 'beginner'
+      const l = localStorage.getItem(key)
+      if (l === 'confident') return 'confident'
+      if (l === 'beginner')  return 'beginner'
+    } catch {}
+    return 'none'
+  }
+
+  const BADGES = [
+    { id: 'waiata',  label: 'Waiata Award',  key: 'mca-waiata-badge',  locked: waiataLocked,  beginner: waiataBeginner,  confident: waiataConfident  },
+    { id: 'purakau', label: 'Pūrākau Award', key: 'mca-purakau-badge', locked: purakauLocked, beginner: purakauBeginner, confident: purakauConfident },
+    { id: 'tikanga', label: 'Kōrero Award',  key: 'mca-tikanga-badge', locked: tikangaLocked, beginner: tikangaBeginner, confident: tikangaConfident },
+    { id: 'pepeha',  label: 'Pepeha Award',  key: 'mca-pepeha-badge',  locked: pepehaLocked,  beginner: pepehaBeginner,  confident: pepehaConfident  },
   ]
+
+  let badgeStates = $derived(BADGES.map(b => {
+    const done  = progress.isComplete(b.id)
+    const level = getBadgeLevel(b.key)
+    const show  = done ? level : 'none'
+    return {
+      ...b,
+      level: show,
+      img:
+        show === 'confident' ? b.confident :
+        show === 'beginner'  ? b.beginner  :
+                               b.locked,
+      caption:
+        show === 'confident' ? '🌺 Confident' :
+        show === 'beginner'  ? '🌿 Beginner'  :
+                               '🔒 Locked',
+      unlocked: done && level !== 'none',
+    }
+  }))
+
+  let completedCount = $derived(badgeStates.filter(b => b.unlocked).length)
 </script>
 
-<div class="award-overlay">
-  <div class="award-frame" style="background-image:url({awardBg})">
-    <!-- Sits over the painted ✕ in the corner of the board. -->
-    <button class="award-close" onclick={onclose} aria-label="Close awards"></button>
+<!-- ── Main awards panel ── -->
+<div class="overlay" role="dialog" aria-modal="true" aria-label="Achievements">
+  <div class="frame" style="background-image: url({awardBg})">
 
-    <ul class="shelf">
-      {#each AWARDS as a (a.id)}
-        {@const earned = progress.isComplete(a.progressId)}
-        <li class="medal" class:earned>
+    <!-- Invisible close hotspot over the X in background image -->
+    <button class="hotspot-close" onclick={onclose} aria-label="Close"></button>
+
+    <!-- 2×2 badge grid -->
+    <div class="badge-grid">
+      {#each badgeStates as b (b.id)}
+        <div class="badge-slot" class:unlocked={b.unlocked} class:confident={b.level === 'confident'}>
+          <p class="badge-name">{b.label}</p>
           <img
-            src={earned ? a.unlocked : a.locked}
-            alt="{a.name} award, {earned ? 'earned' : 'locked'}"
+            src={b.img}
+            alt={b.label}
+            class="badge-img"
+            class:locked-img={!b.unlocked}
             draggable="false"
           />
-          {#if earned}
-            <span class="caption earned">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M5 12.5l4 4 10-10"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              Earned
-            </span>
-          {:else}
-            <span class="caption">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M7 10V7a5 5 0 0 1 10 0v3"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-                <rect x="5" y="10" width="14" height="9" rx="2" fill="currentColor" />
-              </svg>
-              Locked
-            </span>
-          {/if}
-        </li>
+          <span class="badge-state" class:earned={b.unlocked}>{b.caption}</span>
+        </div>
       {/each}
-    </ul>
+    </div>
+
+    <!-- Progress pill -->
+    <div class="progress-pill">
+      PROGRESS: {completedCount}/{BADGES.length} ACHIEVEMENTS
+    </div>
+
+    <!-- Invisible hotspot over VIEW ALL DETAILS in background image -->
+    <button class="hotspot-details" onclick={() => showDetails = true} aria-label="View all details"></button>
+
   </div>
 </div>
 
+<!-- ── Details popup ── -->
+{#if showDetails}
+  <div class="details-overlay" role="dialog" aria-modal="true" aria-label="Achievement details">
+    <div class="details-box">
+      <button class="details-close" onclick={() => showDetails = false} aria-label="Close details">×</button>
+      <h2 class="details-title">Achievement Details</h2>
+
+      {#each badgeStates as b (b.id)}
+        <div class="detail-row" class:done={b.unlocked} class:confident={b.level === 'confident'}>
+          <img src={b.img} alt={b.label} class="detail-img" draggable="false" />
+          <div class="detail-text">
+            <strong>{b.label}</strong>
+            <span>{b.caption}</span>
+          </div>
+        </div>
+      {/each}
+    </div>
+  </div>
+{/if}
+
 <style>
-  .award-overlay {
+  /* ── Overlay ── */
+  .overlay {
     position: absolute;
     inset: 0;
     z-index: 70;
-    display: grid;
-    place-items: center;
-    background: rgba(4, 18, 26, 0.55);
-    animation: fade 0.18s ease-out both;
-  }
-
-  /* award-bg shares the map's 1283:832 ratio, so it fills the stage cleanly. */
-  .award-frame {
-    position: absolute;
-    inset: 0;
-    background-size: 100% 100%;
-    background-repeat: no-repeat;
-    font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
-    animation: pop 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
-
-  .award-close {
-    position: absolute;
-    top: 3.5%;
-    right: 2.5%;
-    width: 6%;
-    aspect-ratio: 1;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: transparent;
-    cursor: pointer;
-  }
-  .award-close:hover {
-    background: rgba(255, 255, 255, 0.14);
-  }
-  .award-close:focus-visible {
-    outline: 3px solid #ffe9a8;
-    outline-offset: 2px;
-  }
-
-  /* The carved inner board, where the medals are arranged in a row. */
-  .shelf {
-    position: absolute;
-    left: 12%;
-    right: 12%;
-    top: 19%;
-    bottom: 22%;
-    margin: 0;
-    padding: 0;
-    list-style: none;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 2%;
+    justify-content: center;
+    background: rgba(4, 18, 26, 0.6);
+    animation: fadeIn .2s ease;
+  }
+  @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+  /* ── Frame — uses awardBg as the panel image ── */
+  .frame {
+    position: relative;
+    width: min(780px, 92vw);
+    aspect-ratio: 700 / 720;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    font-family: 'Baloo 2', system-ui, sans-serif;
+    margin-top: 4vh;
+    animation: popIn .3s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes popIn {
+    from { opacity:0; transform:scale(0.85) }
+    to   { opacity:1; transform:scale(1) }
   }
 
-  .medal {
-    flex: 1 1 0;
+  /* ── Invisible hotspot over the X button in the bg image ── */
+  .hotspot-close {
+    position: absolute;
+    top: 6%;
+    right: 2%;
+    width: 8%;
+    height: 8%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 20;
+    border-radius: 50%;
+    transition: background .15s;
+  }
+  .hotspot-close:hover { background: rgba(255,255,255,0.15); }
+
+  /* ── Badge grid — sits inside the wooden panel area ── */
+  .badge-grid {
+    position: absolute;
+    top: 20%;
+    left: 11%;
+    right: 11%;
+    bottom: 20%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2.5%;
+  }
+
+  /* ── Individual badge slot ── */
+  .badge-slot {
+    background: rgba(25, 12, 4, 0.55);
+    border-radius: 14px;
+    border: 2px solid rgba(160,100,26,.25);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8%;
-    animation: rise 0.4s ease both;
+    justify-content: center;
+    gap: 4%;
+    padding: 3% 3%;
+    transition: transform .15s;
   }
-  .medal:nth-child(2) { animation-delay: 0.06s; }
-  .medal:nth-child(3) { animation-delay: 0.12s; }
-  .medal:nth-child(4) { animation-delay: 0.18s; }
+  .badge-slot:hover { transform: translateY(-2px); }
+  .badge-slot.unlocked { border-color: rgba(255,220,80,.4); background: rgba(15,8,2,.45); }
+  .badge-slot.confident { border-color: rgba(245,158,11,.6); box-shadow: 0 0 14px rgba(245,158,11,.2) inset; }
 
-  .medal img {
-    width: 86%;
-    height: auto;
-    -webkit-user-drag: none;
-    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
-    /* Dimmed + desaturated to read as "not yet earned". */
-    opacity: 0.75;
-    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55)) grayscale(0.35);
-    /* Grow a little when the child points at it. */
-    transition: transform 0.18s ease;
-    cursor: pointer;
-  }
-  .medal img:hover {
-    transform: scale(1.12);
-  }
-
-  /* Earned: full colour with a warm golden glow so it clearly stands out. */
-  .medal.earned img {
-    opacity: 1;
-    filter: drop-shadow(0 0 14px rgba(255, 213, 120, 0.85))
-      drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
-  }
-
-  .caption {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3em;
-    padding: 0.22em 0.7em;
+  /* Badge name label */
+  .badge-name {
+    margin: 0;
+    font-size: clamp(9px, 1.5vmin, 13px);
+    font-weight: 900;
+    color: #ffe9a8;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    background: rgba(15,8,2,.7);
+    padding: 2px 8px;
     border-radius: 999px;
-    background: rgba(20, 10, 2, 0.78);
-    color: #f2d9a0;
-    font-weight: 700;
-    font-size: clamp(10px, 1.5vmin, 15px);
-    letter-spacing: 0.3px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  }
-  .caption svg {
-    width: 1.05em;
-    height: 1.05em;
-  }
-  /* Earned caption: golden badge instead of the muted "Locked" pill. */
-  .caption.earned {
-    background: linear-gradient(180deg, #f6c453 0%, #d9962a 100%);
-    color: #2a1602;
-    box-shadow: 0 2px 8px rgba(217, 150, 42, 0.55);
+    text-align: center;
+    line-height: 1.3;
   }
 
-  @keyframes fade {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  /* Badge image */
+  .badge-img {
+    width: clamp(85px, 52%, 145px);
+    height: auto;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,.5));
+    transition: filter .2s, transform .2s;
   }
-  @keyframes pop {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
+  .badge-slot.unlocked .badge-img { animation: glow 1.8s ease-in-out infinite; }
+  .badge-img.locked-img { filter: grayscale(1) brightness(.65) drop-shadow(0 4px 8px rgba(0,0,0,.4)); opacity:.7; }
+
+  @keyframes glow {
+    0%,100% { filter: drop-shadow(0 4px 10px rgba(0,0,0,.5)); transform: scale(1); }
+    50%      { filter: drop-shadow(0 0 18px rgba(255,220,80,.85)) drop-shadow(0 4px 10px rgba(0,0,0,.4)); transform: scale(1.04); }
   }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+
+  /* Completion state pill */
+  .badge-state {
+    font-size: clamp(9px, 1.4vmin, 12px);
+    font-weight: 800;
+    color: #f2d9a0;
+    background: rgba(15,8,2,.75);
+    padding: 2px 9px;
+    border-radius: 999px;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .award-overlay,
-    .award-frame,
-    .medal {
-      animation: none !important;
-    }
-    .medal img {
-      transition: none !important;
-    }
-    .medal img:hover {
-      transform: none;
-    }
+  .badge-state.earned { background: rgba(30,80,35,.85); color: #d4fcbc; }
+
+  /* ── Progress pill ── */
+  .progress-pill {
+    position: absolute;
+    bottom: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    background: linear-gradient(180deg,#c8860a,#7a421d);
+    color: #ffe9a8;
+    font-size: clamp(10px,1.7vmin,15px);
+    font-weight: 900;
+    padding: 5px 22px;
+    border-radius: 999px;
+    border: 2px solid rgba(255,220,80,.45);
+    box-shadow: 0 4px 12px rgba(0,0,0,.35);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  /* ── Invisible hotspot over VIEW ALL DETAILS text in bg image ── */
+  .hotspot-details {
+    position: absolute;
+    bottom: 1%;
+    left: 18%;
+    right: 18%;
+    height: 8%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 20;
+    border-radius: 10px;
+    transition: background .15s;
+  }
+  .hotspot-details:hover { background: rgba(255,255,255,0.12); }
+
+  /* ── Details popup ── */
+  .details-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.55);
+    animation: fadeIn .2s ease;
+  }
+
+  .details-box {
+    position: relative;
+    width: min(500px, 85vw);
+    background: #fff8e8;
+    border: 4px solid #7a421d;
+    border-radius: 22px;
+    padding: 24px 28px;
+    box-shadow: 0 12px 36px rgba(0,0,0,.45);
+    animation: popIn .3s cubic-bezier(.34,1.56,.64,1) both;
+    font-family: 'Baloo 2', system-ui, sans-serif;
+  }
+
+  .details-title {
+    margin: 0 0 16px;
+    text-align: center;
+    font-size: clamp(15px,2.2vmin,20px);
+    font-weight: 900;
+    color: #5a3208;
+  }
+
+  .details-close {
+    position: absolute;
+    top: 12px; right: 14px;
+    width: 34px; height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #7a421d;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s;
+  }
+  .details-close:hover { background: #a0541a; }
+
+  /* Detail row */
+  .detail-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 14px;
+    background: rgba(120,80,40,.1);
+    border: 2px solid transparent;
+  }
+  .detail-row.done      { background: rgba(50,140,60,.12); border-color: rgba(50,140,60,.3); }
+  .detail-row.confident { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.35); }
+
+  .detail-img {
+    width: 52px; height: 52px;
+    object-fit: contain;
+    border-radius: 50%;
+    flex-shrink: 0;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,.25));
+  }
+
+  .detail-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .detail-text strong {
+    font-size: clamp(13px,1.8vmin,16px);
+    font-weight: 900;
+    color: #3b220b;
+  }
+  .detail-text span {
+    font-size: clamp(11px,1.5vmin,14px);
+    font-weight: 700;
+    color: #7a421d;
   }
 </style>
