@@ -118,9 +118,8 @@ const mauiFishesUpTheIsland: Story = {
       image: 'img-1',
       caption: 'Māui secretly makes his fishing line',
       narration: [
-        'Māui dreamed of going fishing with his older brothers. But they always made excuses. "No, you\'re too young! We need all the room in our waka for the fish."',
-        'Māui was determined. "I\'ll prove how good I am!" One night, he secretly wove a strong fishing line from flax, chanting a karakia to give it strength.',
-        'When he was finished, Māui took the jawbone his grandmother Murirangawhenua had given him — and bound it to the line as a magic hook.',
+        'Māui dreamed of going fishing with his brothers, but they always said no. "You\'re too young for our waka!" So one night, he secretly wove a strong fishing line from flax, chanting a karakia for strength.',
+        'He took the jawbone his grandmother Murirangawhenua gave him and bound it to the line — a magic hook.',
       ],
     },
     {
@@ -128,9 +127,8 @@ const mauiFishesUpTheIsland: Story = {
       image: 'img-2',
       caption: 'Māui reveals himself at sea',
       narration: [
-        'Early next morning, Māui crept into the hull of his brothers\' waka and hid. When the brothers pulled the canoe into the sea, they grumbled, "The waka feels heavy today!"',
-        'They paddled far out and dropped anchor. Then — surprise! Māui jumped out from his hiding place! The brothers were shocked. "What! You tricked us!"',
-        'But Māui had brought a special taonga hidden in his bag — a magic fish hook. Which one is it?',
+        'Before dawn, Māui crept into the hull of the waka and hid. Far out at sea, he jumped out — surprising his brothers! "What! You tricked us!"',
+        'But Māui had brought a special taonga — a magic fish hook. Which one is it?',
       ],
       interaction: {
         kind: 'prop',
@@ -145,8 +143,7 @@ const mauiFishesUpTheIsland: Story = {
       image: 'img-3',
       caption: 'Māui casts his magic hook',
       narration: [
-        '"I have come to fish because Murirangawhenua said I would be a great fisherman," Māui declared. He began his karakia, and the brothers\' lines filled with fish — the waka was soon overflowing!',
-        '"Now it is my turn," said Māui, pulling out his own line. The brothers laughed. "You\'ll be lucky to catch a piece of seaweed with that!" But Māui knew his magic hook was special.',
+        'Māui began his karakia and the brothers\' lines filled with fish — the waka was soon overflowing! "Now my turn," said Māui. The brothers laughed at his little line, but Māui knew his magic hook was special.',
       ],
     },
     {
@@ -154,8 +151,7 @@ const mauiFishesUpTheIsland: Story = {
       image: 'img-4',
       caption: 'The giant fish rises from the sea',
       narration: [
-        'The brothers refused to share their bait, so Māui hit his nose and smeared his own blood on the hook. He stood at the front of the waka, whirled his line, and cast it far out to sea.',
-        'The line sank deep into the domain of Tangaroa. Suddenly — TUG! Something enormous pulled on the line! Māui held on with all his strength.',
+        'With no bait to share, Māui smeared his own blood on the hook. He cast his line deep into the domain of Tangaroa. Suddenly — TUG! Something enormous pulled!',
       ],
       interaction: {
         kind: 'tap',
@@ -169,10 +165,9 @@ const mauiFishesUpTheIsland: Story = {
       image: 'img-5',
       caption: 'The fish becomes the North Island',
       narration: [
-        'The waka shot across the ocean! "Cut the line!" the brothers cried in terror. But Māui held tight, and slowly a giant fish rose to the surface — so huge it towered over their little canoe.',
-        '"This is the fish Murirangawhenua promised us," Māui said. "Guard it while I fetch our people." But as soon as he left, the greedy brothers began chopping at the fish, carving deep gullies and mountains into its flesh.',
-        'Over time, the great fish became Te Ika-a-Māui — the North Island of Aotearoa. And the brothers\' waka became Te Waka-a-Māui — the South Island.',
-        'And that, e hoa, is how Māui fished up Aotearoa.',
+        'The waka shot across the ocean! But Māui held tight, and slowly a giant fish rose — so huge it towered over their canoe.',
+        '"This is the fish Murirangawhenua promised us," Māui said. But while he was gone, his greedy brothers chopped at the fish, carving deep gullies and mountains into its flesh.',
+        'Over time, the fish became Te Ika-a-Māui — the North Island. The waka became Te Waka-a-Māui — the South Island. And that is how Māui fished up Aotearoa.',
       ],
     },
   ],

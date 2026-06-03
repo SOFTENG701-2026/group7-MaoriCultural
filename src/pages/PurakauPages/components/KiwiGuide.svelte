@@ -72,8 +72,8 @@
 
   .bubble {
     position: relative;
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(6px);
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(16px);
     border-radius: 22px;
     padding: 18px 22px;
     box-shadow: none;
@@ -89,7 +89,7 @@
     left: -14px;
     transform: translateY(-50%);
     border: 12px solid transparent;
-    border-right-color: rgba(255, 255, 255, 0.55);
+    border-right-color: rgba(255, 255, 255, 0.82);
   }
   .flip .bubble {
     padding: 18px 22px;
@@ -98,7 +98,7 @@
     left: auto;
     right: -14px;
     border-right-color: transparent;
-    border-left-color: rgba(255, 255, 255, 0.55);
+    border-left-color: rgba(255, 255, 255, 0.82);
   }
 
   .bubble .lead {
