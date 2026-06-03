@@ -12,6 +12,7 @@
   import { tikangaState } from '../../lib/tikangaState.svelte'
   import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
+  import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
   interface Props {
     onNext: () => void
@@ -113,7 +114,9 @@
   <img src={miniMapImg} alt="Marae Visit Map — Station 1 lit" class="mini-map" />
 
   <!-- Back button -->
-  <button class="pill btn-back" onclick={onBack}>← Back</button>
+  <button class="map-btn" onclick={onBack} aria-label="Back to map">
+    <img src={backToMapImg} alt="Back to Map" />
+  </button>
 
   <!-- Main content card -->
   <div class="content">
@@ -192,11 +195,24 @@
     filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
   }
 
-  .btn-back {
+  .map-btn {
     position: fixed;
-    top: 16px;
-    left: 16px;
+    top: 12px;
+    left: 12px;
     z-index: 50;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .map-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .map-btn:active { transform: scale(0.97); }
+  .map-btn img {
+    width: min(160px, 16vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
   .content {
