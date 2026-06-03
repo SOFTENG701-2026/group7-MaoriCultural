@@ -167,19 +167,6 @@
     display: block;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
   }
-  .bubble-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -52%);
-    width: 76%;
-    text-align: center;
-    font-size: clamp(12px, 1.5vw, 16px);
-    font-weight: 800;
-    color: #1a2e00;
-    line-height: 1.45;
-    pointer-events: none;
-  }
 
   /* ③ Map block */
   .map-block {

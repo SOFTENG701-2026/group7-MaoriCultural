@@ -408,15 +408,6 @@
   .next-img-btn:hover:not(:disabled) { transform: translateY(-3px); }
   .next-img-btn:disabled { cursor: not-allowed; opacity: .85; }
 
-  .bottom-nav {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    z-index: 30;
-    padding: 10px 18px 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
 
   .pill {
     border: none;
