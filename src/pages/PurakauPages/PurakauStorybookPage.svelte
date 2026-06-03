@@ -18,6 +18,7 @@
     arrowRight,
     heiMatau,
     fernLeaf,
+    SCENE_IMAGES,
   } from './assets'
   import SceneArt from './components/SceneArt.svelte'
 
@@ -103,7 +104,7 @@
           <!-- Left page: the cover illustration (B&W until finished) -->
           <div class="left-page">
             <div class="cover-frame" class:colored={coverColored}>
-              <SceneArt art={story.cover} colored={coverColored} animate={coverColored} />
+              <SceneArt image={SCENE_IMAGES[story.coverImage]} colored={coverColored} animate={coverColored} />
               {#if storyLocked}
                 <div class="lock-veil"><span class="lock">🔒</span></div>
               {/if}

@@ -58,8 +58,6 @@
 {#if story}
   <div class="player">
     <div class="bg" style:background-image="url({beachScene})" aria-hidden="true"></div>
-    <div class="scrim" aria-hidden="true"></div>
-
     <button class="pill btn-book" onclick={() => push('/purakau')}>← Book</button>
 
     <main class="stage">
@@ -117,7 +115,6 @@
     flex-direction: column;
     align-items: center;
     font-family: 'Nunito', 'Fredoka', system-ui, sans-serif;
-    overflow: hidden;
   }
   .bg {
     position: fixed;
@@ -127,13 +124,6 @@
     background-position: center;
     background-repeat: no-repeat;
   }
-  .scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    background: linear-gradient(180deg, rgba(20, 40, 60, 0.42), rgba(20, 40, 60, 0.62));
-  }
-
   .btn-book {
     position: fixed;
     top: 16px;
@@ -146,10 +136,9 @@
   .stage {
     position: relative;
     z-index: 10;
-    width: 94%;
-    max-width: 1000px;
+    width: 100%;
     margin: 0 auto;
-    padding: 54px 6px 8px;
+    padding: 38px 0 0;
     flex: 1;
     min-height: 0; /* allow children to fit/shrink instead of growing the page */
     display: flex;

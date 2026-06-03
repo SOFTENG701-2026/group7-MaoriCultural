@@ -1,7 +1,7 @@
 // Data model + content for the Purākau module. The whole module is driven by
 // this file: the storybook lists these stories, and the player walks through a
 // story's `scenes`, `sequence` mini-game and `quiz`. Adding a new pūrākau is
-// purely a data change here (plus a SceneArt entry for any new `art` key).
+// purely a data change here (plus PNG illustrations in true_alpha_ui_assets).
 //
 // Cultural safety: story text is fixed and teacher-reviewable. It teaches a
 // well-known pūrākau in simple language for Year 1–3 readers, weaving in a few
@@ -14,6 +14,10 @@ import {
   propWahaika,
   propMatau,
 } from './assets'
+
+// ── Scene images (Story 1: Māui and the Giant Fish) ──────────────────────────
+// Keys map to PNG illustrations via SCENE_IMAGES in assets.ts.
+export type SceneImage = 'img-1' | 'img-2' | 'img-3' | 'img-4' | 'img-5'
 
 // ── Props (Step 3) ───────────────────────────────────────────────────────────
 export type PropId = 'taiaha' | 'patu' | 'raukura' | 'wahaika' | 'matau'
@@ -40,20 +44,9 @@ export function propById(id: PropId): Prop {
 }
 
 // ── Scenes (Step 3) ──────────────────────────────────────────────────────────
-// `art` keys map to a drawing in SceneArt.svelte. `caption` is the short line
-// shown on the sequencing card + during playback. `narration` is what Kiki
-// reads, one paragraph per array item.
-export type SceneArtKey =
-  | 'cover'
-  | 'hide'
-  | 'hook'
-  | 'pull'
-  | 'island'
-  | 'sun-race'
-  | 'plait'
-  | 'snare'
-  | 'long-day'
-
+// `image` keys map to a PNG illustration in assets.ts → SCENE_IMAGES.
+// `caption` is the short line shown on the sequencing card + during playback.
+// `narration` is what Kiki reads, one paragraph per array item.
 export type Interaction =
   | {
       kind: 'prop'
@@ -71,7 +64,7 @@ export type Interaction =
 
 export interface Scene {
   id: string
-  art: SceneArtKey
+  image: SceneImage
   caption: string
   narration: string[]
   interaction?: Interaction
@@ -101,7 +94,7 @@ export interface Story {
   title: string
   teReo: string // te reo Māori title shown as the eyebrow
   summary: string // suspenseful one-liner for the storybook page
-  cover: SceneArtKey
+  coverImage: SceneImage
   // No content authored yet — shown in the book as "Coming soon", never playable
   // regardless of progress. (Distinct from the sequential gate below.)
   comingSoon?: boolean
@@ -109,31 +102,35 @@ export interface Story {
   quiz: QuizQuestion[]
 }
 
+// ── Story 1: Māui and the Giant Fish ─────────────────────────────────────────
+// Text adapted from docs/fish_story.txt, split into 5 segments matching
+// illustrations 1–5 in true_alpha_ui_assets.
 const mauiFishesUpTheIsland: Story = {
   id: 'maui-fish',
   title: 'How Māui Fished Up the Island',
   teReo: 'Te Ika-a-Māui',
   summary:
     "A cheeky boy hides in his brothers' canoe and sails far out to sea. What giant secret waits beneath the waves? Tap to find out…",
-  cover: 'cover',
+  coverImage: 'img-1',
   scenes: [
     {
-      id: 'hide',
-      art: 'hide',
-      caption: 'Māui hides in the waka',
+      id: 'plan',
+      image: 'img-1',
+      caption: 'Māui secretly makes his fishing line',
       narration: [
-        'Long ago there lived a clever boy named Māui. He was the youngest of many brothers.',
-        'Every morning his big brothers paddled their waka — their canoe — far out to sea to fish. But they never took little Māui.',
-        'So one night, Māui crept down and hid under the floor of the waka. Shhh!',
+        'Māui dreamed of going fishing with his older brothers. But they always made excuses. "No, you\'re too young! We need all the room in our waka for the fish."',
+        'Māui was determined. "I\'ll prove how good I am!" One night, he secretly wove a strong fishing line from flax, chanting a karakia to give it strength.',
+        'When he was finished, Māui took the jawbone his grandmother Murirangawhenua had given him — and bound it to the line as a magic hook.',
       ],
     },
     {
-      id: 'hook',
-      art: 'hook',
-      caption: 'Māui finds his magic hook',
+      id: 'reveal',
+      image: 'img-2',
+      caption: 'Māui reveals himself at sea',
       narration: [
-        'When the sun came up, the brothers paddled far, far out to sea. Then — surprise! Māui jumped out!',
-        'Māui wanted to catch the biggest fish of all. But for that, he needed one very special taonga.',
+        'Early next morning, Māui crept into the hull of his brothers\' waka and hid. When the brothers pulled the canoe into the sea, they grumbled, "The waka feels heavy today!"',
+        'They paddled far out and dropped anchor. Then — surprise! Māui jumped out from his hiding place! The brothers were shocked. "What! You tricked us!"',
+        'But Māui had brought a special taonga hidden in his bag — a magic fish hook. Which one is it?',
       ],
       interaction: {
         kind: 'prop',
@@ -144,12 +141,21 @@ const mauiFishesUpTheIsland: Story = {
       },
     },
     {
-      id: 'pull',
-      art: 'pull',
-      caption: 'A giant tug on the line!',
+      id: 'cast',
+      image: 'img-3',
+      caption: 'Māui casts his magic hook',
       narration: [
-        'Māui tied the matau to a strong line. He said a karakia — a special chant — and threw it into the deep blue sea.',
-        'Suddenly… TUG! Something HUGE pulled on the line. Māui held on tight!',
+        '"I have come to fish because Murirangawhenua said I would be a great fisherman," Māui declared. He began his karakia, and the brothers\' lines filled with fish — the waka was soon overflowing!',
+        '"Now it is my turn," said Māui, pulling out his own line. The brothers laughed. "You\'ll be lucky to catch a piece of seaweed with that!" But Māui knew his magic hook was special.',
+      ],
+    },
+    {
+      id: 'pull',
+      image: 'img-4',
+      caption: 'The giant fish rises from the sea',
+      narration: [
+        'The brothers refused to share their bait, so Māui hit his nose and smeared his own blood on the hook. He stood at the front of the waka, whirled his line, and cast it far out to sea.',
+        'The line sank deep into the domain of Tangaroa. Suddenly — TUG! Something enormous pulled on the line! Māui held on with all his strength.',
       ],
       interaction: {
         kind: 'tap',
@@ -160,12 +166,13 @@ const mauiFishesUpTheIsland: Story = {
     },
     {
       id: 'island',
-      art: 'island',
-      caption: 'The fish becomes the island',
+      image: 'img-5',
+      caption: 'The fish becomes the North Island',
       narration: [
-        'Up from the water came a fish so enormous that it became land!',
-        "That giant fish is now the North Island — Te Ika-a-Māui, 'the fish of Māui'. And the brothers' waka became the South Island — Te Waka-a-Māui!",
-        'And that, e hoa — my friend — is how Māui fished up Aotearoa.',
+        'The waka shot across the ocean! "Cut the line!" the brothers cried in terror. But Māui held tight, and slowly a giant fish rose to the surface — so huge it towered over their little canoe.',
+        '"This is the fish Murirangawhenua promised us," Māui said. "Guard it while I fetch our people." But as soon as he left, the greedy brothers began chopping at the fish, carving deep gullies and mountains into its flesh.',
+        'Over time, the great fish became Te Ika-a-Māui — the North Island of Aotearoa. And the brothers\' waka became Te Waka-a-Māui — the South Island.',
+        'And that, e hoa, is how Māui fished up Aotearoa.',
       ],
     },
   ],
@@ -181,7 +188,7 @@ const mauiFishesUpTheIsland: Story = {
         { id: 'whare', emoji: '🏠', word: 'Whare', correct: false },
       ],
       funFact:
-        'Fun fact: Māui\'s hook was carved from the magic jawbone of his grandmother, Murirangawhenua!',
+        "Fun fact: Māui's hook was carved from the magic jawbone of his grandmother, Murirangawhenua!",
       hint: 'Think about the bone hook you gave Māui. It starts with "Ma…"',
       kikiCorrect: '"Matau" means fish hook. Ka pai!',
     },
@@ -211,133 +218,34 @@ const mauiFishesUpTheIsland: Story = {
         { id: 'manu', emoji: '🐦', word: 'Manu', correct: false },
       ],
       funFact:
-        'Fun fact: the brothers\' waka became Te Waka-a-Māui — the South Island!',
+        "Fun fact: the brothers' waka became Te Waka-a-Māui — the South Island!",
       hint: 'Māui hid inside it at the very start. It floats on the sea.',
       kikiCorrect: 'Tino pai! "Waka" means canoe.',
     },
   ],
 }
 
-// Story 2 — unlocked once the child finishes Story 1 (see `isStoryUnlocked`).
-// Same data-driven shape: scenes (with a tap + a prop interaction), then a quiz.
+// ── Story 2: Māui and the Sun (coming soon — needs illustration assets) ──────
 const mauiAndTheSun: Story = {
   id: 'maui-sun',
   title: 'How Māui Caught the Sun',
   teReo: 'Māui me Te Rā',
   summary:
-    'The sun zooms across the sky so fast that the days are far too short! Can Māui and his brothers catch Te Rā and teach it to slow down? Tap to find out…',
-  cover: 'long-day',
-  scenes: [
-    {
-      id: 'short-days',
-      art: 'sun-race',
-      caption: 'The sun races by too fast',
-      narration: [
-        'In the old days, the sun — Te Rā — raced across the sky far too fast.',
-        'The days were so short that no one had time to fish, cook, or play before dark.',
-        '"This is no good!" said clever Māui. "Let us catch the sun and slow it down."',
-      ],
-    },
-    {
-      id: 'plait',
-      art: 'plait',
-      caption: 'Plaiting strong flax ropes',
-      narration: [
-        'Māui and his brothers gathered harakeke — flax leaves — and plaited them into long, strong ropes.',
-        'They worked hard to weave a great snare to catch Te Rā.',
-      ],
-      interaction: {
-        kind: 'tap',
-        prompt: 'Help plait the flax! Tap to twist the rope tight.',
-        target: 5,
-        cheer: 'Ka pai! The taura — the rope — is strong now!',
-      },
-    },
-    {
-      id: 'tame',
-      art: 'snare',
-      caption: 'Māui tames the sun',
-      narration: [
-        'The brothers crept east to the deep pit where the sun sleeps. As Te Rā rose, they dropped their snare around it!',
-        'The sun pulled and roared. Māui needed one special taonga to make it listen.',
-      ],
-      interaction: {
-        kind: 'prop',
-        prompt: 'Which taonga can Māui use to make the sun slow down?',
-        clue: 'Clue: look for a flat, smooth striking club held in one hand.',
-        correctId: 'patu',
-        cheer: 'Ka pai! The patu — Māui taps Te Rā and tells it to slow down!',
-      },
-    },
-    {
-      id: 'long-days',
-      art: 'long-day',
-      caption: 'Long, sunny days at last',
-      narration: [
-        'At last the sun grew tired and promised to move slowly across the sky.',
-        'From that day on, the days were long and bright — with plenty of time to fish, cook, and play.',
-        'And that, e hoa — my friend — is how Māui caught the sun.',
-      ],
-    },
-  ],
-  quiz: [
-    {
-      id: 'q-ra',
-      badge: 'Kupu check',
-      question: 'What is the Māori word for the sun?',
-      options: [
-        { id: 'ra', emoji: '☀️', word: 'Rā', correct: true },
-        { id: 'marama', emoji: '🌙', word: 'Marama', correct: false },
-        { id: 'whetu', emoji: '⭐', word: 'Whetū', correct: false },
-        { id: 'ua', emoji: '🌧️', word: 'Ua', correct: false },
-      ],
-      funFact:
-        'Fun fact: the sun\'s full name is Tama-nui-te-rā — "the great son, the sun"!',
-      hint: 'Think of the bright light in the sky by day. We call it "Te Rā".',
-      kikiCorrect: '"Rā" means sun. Ka pai!',
-    },
-    {
-      id: 'q-taura',
-      badge: 'Kupu check',
-      question: 'Māui wove his snare from plaited flax. What is the Māori word for rope?',
-      options: [
-        { id: 'taura', emoji: '🪢', word: 'Taura', correct: true },
-        { id: 'maunga', emoji: '⛰️', word: 'Maunga', correct: false },
-        { id: 'manu', emoji: '🐦', word: 'Manu', correct: false },
-        { id: 'awa', emoji: '🌊', word: 'Awa', correct: false },
-      ],
-      funFact:
-        'Fun fact: flax — harakeke — is still woven today to make kete (baskets) and strong ropes!',
-      hint: 'It is the strong plaited cord Māui used to snare the sun.',
-      kikiCorrect: 'Tino pai! "Taura" means rope.',
-    },
-    {
-      id: 'q-why',
-      badge: 'Story check',
-      question: 'Why did Māui want to catch the sun?',
-      options: [
-        { id: 'long', emoji: '🌅', word: 'To make the days longer', correct: true },
-        { id: 'eat', emoji: '🍽️', word: 'To eat it', correct: false },
-        { id: 'hide', emoji: '🙈', word: 'To hide it away', correct: false },
-        { id: 'race', emoji: '🏁', word: 'To race it for fun', correct: false },
-      ],
-      funFact:
-        'Fun fact: thanks to Māui, we now have long days to work, learn, and play in the sun!',
-      hint: 'Remember — the days were too short. Māui wanted more daylight.',
-      kikiCorrect: 'Ka pai! Māui slowed the sun so the days would be longer.',
-    },
-  ],
+    'The sun zooms across the sky so fast that the days are far too short! Can Māui and his brothers catch Te Rā and teach it to slow down? Coming soon…',
+  coverImage: 'img-1', // placeholder — will be updated when assets arrive
+  comingSoon: true,
+  scenes: [],
+  quiz: [],
 }
 
-// "Coming soon" story — fills the book and signposts future content, but has no
-// scenes/quiz yet, so it is never playable (regardless of progress).
+// ── Story 3: The Sky and the Earth (coming soon — needs illustration assets) ─
 const rangiAndPapa: Story = {
   id: 'rangi-papa',
   title: 'The Sky and the Earth',
   teReo: 'Ranginui rāua ko Papatūānuku',
   summary:
     'The sky father and earth mother hold each other so tightly that no light can get in. Who will set the world free? Coming soon…',
-  cover: 'hide',
+  coverImage: 'img-1', // placeholder — will be updated when assets arrive
   comingSoon: true,
   scenes: [],
   quiz: [],
