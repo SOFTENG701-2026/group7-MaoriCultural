@@ -10,9 +10,9 @@
   // When the order is correct, the cards play through as a short animation.
   import { untrack } from 'svelte'
   import type { Scene } from '../stories'
-  import { narrate } from '../../../lib/settings.svelte'
-  import { rebuilderSign } from '../assets'
+  import { rebuilderSign, SCENE_IMAGES } from '../assets'
   import SceneArt from './SceneArt.svelte'
+  import KiwiGuide from './KiwiGuide.svelte'
 
   interface Props {
     scenes: Scene[] // in the correct chronological order
@@ -66,8 +66,7 @@
   function check() {
     if (!solved && isCorrect) {
       solved = true
-      onSolved() // advance FIRST — never gated by speech
-      narrate('Ka pai! You put the whole story in order. Now watch it come alive!')
+      onSolved()
     }
   }
 
@@ -179,7 +178,7 @@
   {#if !solved}
     <p class="how lead">Put the story in order. Drag a picture — or tap two to swap them.</p>
   {:else}
-    <p class="how done lead">✓ Ka pai! Your story is in order. Tap “Watch the story!”</p>
+    <p class="how done lead">✓ Ka pai! Your story is in order. Tap "Watch the story!"</p>
   {/if}
 
   <ol class="slots" class:solved>
@@ -199,7 +198,7 @@
           onpointerdown={(e) => onDown(e, i)}
           onkeydown={(e) => onKey(e, i)}
         >
-          <span class="art"><SceneArt art={scene.art} animate={false} /></span>
+          <span class="art"><SceneArt image={SCENE_IMAGES[scene.image]} animate={false} /></span>
           <span class="cap">{scene.caption}</span>
         </div>
       </li>
@@ -207,14 +206,17 @@
   </ol>
 
   {#if solved}
-    <button class="watch-btn" onclick={watch}>▶ Watch the story!</button>
+    <div class="solved-row">
+      <button class="watch-btn" onclick={watch}>▶ Watch the story!</button>
+      <KiwiGuide pose="yes" size="sm" />
+    </div>
   {/if}
 </div>
 
 <!-- Floating drag ghost -->
 {#if dragScene && dragMoved}
   <div class="ghost" style="left:{ghostX}px; top:{ghostY}px" aria-hidden="true">
-    <span class="art"><SceneArt art={dragScene.art} animate={false} /></span>
+    <span class="art"><SceneArt image={SCENE_IMAGES[dragScene.image]} animate={false} /></span>
   </div>
 {/if}
 
@@ -223,7 +225,7 @@
   <div class="player-overlay" role="dialog" aria-modal="true" aria-label="Story playback">
     <div class="player-card">
       {#key playIdx}
-        <div class="play-art"><SceneArt art={scenes[playIdx].art} /></div>
+        <div class="play-art"><SceneArt image={SCENE_IMAGES[scenes[playIdx].image]} /></div>
         <p class="play-cap">{scenes[playIdx].caption}</p>
       {/key}
       <div class="dots">
@@ -271,14 +273,18 @@
   .slots {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 0 4px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
     width: 100%;
-    max-width: 920px;
+    max-width: none;
+    box-sizing: border-box;
   }
   @media (max-width: 760px) {
+    .slots { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 480px) {
     .slots { grid-template-columns: repeat(2, 1fr); }
   }
 
@@ -303,8 +309,8 @@
   .card {
     position: relative;
     width: 100%;
-    padding: 8px;
-    border: 5px solid #9c6b34;
+    padding: 5px;
+    border: 4px solid #9c6b34;
     border-radius: 16px;
     background: linear-gradient(160deg, #c89255, #a06d34);
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.18);
@@ -328,6 +334,20 @@
   .card.placed { border-color: #4caf50; }
   .slots.solved .card { cursor: default; }
 
+  .solved-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+    animation: rise 0.4s ease both;
+  }
+  .solved-row :global(.kiki) {
+    justify-content: center;
+    width: auto;
+  }
+
   .art {
     display: block;
     width: 100%;
@@ -336,13 +356,16 @@
     pointer-events: none; /* drag targets the card, not the inner art */
   }
   .cap {
-    font-size: clamp(11px, 1.3vw, 14px);
+    font-size: clamp(10px, 1.1vw, 13px);
     font-weight: 800;
     color: #fff5e3;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    line-height: 1.25;
+    line-height: 1.2;
     text-align: center;
     pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Floating ghost that follows the pointer while dragging. */
@@ -372,6 +395,7 @@
     box-shadow: 0 6px 18px rgba(245, 166, 35, 0.5);
     cursor: pointer;
     animation: breathe 2s ease-in-out infinite;
+    flex-shrink: 0;
   }
   .watch-btn:hover { transform: translateY(-2px); }
   .watch-btn:focus-visible { outline: 3px solid #aa3bff; outline-offset: 3px; }
@@ -445,6 +469,6 @@
   @keyframes kenburns { from { transform: scale(1.06); } to { transform: scale(1); } }
 
   @media (prefers-reduced-motion: reduce) {
-    .sign, .watch-btn, .play-art, .play-cap { animation: none !important; }
+    .sign, .watch-btn, .play-art, .play-cap, .solved-row { animation: none !important; }
   }
 </style>

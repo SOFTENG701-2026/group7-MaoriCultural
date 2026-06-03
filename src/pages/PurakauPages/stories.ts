@@ -1,7 +1,7 @@
 // Data model + content for the Purākau module. The whole module is driven by
 // this file: the storybook lists these stories, and the player walks through a
 // story's `scenes`, `sequence` mini-game and `quiz`. Adding a new pūrākau is
-// purely a data change here (plus a SceneArt entry for any new `art` key).
+// purely a data change here (plus PNG illustrations in true_alpha_ui_assets).
 //
 // Cultural safety: story text is fixed and teacher-reviewable. It teaches a
 // well-known pūrākau in simple language for Year 1–3 readers, weaving in a few
@@ -14,6 +14,10 @@ import {
   propWahaika,
   propMatau,
 } from './assets'
+
+// ── Scene images (Story 1: Māui and the Giant Fish) ──────────────────────────
+// Keys map to PNG illustrations via SCENE_IMAGES in assets.ts.
+export type SceneImage = 'img-1' | 'img-2' | 'img-3' | 'img-4' | 'img-5'
 
 // ── Props (Step 3) ───────────────────────────────────────────────────────────
 export type PropId = 'taiaha' | 'patu' | 'raukura' | 'wahaika' | 'matau'
@@ -40,11 +44,9 @@ export function propById(id: PropId): Prop {
 }
 
 // ── Scenes (Step 3) ──────────────────────────────────────────────────────────
-// `art` keys map to a drawing in SceneArt.svelte. `caption` is the short line
-// shown on the sequencing card + during playback. `narration` is what Kiki
-// reads, one paragraph per array item.
-export type SceneArtKey = 'cover' | 'hide' | 'hook' | 'pull' | 'island'
-
+// `image` keys map to a PNG illustration in assets.ts → SCENE_IMAGES.
+// `caption` is the short line shown on the sequencing card + during playback.
+// `narration` is what Kiki reads, one paragraph per array item.
 export type Interaction =
   | {
       kind: 'prop'
@@ -62,7 +64,7 @@ export type Interaction =
 
 export interface Scene {
   id: string
-  art: SceneArtKey
+  image: SceneImage
   caption: string
   narration: string[]
   interaction?: Interaction
@@ -92,37 +94,43 @@ export interface Story {
   title: string
   teReo: string // te reo Māori title shown as the eyebrow
   summary: string // suspenseful one-liner for the storybook page
-  cover: SceneArtKey
-  locked?: boolean // "coming soon" — visible in the book but not playable yet
+  coverImage: SceneImage
+  // No content authored yet — shown in the book as "Coming soon", never playable
+  // regardless of progress. (Distinct from the sequential gate below.)
+  comingSoon?: boolean
   scenes: Scene[]
   quiz: QuizQuestion[]
 }
 
+// ── Story 1: Māui and the Giant Fish ─────────────────────────────────────────
+// Text adapted from docs/fish_story.txt, split into 5 segments matching
+// illustrations 1–5 in true_alpha_ui_assets.
 const mauiFishesUpTheIsland: Story = {
   id: 'maui-fish',
   title: 'How Māui Fished Up the Island',
   teReo: 'Te Ika-a-Māui',
   summary:
     "A cheeky boy hides in his brothers' canoe and sails far out to sea. What giant secret waits beneath the waves? Tap to find out…",
-  cover: 'cover',
+  coverImage: 'img-1',
   scenes: [
     {
-      id: 'hide',
-      art: 'hide',
-      caption: 'Māui hides in the waka',
+      id: 'plan',
+      image: 'img-1',
+      caption: 'Māui secretly makes his fishing line',
       narration: [
-        'Long ago there lived a clever boy named Māui. He was the youngest of many brothers.',
-        'Every morning his big brothers paddled their waka — their canoe — far out to sea to fish. But they never took little Māui.',
-        'So one night, Māui crept down and hid under the floor of the waka. Shhh!',
+        'Māui dreamed of going fishing with his older brothers. But they always made excuses. "No, you\'re too young! We need all the room in our waka for the fish."',
+        'Māui was determined. "I\'ll prove how good I am!" One night, he secretly wove a strong fishing line from flax, chanting a karakia to give it strength.',
+        'When he was finished, Māui took the jawbone his grandmother Murirangawhenua had given him — and bound it to the line as a magic hook.',
       ],
     },
     {
-      id: 'hook',
-      art: 'hook',
-      caption: 'Māui finds his magic hook',
+      id: 'reveal',
+      image: 'img-2',
+      caption: 'Māui reveals himself at sea',
       narration: [
-        'When the sun came up, the brothers paddled far, far out to sea. Then — surprise! Māui jumped out!',
-        'Māui wanted to catch the biggest fish of all. But for that, he needed one very special taonga.',
+        'Early next morning, Māui crept into the hull of his brothers\' waka and hid. When the brothers pulled the canoe into the sea, they grumbled, "The waka feels heavy today!"',
+        'They paddled far out and dropped anchor. Then — surprise! Māui jumped out from his hiding place! The brothers were shocked. "What! You tricked us!"',
+        'But Māui had brought a special taonga hidden in his bag — a magic fish hook. Which one is it?',
       ],
       interaction: {
         kind: 'prop',
@@ -133,12 +141,21 @@ const mauiFishesUpTheIsland: Story = {
       },
     },
     {
-      id: 'pull',
-      art: 'pull',
-      caption: 'A giant tug on the line!',
+      id: 'cast',
+      image: 'img-3',
+      caption: 'Māui casts his magic hook',
       narration: [
-        'Māui tied the matau to a strong line. He said a karakia — a special chant — and threw it into the deep blue sea.',
-        'Suddenly… TUG! Something HUGE pulled on the line. Māui held on tight!',
+        '"I have come to fish because Murirangawhenua said I would be a great fisherman," Māui declared. He began his karakia, and the brothers\' lines filled with fish — the waka was soon overflowing!',
+        '"Now it is my turn," said Māui, pulling out his own line. The brothers laughed. "You\'ll be lucky to catch a piece of seaweed with that!" But Māui knew his magic hook was special.',
+      ],
+    },
+    {
+      id: 'pull',
+      image: 'img-4',
+      caption: 'The giant fish rises from the sea',
+      narration: [
+        'The brothers refused to share their bait, so Māui hit his nose and smeared his own blood on the hook. He stood at the front of the waka, whirled his line, and cast it far out to sea.',
+        'The line sank deep into the domain of Tangaroa. Suddenly — TUG! Something enormous pulled on the line! Māui held on with all his strength.',
       ],
       interaction: {
         kind: 'tap',
@@ -149,12 +166,13 @@ const mauiFishesUpTheIsland: Story = {
     },
     {
       id: 'island',
-      art: 'island',
-      caption: 'The fish becomes the island',
+      image: 'img-5',
+      caption: 'The fish becomes the North Island',
       narration: [
-        'Up from the water came a fish so enormous that it became land!',
-        "That giant fish is now the North Island — Te Ika-a-Māui, 'the fish of Māui'. And the brothers' waka became the South Island — Te Waka-a-Māui!",
-        'And that, e hoa — my friend — is how Māui fished up Aotearoa.',
+        'The waka shot across the ocean! "Cut the line!" the brothers cried in terror. But Māui held tight, and slowly a giant fish rose to the surface — so huge it towered over their little canoe.',
+        '"This is the fish Murirangawhenua promised us," Māui said. "Guard it while I fetch our people." But as soon as he left, the greedy brothers began chopping at the fish, carving deep gullies and mountains into its flesh.',
+        'Over time, the great fish became Te Ika-a-Māui — the North Island of Aotearoa. And the brothers\' waka became Te Waka-a-Māui — the South Island.',
+        'And that, e hoa, is how Māui fished up Aotearoa.',
       ],
     },
   ],
@@ -170,7 +188,7 @@ const mauiFishesUpTheIsland: Story = {
         { id: 'whare', emoji: '🏠', word: 'Whare', correct: false },
       ],
       funFact:
-        'Fun fact: Māui\'s hook was carved from the magic jawbone of his grandmother, Murirangawhenua!',
+        "Fun fact: Māui's hook was carved from the magic jawbone of his grandmother, Murirangawhenua!",
       hint: 'Think about the bone hook you gave Māui. It starts with "Ma…"',
       kikiCorrect: '"Matau" means fish hook. Ka pai!',
     },
@@ -200,43 +218,76 @@ const mauiFishesUpTheIsland: Story = {
         { id: 'manu', emoji: '🐦', word: 'Manu', correct: false },
       ],
       funFact:
-        'Fun fact: the brothers\' waka became Te Waka-a-Māui — the South Island!',
+        "Fun fact: the brothers' waka became Te Waka-a-Māui — the South Island!",
       hint: 'Māui hid inside it at the very start. It floats on the sea.',
       kikiCorrect: 'Tino pai! "Waka" means canoe.',
     },
   ],
 }
 
-// "Coming soon" stories — they fill the storybook so it feels like a real book
-// and signpost future content, but are clearly locked and not yet playable.
-const comingSoon: Story[] = [
-  {
-    id: 'maui-sun',
-    title: 'Māui and the Sun',
-    teReo: 'Māui me Te Rā',
-    summary:
-      'The sun races across the sky far too fast! Can Māui and his brothers catch it and make the days longer? Coming soon…',
-    cover: 'island',
-    locked: true,
-    scenes: [],
-    quiz: [],
-  },
-  {
-    id: 'rangi-papa',
-    title: 'The Sky and the Earth',
-    teReo: 'Ranginui rāua ko Papatūānuku',
-    summary:
-      'The sky father and earth mother hold each other so tightly that no light can get in. Who will set the world free? Coming soon…',
-    cover: 'hide',
-    locked: true,
-    scenes: [],
-    quiz: [],
-  },
-]
+// ── Story 2: Māui and the Sun (coming soon — needs illustration assets) ──────
+const mauiAndTheSun: Story = {
+  id: 'maui-sun',
+  title: 'How Māui Caught the Sun',
+  teReo: 'Māui me Te Rā',
+  summary:
+    'The sun zooms across the sky so fast that the days are far too short! Can Māui and his brothers catch Te Rā and teach it to slow down? Coming soon…',
+  coverImage: 'img-1', // placeholder — will be updated when assets arrive
+  comingSoon: true,
+  scenes: [],
+  quiz: [],
+}
 
-export const STORIES: Story[] = [mauiFishesUpTheIsland, ...comingSoon]
+// ── Story 3: The Sky and the Earth (coming soon — needs illustration assets) ─
+const rangiAndPapa: Story = {
+  id: 'rangi-papa',
+  title: 'The Sky and the Earth',
+  teReo: 'Ranginui rāua ko Papatūānuku',
+  summary:
+    'The sky father and earth mother hold each other so tightly that no light can get in. Who will set the world free? Coming soon…',
+  coverImage: 'img-1', // placeholder — will be updated when assets arrive
+  comingSoon: true,
+  scenes: [],
+  quiz: [],
+}
+
+// Reading order. Stories unlock in sequence (see `isStoryUnlocked`).
+export const STORIES: Story[] = [
+  mauiFishesUpTheIsland,
+  mauiAndTheSun,
+  rangiAndPapa,
+]
 
 export function storyById(id: string | null): Story | null {
   if (!id) return null
   return STORIES.find((s) => s.id === id) ?? null
+}
+
+// Sequential gate: the first playable story is always open; every later story
+// unlocks only once the previous *playable* story has been completed. A
+// `comingSoon` story is never unlocked (it has no content yet). `isComplete` is
+// injected so this stays free of store/UI dependencies.
+export function isStoryUnlocked(
+  id: string,
+  isComplete: (storyId: string) => boolean,
+): boolean {
+  const i = STORIES.findIndex((s) => s.id === id)
+  if (i < 0) return false
+  if (STORIES[i].comingSoon) return false
+  // Find the nearest earlier playable story; if none, this is the first one.
+  for (let p = i - 1; p >= 0; p--) {
+    if (STORIES[p].comingSoon) continue
+    return isComplete(STORIES[p].id)
+  }
+  return true
+}
+
+// The story whose completion unlocks `id` (for the "finish X to unlock" label).
+export function prerequisiteStory(id: string): Story | null {
+  const i = STORIES.findIndex((s) => s.id === id)
+  if (i < 0) return null
+  for (let p = i - 1; p >= 0; p--) {
+    if (!STORIES[p].comingSoon) return STORIES[p]
+  }
+  return null
 }
