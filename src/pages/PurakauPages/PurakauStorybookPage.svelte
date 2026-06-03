@@ -8,7 +8,7 @@
   // a wrap-up, and the Hei Matau badge pops in (the module's visible reward).
   import { onMount } from 'svelte'
   import { push } from 'svelte-spa-router'
-  import { STORIES } from './stories'
+  import { STORIES, isStoryUnlocked, prerequisiteStory } from './stories'
   import { purakauState } from '../../lib/purakauState.svelte'
   import { narrate } from '../../lib/settings.svelte'
   import {
@@ -46,6 +46,10 @@
   // The just-finished cover starts grey then turns colour when revealOn flips.
   const coverColored = $derived(done && !(story.id === justColored && !revealOn))
   const celebrating = $derived(justColored !== null && story.id === justColored)
+  const storyLocked = $derived(
+    !isStoryUnlocked(story.id, (id) => purakauState.isComplete(id)),
+  )
+  const prereq = $derived(prerequisiteStory(story.id))
 
   onMount(() => {
     const id = purakauState.consumeJustColored()
@@ -100,7 +104,7 @@
           <div class="left-page">
             <div class="cover-frame" class:colored={coverColored}>
               <SceneArt art={story.cover} colored={coverColored} animate={coverColored} />
-              {#if story.locked}
+              {#if storyLocked}
                 <div class="lock-veil"><span class="lock">🔒</span></div>
               {/if}
             </div>
@@ -121,8 +125,10 @@
             <p class="lead summary">{story.summary}</p>
 
             <div class="action">
-              {#if story.locked}
+              {#if story.comingSoon}
                 <span class="soon">🔒 Coming soon</span>
+              {:else if storyLocked}
+                <span class="soon">🔒 Complete "{prereq?.title ?? 'the previous story'}" first</span>
               {:else if done}
                 <span class="done-tag">✓ Story complete</span>
                 <button class="cta" onclick={() => onRead(story.id)}>Read again →</button>
