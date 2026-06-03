@@ -141,19 +141,13 @@
     </button>
   </div>
 
-  <!-- Bottom nav -->
-  <nav class="bottom-nav">
-    <div></div>
-    <ReadToMe text={readText} />
-    <div></div>
-  </nav>
+  <nav class="rtm-nav"><ReadToMe text={readText} /></nav>
 </div>
 
 <style>
   .page {
-    position: relative;
-    min-height: 100vh;
-    width: 100%;
+    position: fixed;
+    inset: 0;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -163,7 +157,7 @@
     font-family: 'Nunito', system-ui, sans-serif;
     padding: 24px 16px 120px;
     box-sizing: border-box;
-    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .mini-map {
@@ -367,4 +361,5 @@
     outline: none;
   }
   .pill:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+  .rtm-nav { position: fixed; bottom: 18px; left: 18px; z-index: 50; }
 </style>

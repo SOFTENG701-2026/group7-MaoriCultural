@@ -1,5 +1,6 @@
 <script lang="ts">
   import { speak } from './settings.svelte'
+  import rtmImg from '../assets/read_to_me.png'
 
   interface Props {
     text: string
@@ -13,35 +14,35 @@
   }
 </script>
 
-<button class="read-to-me-pill" onclick={handleClick} aria-label={label}>
-  🔊 {label}
+<button class="rtm-btn" onclick={handleClick} aria-label={label}>
+  <img src={rtmImg} alt={label} />
 </button>
 
 <style>
-  .read-to-me-pill {
+  .rtm-btn {
+    background: none;
     border: none;
-    border-radius: 100px;
-    padding: 16px 36px;
-    font-family: 'Nunito', system-ui, sans-serif;
-    font-size: 18px;
-    font-weight: 700;
+    padding: 0;
     cursor: pointer;
-    background: #fff;
-    color: #2255cc;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
-    white-space: nowrap;
+    transition: transform 0.12s ease, filter 0.12s ease;
     outline: none;
   }
-  .read-to-me-pill:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  .rtm-btn img {
+    width: min(180px, 18vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
   }
-  .read-to-me-pill:active {
-    transform: translateY(0);
+  .rtm-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    filter: brightness(1.05);
   }
-  .read-to-me-pill:focus-visible {
+  .rtm-btn:active {
+    transform: scale(0.97);
+  }
+  .rtm-btn:focus-visible {
     outline: 3px solid #2255cc;
-    outline-offset: 3px;
+    outline-offset: 4px;
+    border-radius: 12px;
   }
 </style>

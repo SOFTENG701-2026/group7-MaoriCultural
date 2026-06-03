@@ -106,7 +106,7 @@
   </button>
 
   <!-- ⑥ Bottom-left: Read to me -->
-  <nav class="bottom-left-nav">
+  <nav class="rtm-nav">
     <ReadToMe text={readText} />
   </nav>
 
@@ -186,7 +186,7 @@
     pointer-events: none;
   }
 
-  /* ③ Map block — bottom-right, smaller */
+  /* ③ Map block */
   .map-block {
     position: absolute;
     bottom: 10%;
@@ -324,8 +324,8 @@
     50%       { transform: translateX(-50%) scale(1.05); filter: drop-shadow(0 10px 24px rgba(20,150,80,0.8)); }
   }
 
-  /* ⑥ Bottom-left nav */
-  .bottom-left-nav {
+  /* ⑥ Read to me — bottom-right */
+  .rtm-nav {
     position: absolute;
     bottom: 2%;
     left: 2%;
