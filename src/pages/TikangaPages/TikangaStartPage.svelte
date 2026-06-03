@@ -8,6 +8,7 @@
   import greyMapImg   from '../../assets/tikanga/p1全灰小地图.png'
   import bubbleImg    from '../../assets/tikanga/p1 kiki word bubble.png'
   import startBtn     from '../../assets/tikanga/p1 start visit.png'
+  import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
   import { tikangaState, type LearnerLevel } from '../../lib/tikangaState.svelte'
   import { speak } from '../../lib/settings.svelte'
@@ -15,8 +16,9 @@
 
   interface Props {
     onNext: () => void
+    onMap: () => void
   }
-  let { onNext }: Props = $props()
+  let { onNext, onMap }: Props = $props()
 
   // Fixed bubble text — always the same greeting on the left
   const bubbleText = 'Kia ora! I am visiting a marae. Help me make respectful choices.'
@@ -43,6 +45,11 @@
 </script>
 
 <div class="stage" style="background-image:url({bgImg})">
+
+  <!-- Back to home — top-left corner (matches Pepeha page 1) -->
+  <button class="map-btn" onclick={onMap} aria-label="Back to home map">
+    <img src={backToMapImg} alt="Back to Map" />
+  </button>
 
   <!-- ① Title — large, top-center -->
   <img src={titleImg} alt="Kiki's First Marae Visit" class="title-img" />
@@ -115,6 +122,27 @@
     font-family: 'Nunito', system-ui, sans-serif;
     overflow: hidden;
     user-select: none;
+  }
+
+  /* Back to home — top-left corner (matches Pepeha page 1) */
+  .map-btn {
+    position: absolute;
+    top: 3%;
+    left: 2%;
+    z-index: 40;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .map-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .map-btn:active { transform: scale(0.97); }
+  .map-btn img {
+    width: min(160px, 16vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
   /* ① Big title — top-center, enlarged */
