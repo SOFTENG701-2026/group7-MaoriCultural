@@ -147,19 +147,17 @@ const routes = {
   '/pepeha/board': wrap({
     asyncComponent: () =>
       import('./pages/PepehaPages/PepehaBoardPage.svelte').then(m => m.default),
-    props: { onNext: () => push('/pepeha/practise'), onBack: () => push('/pepeha/whanau') },
-  }),
-
-  '/pepeha/practise': wrap({
-    asyncComponent: () =>
-      import('./pages/PepehaPages/PepehaPractisePage.svelte').then(m => m.default),
-    props: { onNext: () => push('/pepeha/quiz'), onBack: () => push('/pepeha/board') },
+    props: {
+      onNext: () => push('/pepeha/quiz'),
+      onBack: () => push('/pepeha/whanau'),
+      onChooseSchool: () => push('/pepeha/school'),
+    },
   }),
 
   '/pepeha/quiz': wrap({
     asyncComponent: () =>
       import('./pages/PepehaPages/PepehaQuizPage.svelte').then(m => m.default),
-    props: { onNext: () => push('/pepeha/reward'), onBack: () => push('/pepeha/practise') },
+    props: { onNext: () => push('/pepeha/reward'), onBack: () => push('/pepeha/board') },
   }),
 
   '/pepeha/reward': wrap({

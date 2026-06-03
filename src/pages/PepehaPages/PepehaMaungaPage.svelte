@@ -8,11 +8,12 @@
   Cultural safety: the maunga shown comes from the chosen *practice-school*
   example (pepehaState.selectedSchool) — never invented or guessed.
 
-  NOTE (to iterate on together):
-    • Confident-level short check ("Why does Kiki use this maunga?") not added yet.
+  Confident level adds a short cultural-safety check ("Why does Kiki use this
+  maunga?") as a modal triggered when the learner taps Find Awa to move on — it
+  must be answered correctly before the page advances.
 
   Layout (over the scene background):
-    • Page tag (top-left, doubles as Back)   • Title + speaker (top-centre)
+    • Back (top-left)                         • Title + speaker (top-centre)
     • Read to me (top-right)                  • Kiki + speech bubble (left)
     • Notebook with question + 3 cards (centre)
     • Reveal panel: "You found it!" + sticker card + Add Sticker (right)
@@ -41,6 +42,8 @@
   import rangitotoSticker        from '../../assets/pepeha/page4/sticker/pukewhakataratara_maunga_sticker_transparent.png'
   import addedPillImg   from '../../assets/pepeha/page4/individual_elements/reward_sticker_ui_03.png'
   import addStickerImg  from '../../assets/pepeha/page4/individual_elements/reward_sticker_ui_04.png'
+  import stickerBgImg   from '../../assets/pepeha/page7/stickerbg.png'
+  import backImg        from '../../assets/pepeha/page4/back.png'
   import playImg        from '../../assets/pepeha/page3/play.png'
   import kikiImg        from '../../assets/kiwihello.png'
   import settingsImg    from '../../assets/settings.png'
@@ -118,12 +121,64 @@
 
   const wrongHint = $derived(checked && selectedCard !== 'mountain')
 
+  // Confident-level short check — triggered when the learner taps Find Awa to
+  // move on. They must answer correctly before the page advances.
+  // Cultural-safety focus: maunga comes from a reviewed example, not a guess.
+  const QUIZ = {
+    question: 'Why does Kiki use this maunga?',
+    options: [
+      'It belongs to this practice school example',
+      'It is the tallest mountain',
+      'Kiki picked it randomly',
+    ],
+    correctIndex: 0,
+  }
+  let pickedOption = $state<number | null>(null)
+  let quizChecked = $state(false)
+  let quizPassed = $state(false)
+  let showQuiz = $state(false)
+
+  // Find Awa: Beginner (or once the check is passed) advances straight away;
+  // Confident must first answer the short cultural-safety check.
+  function handleNext() {
+    if (isBeginner || quizPassed) {
+      onNext()
+    } else {
+      showQuiz = true
+    }
+  }
+
+  function pickOption(i: number) {
+    pickedOption = i
+    quizChecked = false // hide any previous hint while they reconsider
+  }
+
+  function checkQuiz() {
+    if (pickedOption === null) return
+    quizChecked = true
+    if (pickedOption === QUIZ.correctIndex) {
+      quizPassed = true
+      showQuiz = false
+      speak('Ka pai! Maunga should not be guessed.')
+      onNext()
+    } else {
+      speak('Not quite — have another try.')
+    }
+  }
+
   const readText = $derived(
-    `${title}. ${kikiLine} Which one is the maunga?`
+    showQuiz
+      ? `${QUIZ.question} ` + QUIZ.options.map((o, i) => `Option ${i + 1}: ${o}.`).join(' ')
+      : `${title}. ${kikiLine} Which one is the maunga?`
   )
 </script>
 
 <div class="stage" style="background-image:url({bgImg})">
+
+  <!-- Back — top-left corner -->
+  <button class="back-btn" onclick={onBack} aria-label="Back">
+    <img src={backImg} alt="Back" />
+  </button>
 
   <!-- Settings — top-right corner -->
   <button class="settings-btn" onclick={() => (settings.open = true)} aria-label="Settings">
@@ -189,8 +244,10 @@
   <!-- Reveal panel — right (shown once the mountain is found) -->
   {#if found}
     <div class="reveal" role="status">
-      <img src={foundBannerImg} alt="You found it!" class="reveal-banner" />
-      <img src={stickerImg} alt={`Maunga Sticker. ${maunga}. ${maungaLine}`} class="reveal-card" />
+      <div class="sticker-card" style="background-image:url({stickerBgImg})">
+        <img src={foundBannerImg} alt="You found it!" class="reveal-banner" />
+        <img src={stickerImg} alt={`Maunga Sticker. ${maunga}. ${maungaLine}`} class="reveal-card" />
+      </div>
       {#if stickerAdded}
         <img src={addedPillImg} alt="Maunga sticker added!" class="reveal-added" />
       {:else}
@@ -200,9 +257,44 @@
       {/if}
 
       <!-- Find Awa appears once the maunga is found, below the reveal panel -->
-      <button class="img-btn find-btn" onclick={onNext} aria-label="Find Awa">
+      <button class="img-btn find-btn" onclick={handleNext} aria-label="Find Awa">
         <img src={findAwaImg} alt="Find Awa" />
       </button>
+    </div>
+  {/if}
+
+  <!-- Confident-level short check — appears once the maunga is found -->
+  {#if showQuiz}
+    <div class="quiz-overlay" role="dialog" aria-modal="true" aria-label={QUIZ.question}>
+      <div class="quiz-card">
+        <p class="quiz-line">{maungaLine}</p>
+        <p class="quiz-q">{QUIZ.question}</p>
+        <div class="quiz-options">
+          {#each QUIZ.options as opt, i}
+            <button
+              class="quiz-opt"
+              class:picked={pickedOption === i}
+              class:wrong={quizChecked && pickedOption === i && i !== QUIZ.correctIndex}
+              onclick={() => pickOption(i)}
+              aria-pressed={pickedOption === i}
+            >
+              {opt}
+            </button>
+          {/each}
+        </div>
+        {#if quizChecked && pickedOption !== QUIZ.correctIndex}
+          <p class="quiz-hint">Not quite — have another try.</p>
+        {/if}
+        <div class="quiz-actions">
+          <button class="quiz-cancel" onclick={() => (showQuiz = false)}>Back</button>
+          <button class="quiz-play" onclick={() => speak(readText)} aria-label="Read to me">
+            <img src={playImg} alt="" />
+          </button>
+          <button class="check-btn" disabled={pickedOption === null} onclick={checkQuiz}>
+            Check answer
+          </button>
+        </div>
+      </div>
     </div>
   {/if}
 
@@ -239,6 +331,28 @@
   .img-btn:active { transform: scale(0.97); }
   .img-btn img { display: block; height: auto; }
   .img-btn:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; border-radius: 16px; }
+
+  /* Back — top-left corner */
+  .back-btn {
+    position: absolute;
+    top: -3%;
+    left: -2%;
+    z-index: 45;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .back-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .back-btn:active { transform: scale(0.97); }
+  .back-btn:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; border-radius: 16px; }
+  .back-btn img {
+    width: min(350px, 14vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
+  }
 
   /* Settings — top-right corner */
   .settings-btn {
@@ -452,13 +566,26 @@
     align-items: center;
     gap: 8px;
   }
-  .reveal-banner { width: 85%; height: auto; display: block; margin-bottom: -4px; }
+  .reveal-banner { width: 92%; height: auto; display: block; }
+  /* Shared sticker-card background (stickerbg) — wraps the green title + sticker,
+     so its top border extends up to the title */
+  .sticker-card {
+    width: 100%;
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    padding: 8% 7% 7%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2px, 1vw, 6px);
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.28));
+  }
   /* Per-maunga reveal sticker (fixed art selected from MAUNGA_STICKERS) */
   .reveal-card {
     width: 100%;
     height: auto;
     display: block;
-    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.28));
   }
   .reveal-added { width: 95%; height: auto; display: block; }
   .add-btn img { width: min(180px, 20vw); }
@@ -485,4 +612,125 @@
   @media (prefers-reduced-motion: reduce) {
     .find-btn { animation: none; }
   }
+
+  /* Confident-level short-check overlay */
+  .quiz-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 16px;
+  }
+  .quiz-card {
+    width: min(540px, 90vw);
+    background: #fffdf3;
+    border: 4px solid #F5A623;
+    border-radius: 24px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    padding: clamp(18px, 3vw, 30px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 1.8vw, 18px);
+    text-align: center;
+  }
+  .quiz-line {
+    margin: 0;
+    font-size: clamp(16px, 2vw, 22px);
+    font-weight: 900;
+    color: #2f8a3e;
+    line-height: 1.3;
+  }
+  .quiz-q {
+    margin: 0;
+    font-size: clamp(17px, 2.1vw, 24px);
+    font-weight: 900;
+    color: #1a5c00;
+    line-height: 1.3;
+  }
+  .quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.2vw, 12px);
+  }
+  .quiz-opt {
+    font-family: inherit;
+    font-size: clamp(15px, 1.7vw, 20px);
+    font-weight: 800;
+    color: #2a3a1a;
+    background: #ffffff;
+    border: 3px solid #2f8a3e;
+    border-radius: 16px;
+    padding: clamp(10px, 1.4vw, 16px);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .quiz-opt:hover  { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18); }
+  .quiz-opt:active { transform: translateY(0); }
+  .quiz-opt:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; }
+  .quiz-opt.picked {
+    background: #eafbe7;
+    box-shadow: 0 0 0 4px #ffd54a;
+  }
+  .quiz-opt.wrong {
+    border-color: #c0392b;
+    background: #fdecea;
+    animation: wiggle 0.4s ease;
+  }
+  .quiz-hint {
+    margin: 0;
+    font-size: clamp(14px, 1.5vw, 18px);
+    font-weight: 800;
+    color: #c0392b;
+  }
+  .quiz-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .quiz-cancel {
+    font-family: inherit;
+    font-size: clamp(13px, 1.4vw, 16px);
+    font-weight: 800;
+    color: #5a6a4a;
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 6px;
+  }
+  .quiz-cancel:hover { color: #2f8a3e; }
+  .quiz-cancel:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; border-radius: 8px; }
+  .quiz-play {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .quiz-play:hover  { transform: scale(1.08); }
+  .quiz-play:active { transform: scale(0.95); }
+  .quiz-play img { width: min(48px, 6vw); height: auto; display: block; }
+  .quiz-play:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; border-radius: 50%; }
+  .check-btn {
+    font-family: inherit;
+    font-size: clamp(15px, 1.7vw, 20px);
+    font-weight: 900;
+    color: #ffffff;
+    background: #2f8a3e;
+    border: none;
+    border-radius: 18px;
+    padding: clamp(10px, 1.4vw, 14px) clamp(18px, 2.4vw, 28px);
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(47, 138, 62, 0.45);
+    transition: transform 0.12s ease, box-shadow 0.2s ease;
+  }
+  .check-btn:hover:not(:disabled)  { transform: translateY(-2px); }
+  .check-btn:active:not(:disabled) { transform: translateY(0); }
+  .check-btn:focus-visible { outline: 3px solid #F5A623; outline-offset: 3px; }
+  .check-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 </style>
