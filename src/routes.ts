@@ -29,12 +29,12 @@ const routes = {
   '/song/play/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/PlayMusicPage/PlayMusicPage.svelte').then(m => m.default),
-    props: (detail: { params: { level?: string } }) => ({
+    props: ((detail: { params: { level?: string } }) => ({
       level:  detail.params?.level ?? 'easy',
       onBack: () => push('/song/select'),
       // Pass level forward so QuizPage and RewardPage can use it
       onNext: () => push(`/sing/${detail.params?.level ?? 'easy'}`),
-    }),
+    })) as any,
   }),
 
   '/song/learn': wrap({
@@ -48,23 +48,23 @@ const routes = {
   '/sing/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/SingAlongPage/SingAlongPage.svelte').then(m => m.default),
-    props: (detail: { params: { level?: string } }) => ({
+    props: ((detail: { params: { level?: string } }) => ({
       level:  detail.params?.level ?? 'easy',
       onBack: () => push(`/song/play/${detail.params?.level ?? 'easy'}`),
       onNext: () => push(`/quiz/${detail.params?.level ?? 'easy'}`),
-    }),
+    })) as any,
   }),
 
   // Dev D: level-aware quiz route
   '/quiz/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/QuizPage/QuizPage.svelte').then(m => m.default),
-    props: (detail: { params: { level?: string } }) => ({
+    props: ((detail: { params: { level?: string } }) => ({
       level:    detail.params?.level ?? 'easy',
       onBack:   () => push('/song/select'),
       onMap:    onBackToMap,
       onFinish: () => push(`/reward/${detail.params?.level ?? 'easy'}`),
-    }),
+    })) as any,
   }),
 
   // Keep original /quiz route as fallback (for any existing links)
@@ -78,9 +78,9 @@ const routes = {
   '/reward/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
-    props: (detail: { params: { level?: string } }) => ({
+    props: ((detail: { params: { level?: string } }) => ({
       level: detail.params?.level ?? 'easy',
-    }),
+    })) as any,
   }),
 
   '/reward': wrap({
