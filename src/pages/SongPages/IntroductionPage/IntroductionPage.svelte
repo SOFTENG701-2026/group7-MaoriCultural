@@ -4,6 +4,7 @@
   import rtmImg  from '../../../assets/read_to_me.png'
   import { onDestroy } from 'svelte'
   import { push } from 'svelte-spa-router'
+  
   import { settings } from '../../../lib/settings.svelte'
   import PlayMusicPage from '../PlayMusicPage/PlayMusicPage.svelte'
   import SingAlongPage from '../SingAlongPage/SingAlongPage.svelte'
@@ -313,6 +314,7 @@ onDestroy(() => {
     text-align: center;
     line-height: 1.4;
   }
+
   .selected-tick {
     position: absolute; top: 10px; right: 14px;
     width: 26px; height: 26px;

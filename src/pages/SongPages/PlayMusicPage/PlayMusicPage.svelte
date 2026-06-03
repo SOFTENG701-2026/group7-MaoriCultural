@@ -349,15 +349,15 @@ function readToMe() {
   .kw-panel {
     position: absolute;
     top: 50%;
-    right: clamp(4px, 1.5%, 16px);
+    right: clamp(8px, 2%, 20px);
     transform: translateY(-50%);
-    max-width: clamp(150px, 18vw, 200px);
     z-index: 20;
     background: linear-gradient(180deg, #f5e6c0 0%, #eedba0 100%);
     border: 3px solid #a0641a;
-    border-radius: 16px;
-    padding: 10px 14px;
-    min-width: 190px;
+    border-radius: 18px;
+    padding: 14px 18px;
+    min-width: 220px;
+    max-width: clamp(200px, 22vw, 260px);
     box-shadow:
       0 6px 20px rgba(0,0,0,.25),
       inset 0 1px 0 rgba(255,255,255,.4);
@@ -378,7 +378,7 @@ function readToMe() {
   }
 
   .kw-title {
-    font-size: clamp(12px, 1.6vmin, 15px);
+    font-size: clamp(14px, 1.8vmin, 17px);
     font-weight: 900;
     color: #5a3208;
     letter-spacing: 1px;
@@ -389,10 +389,10 @@ function readToMe() {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 5px 6px;
-    border-radius: 10px;
+    padding: 8px 10px;
+    border-radius: 12px;
     background: rgba(255,255,255,.6);
-    margin-bottom: 5px;
+    margin-bottom: 6px;
   }
 
   .kw-row:last-child {
@@ -409,7 +409,7 @@ function readToMe() {
   }
 
   .kw-text {
-    font-size: clamp(10px, 1.4vmin, 14px);
+    font-size: clamp(13px, 1.7vmin, 17px);
     font-weight: 700;
     color: #3a2008;
     white-space: nowrap;

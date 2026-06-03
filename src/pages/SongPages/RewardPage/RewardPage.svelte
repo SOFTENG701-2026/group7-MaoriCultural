@@ -5,54 +5,55 @@
   import { progress } from '../../../lib/progress.svelte'
   import { settings } from '../../../lib/settings.svelte'
 
-  import youDidIt from '../../../assets/quiz-page/youdidit.png'
+  import waiataCard from '../../../assets/waiata_badge_card.png'
   import badgeBackToMap from '../../../assets/quiz-page/badgebacktomap.png'
-  import beginnerBadge from '../../../assets/waiata_badge_for_beginners.png'
-  import confidentBadge from '../../../assets/waiata_badge_for_confident.png'
+  import beginnerBadge from '../../../assets/badges/waiata badge for beginners.png'
+  import confidentBadge from '../../../assets/badges/waiata badge for confident.png'
 
   interface Props {
     level?: string
     onMap?: () => void
   }
-const { level = 'beginner', onMap = () => push('/') } = $props<Props>()
 
-let lvl = $derived(level)
-let isConfident = $derived(lvl === 'confident' || lvl === 'hard')
+  const { level = 'beginner', onMap = () => push('/') } = $props<Props>()
 
-let CONTENT = $derived.by(() => ({
-  title: 'Waiata Complete!',
+  let lvl = $derived(level)
+  let isConfident = $derived(lvl === 'confident' || lvl === 'hard')
 
-  kikiSays: isConfident
-    ? 'Ka pai! You listened and tried Te Aroha.'
-    : 'Ka pai! You listened and tried the colour song.',
+  let CONTENT = $derived.by(() => ({
+    title: 'Waiata Complete!',
 
-  badgeLabel: isConfident
-    ? 'Waiata Navigator Badge'
-    : 'Waiata Explorer Badge',
+    kikiSays: isConfident
+      ? 'Ka pai! You listened and tried Te Aroha.'
+      : 'Ka pai! You listened and tried the colour song.',
 
-  badgeImg: isConfident
-    ? confidentBadge
-    : beginnerBadge,
+    badgeLabel: isConfident
+      ? 'Waiata Navigator Badge'
+      : 'Waiata Explorer Badge',
 
-  levelTag: isConfident
-    ? '🌺 Confident Level completed!'
-    : '🌿 Beginner Level completed!',
+    badgeImg: isConfident
+      ? confidentBadge
+      : beginnerBadge,
 
-  summary: isConfident
-    ? [
-        'aroha = love',
-        'rangimārie = peace',
-        'tātou = all of us',
-        'You completed the Te Aroha word and meaning checks',
-      ]
-    : [
-        'mā = white',
-        'whero = red',
-        'kākāriki = green',
-        'pango / mangu = black',
-        'You completed the colour word and meaning checks',
-      ],
-}))
+    levelTag: isConfident
+      ? '🌺 Confident Level completed!'
+      : '🌿 Beginner Level completed!',
+
+    summary: isConfident
+      ? [
+          'aroha = love',
+          'rangimārie = peace',
+          'tātou = all of us',
+          'You completed the Te Aroha word and meaning checks',
+        ]
+      : [
+          'mā = white',
+          'whero = red',
+          'kākāriki = green',
+          'pango / mangu = black',
+          'You completed the colour word and meaning checks',
+        ],
+  }))
 
   const BADGE_KEY = 'mca-waiata-badge'
 
@@ -66,75 +67,76 @@ let CONTENT = $derived.by(() => ({
 
   function saveBadge(t: string) {
     try {
-      if (getSavedBadge() !== 'confident') {
-        localStorage.setItem(BADGE_KEY, t)
-      }
+      sessionStorage.setItem(BADGE_KEY, t)
+
+      const current = getSavedBadge()
+      if (current === 'confident' && t === 'beginner') return
+
+      localStorage.setItem(BADGE_KEY, t)
     } catch {}
   }
 
   let isUpgrade = $state(false)
   let showModal = $state(false)
 
-function handleDone() {
-  speechSynthesis.cancel()
+  function handleDone() {
+    speechSynthesis.cancel()
 
-  progress.markComplete('waiata')
+    progress.markComplete('waiata')
 
-  const badgeType = isConfident ? 'confident' : 'beginner'
-  isUpgrade = getSavedBadge() === 'beginner' && badgeType === 'confident'
+    const badgeType = isConfident ? 'confident' : 'beginner'
+    isUpgrade = getSavedBadge() === 'beginner' && badgeType === 'confident'
 
-  saveBadge(badgeType)
+    saveBadge(badgeType)
 
-  console.log(`[Dev D] awardBadge('waiata', '${badgeType}')`)
+    console.log(`[Dev D] awardBadge('waiata', '${badgeType}')`)
 
-  showModal = true
-}
+    showModal = true
+  }
 
-function goToMap() {
-  speechSynthesis.cancel()
-  onMap()
-  push('/')
-}
+  function goToMap() {
+    speechSynthesis.cancel()
+    onMap()
+    push('/')
+  }
 
-function readToMe() {
-  if (!soundIsOn()) return
+  function readToMe() {
+    if (!soundIsOn()) return
 
-  speechSynthesis.cancel()
+    speechSynthesis.cancel()
 
-  const text = `${CONTENT.title}. ${CONTENT.kikiSays}. You learned: ${CONTENT.summary.join('. ')}. ${CONTENT.badgeLabel} unlocked!`
+    const text = `${CONTENT.title}. ${CONTENT.kikiSays}. You learned: ${CONTENT.summary.join('. ')}. ${CONTENT.badgeLabel} unlocked!`
 
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'en-NZ'
-  u.rate = getSpeechRate()
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'en-NZ'
+    u.rate = getSpeechRate()
 
-  speechSynthesis.speak(u)
-}
+    speechSynthesis.speak(u)
+  }
 
-function soundIsOn() {
-  const s: any = settings
+  function soundIsOn() {
+    const s: any = settings
 
-  if (s.sound === 'off') return false
-  if (s.sound === false) return false
-  if (s.soundOn === false) return false
-  if (s.muted === true) return false
+    if (s.sound === 'off') return false
+    if (s.sound === false) return false
+    if (s.soundOn === false) return false
+    if (s.muted === true) return false
 
-  return true
-}
+    return true
+  }
 
-function getSpeechRate() {
-  const s: any = settings
-  const volume = s.volume ?? s.volumeLevel ?? 'medium'
+  function getSpeechRate() {
+    const s: any = settings
+    const volume = s.volume ?? s.volumeLevel ?? 'medium'
 
-  if (volume === 'low') return 0.8
-  if (volume === 'high') return 0.9
-  return 0.85
-}
+    if (volume === 'low') return 0.8
+    if (volume === 'high') return 0.9
+    return 0.85
+  }
 
-onDestroy(() => {
-  speechSynthesis.cancel()
-})
-
-
+  onDestroy(() => {
+    speechSynthesis.cancel()
+  })
 </script>
 
 <div class="page">
@@ -142,15 +144,14 @@ onDestroy(() => {
 
   <button class="btn-corner" onclick={goToMap}>← Back to Map</button>
 
- 
-
   <div class="cards-row">
     <div class="left-wrap">
       <div class="reward-banner">🎉 Reward time!</div>
 
       <div class="left-card">
-        <img src={youDidIt} alt="You did it!" class="youdidit-img" />
+        <img src={waiataCard} alt="Waiata badge card" class="youdidit-img" />
 
+        <!-- Badge now sits inside the big coin/circle area on the certificate -->
         <img
           src={CONTENT.badgeImg}
           alt={CONTENT.badgeLabel}
@@ -212,6 +213,7 @@ onDestroy(() => {
       >
         ×
       </button>
+
       <p class="modal-title">
         {isUpgrade ? '⬆️ Badge Upgraded!' : 'Ka rawe! 🎉'}
       </p>
@@ -231,10 +233,10 @@ onDestroy(() => {
         {#if isUpgrade}
           ✨ You completed the Confident level — your Waiata badge has been upgraded to Navigator!
         {:else if isConfident}
-        🌺 You earned the Waiata Navigator Badge for completing Te Aroha!
+          🌺 You earned the Waiata Navigator Badge for completing Te Aroha!
         {:else}
-     🌿 You earned the Waiata Explorer Badge for completing the colour waiata!    
-    {/if}
+          🌿 You earned the Waiata Explorer Badge for completing the colour waiata!
+        {/if}
       </p>
 
       <button class="back-map-btn" onclick={goToMap}>
@@ -300,8 +302,6 @@ onDestroy(() => {
     transform: translateY(-2px);
   }
 
- 
-
   .cards-row {
     position: relative;
     z-index: 20;
@@ -325,7 +325,7 @@ onDestroy(() => {
 
   .reward-banner {
     position: relative;
-    z-index: 2;
+    z-index: 5;
     background: #f5a623;
     color: #2c1600;
     font-weight: 800;
@@ -347,7 +347,7 @@ onDestroy(() => {
     align-items: center;
     justify-content: center;
     min-height: 650px;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .youdidit-img {
@@ -358,16 +358,19 @@ onDestroy(() => {
     animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
-  .coin-badge {
-    position: absolute;
-    top: -24px;
-    right: -24px;
-    width: clamp(80px, 10vw, 130px);
-    height: auto;
-    filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.35));
-    animation: popIn 0.6s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-    z-index: 30;
-  }
+  /* Updated: badge is inside the big coin/circle area */
+.coin-badge {
+  position: absolute;
+  top: 12%;
+  left: 40%;
+  transform: translate(-50%, 0);
+  width: clamp(155px, 15vw, 220px);
+  height: auto;
+  border-radius: 50%;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.28));
+  animation: popIn 0.6s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  z-index: 30;
+}
 
   .coin-badge.glow {
     animation:
@@ -534,45 +537,46 @@ onDestroy(() => {
   }
 
   .modal-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  background: #fff;
-  border-radius: 28px;
-  padding: 36px 40px;
-  max-width: 440px;
-  width: 90%;
-  position: relative;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
-  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    background: #fff;
+    border-radius: 28px;
+    padding: 36px 40px;
+    max-width: 440px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+    animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
 
-.modal-close {
-  position: absolute;
-  top: 16px;
-  right: 18px;
-  width: 34px;
-  height: 34px;
-  border: none;
-  border-radius: 50%;
-  background: #ffffff;
-  color: #374151;
-  font-size: 22px;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #374151;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-.modal-close:hover {
-  background: #fef3c7;
-  color: #92400e;
-  transform: scale(1.05);
-}
+  .modal-close:hover {
+    background: #fef3c7;
+    color: #92400e;
+    transform: scale(1.05);
+  }
+
   .modal-title {
     margin: 0;
     font-size: clamp(22px, 3vmin, 30px);

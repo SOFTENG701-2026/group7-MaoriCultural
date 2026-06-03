@@ -3,7 +3,6 @@
   // First-login spotlight: darkens the map except the Waiata node,
   // shows Kiki's "Let's start here!" prompt. Tap anywhere or the CTA to dismiss.
 
-  import { kiwiImg } from '../assets'
 
   let {
     waiataIcon,
@@ -49,7 +48,9 @@
         <circle cx={cx} cy={cy} r={R} fill="url(#spot-fade)" />
       </mask>
     </defs>
-    <rect width="100" height="100" fill="rgba(5,15,25,0.82)" mask="url(#spotlight-mask)" />
+    <rect width="100" height="100" fill="rgba(5,15,25,0.52)" mask="url(#spotlight-mask)" />
+    <!-- Warm golden glow behind Waiata node -->
+    <circle cx={cx} cy={cy} r={R * 1.2} fill="rgba(255,210,60,0.18)" />
     <!-- Pulse rings draw attention to the spotlight -->
     <circle cx={cx} cy={cy} r={R} class="pulse-ring" />
     <circle cx={cx} cy={cy} r={R} class="pulse-ring pulse-ring--delay" />
@@ -60,8 +61,6 @@
     class="bubble"
     style="left:{bubbleLeft}%; top:{bubbleTop}%"
   >
-    <img src={kiwiImg} alt="Kiki the kiwi" class="kiki" draggable="false" />
-
     <div class="balloon">
       <p class="balloon-text">Let's start here!</p>
       <p class="balloon-sub">Tap Waiata to begin your adventure 🎵</p>
@@ -126,13 +125,6 @@
   @keyframes bubbleIn {
     from { opacity: 0; transform: translateY(12px) scale(0.88); }
     to   { opacity: 1; transform: translateY(0)    scale(1); }
-  }
-
-  .kiki {
-    width: clamp(56px, 8vmin, 88px);
-    height: auto;
-    flex-shrink: 0;
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
   }
 
   .balloon {
