@@ -165,6 +165,24 @@
     animation: fadeIn 0.5s ease both;
   }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.75); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(60px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes bounceIn {
+    0% { opacity: 0; transform: scale(0.3); }
+    50% { transform: scale(1.08); }
+    70% { transform: scale(0.94); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 12px 32px rgba(245, 166, 35, 0.5); }
+  }
 
   /* ── Progress pips ── */
   .progress {
@@ -224,7 +242,7 @@
     transform: translateX(-50%);
     z-index: 4;
     width: min(94vw, 720px);
-    animation: fadeIn 0.3s ease both;
+    animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   .interaction-area.right {
     position: fixed;
@@ -237,6 +255,7 @@
     align-items: flex-end;
     display: flex;
     flex-direction: column;
+    animation: slideInRight 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
   }
   .interaction-area.right :global(.kiki) {
     flex-direction: row-reverse;
@@ -261,15 +280,22 @@
     background-color: transparent !important;
     border-radius: 14px;
     filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+    opacity: 0;
+    animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
+  .interaction-area.right :global(.slot:nth-child(1)) { animation-delay: 0.05s; }
+  .interaction-area.right :global(.slot:nth-child(2)) { animation-delay: 0.12s; }
+  .interaction-area.right :global(.slot:nth-child(3)) { animation-delay: 0.19s; }
+  .interaction-area.right :global(.slot:nth-child(4)) { animation-delay: 0.26s; }
+  .interaction-area.right :global(.slot:nth-child(5)) { animation-delay: 0.33s; }
   .interaction-area.right :global(.prop) {
-    height: 56%;
+    height:65%;
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.25));
   }
   .interaction-area.right :global(.name) {
-    font-size: clamp(9px, 1vw, 12px);
+    font-size: clamp(13px, 1.6vw, 18px);
     color: #fff;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.5);
   }
   .tap-area {
     display: flex;
@@ -292,6 +318,7 @@
     left: 4px;
     top: 2vh;
     max-width: 55vw;
+    animation: popIn 0.4s 0.05s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   .tap-right {
     position: absolute;
@@ -301,6 +328,7 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    animation: bounceIn 0.5s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
   /* Tap-to-pull */
@@ -318,6 +346,7 @@
     gap: 2px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     transition: transform 0.08s ease;
+    animation: bounceIn 0.5s 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both, pulse 2.4s 0.8s ease-in-out infinite;
   }
   .pull-target:hover { transform: scale(1.04); }
   .pull-target:active { transform: scale(0.92); }
@@ -338,11 +367,11 @@
     transform: translateX(-50%);
     z-index: 3;
     margin: 0;
-    font-size: 13px;
+    font-size: clamp(15px, 2vw, 20px);
     font-weight: 700;
     color: #fff;
     background: rgba(138, 90, 0, 0.9);
-    padding: 4px 16px;
+    padding: 6px 20px;
     border-radius: 999px;
     pointer-events: none;
   }

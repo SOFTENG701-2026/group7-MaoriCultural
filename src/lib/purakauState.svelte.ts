@@ -1,12 +1,10 @@
 // Purākau module state — reactive singleton persisted to localStorage.
 // Tracks which pūrākau (stories) the child has finished and which story is
-// currently being read. Completing a story also flips the shared `purakau`
-// completion flag (see `progress`) so the map marker is marked done and the
-// "Pūrākau" medal lights up in the reward panel — this is the module's call to
-// the kick-off `awardBadge` contract, implemented here via the shared
-// `progress` store the rest of the app already reads.
-
-import { progress } from './progress.svelte'
+// currently being read.
+//
+// Module-level completion (map marker + badge) is handled by the dedicated
+// PurakauRewardPage, which calls progress.markComplete('purakau') and persists
+// the badge level — following the Tikanga module pattern.
 
 const STORAGE_KEY = 'mca-purakau'
 
@@ -48,8 +46,10 @@ class PurakauState {
   }
 
   // Mark the active story finished. Sets the colour-reveal flag for the
-  // storybook and lights the shared map/medal flag the first time any pūrākau
-  // is completed.
+  // storybook and records the story id so the storybook can play the
+  // black-and-white → colour reveal animation on return.
+  // Module-level progress (map marker + badge) is handled by the dedicated
+  // PurakauRewardPage, following the Tikanga module pattern.
   completeActiveStory(): void {
     const id = this.activeStoryId
     if (!id) return
@@ -59,8 +59,11 @@ class PurakauState {
     }
     this.justColoredStoryId = id
     this.activeStoryId = null
-    // Cross-module integration: light the "Pūrākau" medal + map marker.
-    progress.markComplete('purakau')
+  }
+
+  /** How many playable stories have been completed (for reward-page stats). */
+  get completedCount(): number {
+    return this.completedStoryIds.length
   }
 
   // Read-and-clear the colour-reveal flag so the animation only plays once.

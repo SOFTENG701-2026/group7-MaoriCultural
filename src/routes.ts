@@ -218,6 +218,13 @@ const routes = {
       import('./pages/PurakauPages/PurakauStoryPage.svelte').then(m => m.default),
   }),
 
+  // Step 6 — reward page (badge ceremony, mirrors TikangaRewardPage pattern).
+  '/purakau/reward': wrap({
+    asyncComponent: () =>
+      import('./pages/PurakauPages/PurakauRewardPage.svelte').then(m => m.default),
+    props: { onMap: onBackToMap },
+  }),
+
   // Fallback: unknown paths return to the home map.
   '*': wrap({
     asyncComponent: () =>
