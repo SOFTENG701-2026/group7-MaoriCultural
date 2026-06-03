@@ -9,7 +9,6 @@
   import lockedBtn from '../../assets/tikanga/p2 locked next entrance.png'
   import nextBtn   from '../../assets/tikanga/p2 next entrance.png'
 
-  import { tikangaState } from '../../lib/tikangaState.svelte'
   import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
   import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
@@ -31,8 +30,8 @@
   let glowing = $state<number | null>(null)
 
   const allClicked = $derived(clicked.size === 4)
-  const showTangataCard = $derived(tikangaState.level === 'confident' && clicked.size >= 2)
-  const canProceed = $derived(tikangaState.level === 'beginner' ? allClicked : clicked.size >= 2)
+  // The Next button only unlocks once all four goals have been tapped.
+  const canProceed = $derived(allClicked)
 
   // Read to me speaks exactly what is on screen: title + the four goals.
   const readText = `What is Tikanga? ${goals.map(g => g.text).join(' ')}`
@@ -55,8 +54,8 @@
   <!-- Page title -->
   <h1 class="page-title">What is Tikanga?</h1>
 
-  <!-- Beginner progress hint — under the title -->
-  {#if tikangaState.level === 'beginner' && !allClicked}
+  <!-- Progress hint — under the title -->
+  {#if !allClicked}
     <p class="hint-text">Tap all 4 goals to continue ({clicked.size}/4)</p>
   {/if}
 
@@ -85,18 +84,10 @@
     </div>
   </div>
 
-  <!-- Confident: tangata whenua info card -->
-  {#if showTangataCard}
-    <div class="info-card fade-in">
-      <span class="info-title">Tangata whenua</span>
-      <p>Tangata whenua means the people of the land. They welcome and guide visitors at the marae.</p>
-    </div>
-  {/if}
 
   <!-- Next button image — bottom-centre -->
   <button
     class="next-img-btn"
-    class:active={canProceed}
     onclick={() => { if (canProceed) onNext() }}
     aria-label={canProceed ? 'Next: Station 1 Entrance' : 'Complete all goals to continue'}
     aria-disabled={!canProceed}
@@ -235,31 +226,6 @@
     justify-content: center;
   }
 
-  /* Confident info card */
-  .info-card {
-    background: rgba(255,255,255,.95);
-    border: 2.5px solid #F5A623;
-    border-radius: 18px;
-    padding: 14px 22px;
-    max-width: min(500px, 80vw);
-    box-shadow: 0 4px 16px rgba(0,0,0,.12);
-    flex-shrink: 0;
-  }
-  .info-title {
-    display: block;
-    font-size: 17px;
-    font-weight: 900;
-    color: #8a5a00;
-    margin-bottom: 4px;
-  }
-  .info-card p {
-    margin: 0;
-    font-size: 15px;
-    color: #2c2c2c;
-    font-weight: 600;
-    line-height: 1.5;
-  }
-
   /* Progress hint */
   .hint-text {
     position: fixed;
@@ -296,17 +262,6 @@
     filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
   }
   .next-img-btn:hover { transform: translateX(-50%) translateY(-3px); }
-  .next-img-btn[aria-disabled='true'] { cursor: not-allowed; opacity: .75; }
-  .next-img-btn[aria-disabled='true']:hover { transform: translateX(-50%); }
-
-  /* Breathing animation when all goals are done */
-  .next-img-btn.active {
-    animation: next-breathe 2s ease-in-out infinite;
-  }
-  @keyframes next-breathe {
-    0%, 100% { transform: translateX(-50%) scale(1);    filter: drop-shadow(0 6px 18px rgba(20,160,90,.45)); }
-    50%       { transform: translateX(-50%) scale(1.06); filter: drop-shadow(0 10px 28px rgba(20,160,90,.8)); }
-  }
   .next-img-btn[aria-disabled='true'] { cursor: not-allowed; opacity: .85; }
   .next-img-btn[aria-disabled='true']:hover { transform: translateX(-50%); }
 
