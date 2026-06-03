@@ -32,8 +32,11 @@
     { label: 'Level',            value: tikangaState.level === 'confident' ? 'Confident' : 'Beginner' },
   ])
 
+  // Read to me speaks exactly what is on screen: heading, stats and badge hint.
   const readText = $derived(
-    `Tikanga complete! You visited 4 marae stations and learned 4 tikanga. You earned the ${badgeLabel}! Tap Done to collect your badge.`
+    'Tikanga complete! ' +
+    stats.map(s => `${s.label}: ${s.value}.`).join(' ') +
+    ` Your badge: ${badgeLabel}. Next step: Tap Done to collect it!`
   )
 
   function handleDone() {

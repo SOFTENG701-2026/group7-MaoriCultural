@@ -11,7 +11,6 @@
   import miniMapImg from '../../assets/tikanga/p6 map 4亮.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
   import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
@@ -91,16 +90,31 @@
   const bgImg = $derived(part >= 2 ? bgImg2 : bgImg1)
 
   // Top tooltip — auto-hides after 3 seconds (same as Station 1–3).
-  let feedback = $state<{ type: 'success' | 'error'; title: string; msg: string } | null>(null)
+  let feedback = $state<{ type: 'success' | 'error' | 'hint'; title: string; msg: string } | null>(null)
   let feedbackTimer: ReturnType<typeof setTimeout>
 
-  function showFeedback(type: 'success' | 'error', title: string, msg: string) {
+  function showFeedback(type: 'success' | 'error' | 'hint', title: string, msg: string) {
     feedback = { type, title, msg }
     clearTimeout(feedbackTimer)
-    feedbackTimer = setTimeout(() => { feedback = null }, 3000)
+    feedbackTimer = setTimeout(() => { feedback = null }, type === 'hint' ? 5000 : 3000)
   }
 
-  const readText = $derived(`Station 4: ${quiz.title}. ${quiz.kaiQuestion}`)
+  // Read to me speaks exactly what is on screen for the current step.
+  const readText = $derived(
+    part >= 2
+      ? `${quiz.title}. ${quiz.careQuestion} ${careChoices.map(c => c.label).join('. ')}.`
+      : `${quiz.title}. ${quiz.support.join(' ')} ${quiz.kaiQuestion} ${kaiChoices.map(c => c.label).join('. ')}.`
+  )
+
+  // Need help gives a silent hint that points to the current step's answer.
+  const helpHint = $derived(
+    part >= 2
+      ? `Tip: try ${careChoices.find(c => c.correct)?.label}.`
+      : `Tip: try ${kaiChoices.find(c => c.correct)?.label}.`
+  )
+  function showHelp() {
+    showFeedback('hint', 'Hint', helpHint)
+  }
 
   function pickKai(c: Choice) {
     if (part !== 1) return
@@ -109,12 +123,10 @@
       wrongCount += 1
       shaking = c.id
       const hint = wrongCount >= 2 ? quiz.repeatHint : c.hint
-      speak(hint)
       showFeedback('error', 'Try again', hint)
       setTimeout(() => { shaking = null; kaiAnswer = null }, 700)
     } else {
       wrongCount = 0
-      speak(`Ka pai! ${quiz.kaiSuccess}`)
       showFeedback('success', 'Ka pai!', quiz.kaiSuccess)
       setTimeout(() => { part = 2 }, 800)
     }
@@ -127,12 +139,10 @@
       wrongCount += 1
       shaking = c.id
       const hint = wrongCount >= 2 ? quiz.repeatHint : c.hint
-      speak(hint)
       showFeedback('error', 'Try again', hint)
       setTimeout(() => { shaking = null; careAnswer = null }, 700)
     } else {
       completed = true
-      speak(quiz.finalSuccess)
       showFeedback('success', 'Station 4 complete! ✓', quiz.finalSuccess)
     }
   }
@@ -157,6 +167,13 @@
   {:else if feedback?.type === 'error'}
     <div class="top-tooltip error fade-in">
       <img src={kiwiTry} alt="Try again" class="tooltip-kiwi" />
+      <div class="tooltip-text">
+        <strong>{feedback.title}</strong>
+        <span>{feedback.msg}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'hint'}
+    <div class="top-tooltip hint fade-in">
       <div class="tooltip-text">
         <strong>{feedback.title}</strong>
         <span>{feedback.msg}</span>
@@ -253,7 +270,7 @@
     </button>
   </div>
 
-  <button class="help-btn" onclick={() => speak(quiz.helpText)} aria-label="Need help?">
+  <button class="help-btn" onclick={showHelp} aria-label="Need help?">
     <img src={needHelp} alt="Need help?" />
   </button>
 
@@ -515,10 +532,12 @@
   }
   .top-tooltip.success { background: #e8f9ee; border: 2.5px solid #4caf50; }
   .top-tooltip.error   { background: #fff8ec; border: 2.5px solid #F5A623; }
+  .top-tooltip.hint    { background: #eef4ff; border: 2.5px solid #2255cc; }
   .tooltip-kiwi { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
   .tooltip-text { display: flex; flex-direction: column; gap: 2px; }
   .tooltip-text strong { font-size: 15px; font-weight: 900; color: #111; }
   .tooltip-text span { font-size: 14px; font-weight: 600; color: #333; line-height: 1.4; }
   .top-tooltip.success .tooltip-text strong { color: #2e7d32; }
   .top-tooltip.error   .tooltip-text strong { color: #8a5a00; }
+  .top-tooltip.hint    .tooltip-text strong { color: #1a3e9e; }
 </style>

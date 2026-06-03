@@ -10,7 +10,6 @@
   import miniMapImg from '../../assets/tikanga/p5 map 3 亮.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
-  import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
   import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
@@ -75,16 +74,27 @@
   const canCheck = $derived(selected.size === 2)
 
   // Top tooltip — auto-hides after 3 seconds (same as Station 1 & 2).
-  let feedback = $state<{ type: 'success' | 'error'; hint?: string } | null>(null)
+  let feedback = $state<{ type: 'success' | 'error' | 'hint'; hint?: string } | null>(null)
   let feedbackTimer: ReturnType<typeof setTimeout>
 
-  function showFeedback(type: 'success' | 'error', hint?: string) {
+  function showFeedback(type: 'success' | 'error' | 'hint', hint?: string) {
     feedback = { type, hint }
     clearTimeout(feedbackTimer)
-    feedbackTimer = setTimeout(() => { feedback = null }, 3000)
+    feedbackTimer = setTimeout(() => { feedback = null }, type === 'hint' ? 5000 : 3000)
   }
 
-  const readText = $derived(`Station 3: ${quiz.title}. ${quiz.intro} ${quiz.question}`)
+  // Read to me speaks exactly what is on screen: title, intro, question, every option.
+  const readText = $derived(
+    `${quiz.title}. ${quiz.intro} ${quiz.question} ${options.map(o => o.label).join('. ')}.`
+  )
+
+  // Need help gives a silent hint that points to the two correct options.
+  const helpHint = $derived(
+    `Tip: try ${options.filter(o => o.correct).map(o => o.label).join(' and ')}.`
+  )
+  function showHelp() {
+    showFeedback('hint', helpHint)
+  }
 
   function toggle(opt: Option) {
     if (completed) return
@@ -102,7 +112,6 @@
     checked = true
     const wrongPicks = [...selected].filter(id => options.find(o => o.id === id && !o.correct))
     if (wrongPicks.length === 0 && selected.size === 2) {
-      speak(quiz.success)
       completed = true
       showFeedback('success')
     } else {
@@ -112,7 +121,6 @@
         shaking = wrongOpt.id
         // On the 2nd+ wrong check, give the stronger "calm body, careful hands" hint.
         const hint = wrongChecks >= 2 ? quiz.repeatHint : wrongOpt.hint
-        speak(hint)
         showFeedback('error', hint)
         setTimeout(() => { shaking = null }, 600)
       }
@@ -141,6 +149,13 @@
       <img src={kiwiTry} alt="Try again" class="tooltip-kiwi" />
       <div class="tooltip-text">
         <strong>Try again</strong>
+        <span>{feedback.hint}</span>
+      </div>
+    </div>
+  {:else if feedback?.type === 'hint'}
+    <div class="top-tooltip hint fade-in">
+      <div class="tooltip-text">
+        <strong>Hint</strong>
         <span>{feedback.hint}</span>
       </div>
     </div>
@@ -209,7 +224,7 @@
     </button>
   </div>
 
-  <button class="help-btn" onclick={() => speak(quiz.helpText)} aria-label="Need help?">
+  <button class="help-btn" onclick={showHelp} aria-label="Need help?">
     <img src={needHelp} alt="Need help?" />
   </button>
 
@@ -497,10 +512,12 @@
   }
   .top-tooltip.success { background: #e8f9ee; border: 2.5px solid #4caf50; }
   .top-tooltip.error   { background: #fff8ec; border: 2.5px solid #F5A623; }
+  .top-tooltip.hint    { background: #eef4ff; border: 2.5px solid #2255cc; }
   .tooltip-kiwi { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
   .tooltip-text { display: flex; flex-direction: column; gap: 2px; }
   .tooltip-text strong { font-size: 15px; font-weight: 900; color: #111; }
   .tooltip-text span { font-size: 14px; font-weight: 600; color: #333; line-height: 1.4; }
   .top-tooltip.success .tooltip-text strong { color: #2e7d32; }
   .top-tooltip.error   .tooltip-text strong { color: #8a5a00; }
+  .top-tooltip.hint    .tooltip-text strong { color: #1a3e9e; }
 </style>
