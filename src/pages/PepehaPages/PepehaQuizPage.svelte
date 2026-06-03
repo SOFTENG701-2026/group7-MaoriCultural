@@ -334,14 +334,14 @@
   /* Title — top centre */
   .title-board {
     position: absolute;
-    top: 1.5%;
+    top: -12%;
     left: 50%;
     transform: translateX(-50%);
     z-index: 35;
     pointer-events: none;
   }
   .title-board img {
-    width: min(420px, 34vw);
+    width: min(700px, 34vw);
     height: auto;
     display: block;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
@@ -367,8 +367,8 @@
     color: #ffffff;
     text-shadow: 0 2px 4px rgba(0,0,0,0.35);
   }
-  .qnum .num.cur { left: 52%; }
-  .qnum .num.tot { left: 70%; }
+  .qnum .num.cur { left: 58%; }
+  .qnum .num.tot { left: 71%; top:48%; }
 
   /* Kiki + bubble — left */
   .kiki-block {
@@ -572,9 +572,9 @@
   .hint-board {
     position: absolute;
     top: 24%;
-    right: 2%;
+    right: -3%;
     z-index: 30;
-    width: min(280px, 24vw);
+    width: min(650px, 40vw);
     animation: popIn 0.3s cubic-bezier(.34,1.56,.64,1) both;
   }
   .hint-board img {
