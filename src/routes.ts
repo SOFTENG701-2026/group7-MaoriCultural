@@ -3,10 +3,10 @@ import { wrap } from 'svelte-spa-router/wrap';
 
 // When the child taps a module on the map, route into the correct flow.
 const onMapNavigate = (id: string) => {
-  if (id === 'waiata')   push('/song');
-  if (id === 'tikanga')  push('/tikanga');
-  if (id === 'pepeha')   push('/pepeha');
-  if (id === 'purakau')  push('/purakau');
+  if (id === 'waiata') push('/song');
+  if (id === 'tikanga') push('/tikanga');
+  if (id === 'pepeha') push('/pepeha');
+  if (id === 'purakau') push('/purakau');
 };
 
 const onSongFinish = () => push('/quiz');
@@ -25,10 +25,16 @@ const routes = {
     props: { onback: onBackToMap },
   }),
 
-  '/song/play': wrap({
+  // Dev D fix: extract :level from route params and pass it as a prop
+  '/song/play/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/PlayMusicPage/PlayMusicPage.svelte').then(m => m.default),
-    props: { onBack: () => push('/song'), onNext: () => push('/sing'), onMap: onBackToMap },
+    props: ((detail: { params: { level?: string } }) => ({
+      level:  detail.params?.level ?? 'easy',
+      onBack: () => push('/song/select'),
+      // Pass level forward so QuizPage and RewardPage can use it
+      onNext: () => push(`/sing/${detail.params?.level ?? 'easy'}`),
+    })) as any,
   }),
 
   '/song/learn': wrap({
@@ -38,23 +44,49 @@ const routes = {
     props: { onback: () => push('/song'), onfinish: onSongFinish },
   }),
 
-  // Singing practice page (after PlayMusicPage, before QuizPage)
-  '/sing': wrap({
+  // Dev D: singing practice page (after PlayMusicPage, before QuizPage)
+  '/sing/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/SingAlongPage/SingAlongPage.svelte').then(m => m.default),
-    props: { onBack: () => push('/song/play'), onNext: () => push('/quiz') },
+    props: ((detail: { params: { level?: string } }) => ({
+      level:  detail.params?.level ?? 'easy',
+      onBack: () => push(`/song/play/${detail.params?.level ?? 'easy'}`),
+      onNext: () => push(`/quiz/${detail.params?.level ?? 'easy'}`),
+    })) as any,
   }),
 
+  // Dev D: level-aware quiz route
+  '/quiz/:level': wrap({
+    asyncComponent: () =>
+      import('./pages/SongPages/QuizPage/QuizPage.svelte').then(m => m.default),
+    props: ((detail: { params: { level?: string } }) => ({
+      level:    detail.params?.level ?? 'easy',
+      onBack:   () => push('/song/select'),
+      onMap:    onBackToMap,
+      onFinish: () => push(`/reward/${detail.params?.level ?? 'easy'}`),
+    })) as any,
+  }),
+
+  // Keep original /quiz route as fallback (for any existing links)
   '/quiz': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/QuizPage/QuizPage.svelte').then(m => m.default),
-    props: { onBack: () => push('/song'), onMap: onBackToMap, onFinish: () => push('/reward') },
+    props: { level: 'easy', onBack: () => push('/song/select'), onMap: onBackToMap, onFinish: () => push('/reward/easy') },
+  }),
+
+  // Dev D: level-aware reward route
+  '/reward/:level': wrap({
+    asyncComponent: () =>
+      import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
+    props: ((detail: { params: { level?: string } }) => ({
+      level: detail.params?.level ?? 'easy',
+    })) as any,
   }),
 
   '/reward': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
-    props: { onMap: onBackToMap },
+    props: { level: 'easy' },
   }),
 
   '/coming-soon': wrap({
