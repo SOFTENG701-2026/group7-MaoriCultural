@@ -231,7 +231,7 @@
     text-shadow: 0 3px 0 #5a3210, 0 6px 14px rgba(0, 0, 0, 0.5);
     letter-spacing: 0.5px;
   }
-  .sub { margin: clamp(20px, 1.8vh, 16px) 0 0; color: #ffe6b0; font-weight: 600; font-size: clamp(14px, 2vw, 19px); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+  .sub { margin: 25px 0 0; color: #ffe6b0; font-weight: 600; font-size: clamp(14px, 2vw, 19px); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
 
   .book-row {
     position: relative;
