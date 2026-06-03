@@ -23,16 +23,11 @@
   // Fixed bubble text — always the same greeting on the left
   const bubbleText = 'Kia ora! I am visiting a marae. Help me make respectful choices.'
 
-  // Level description shown near the centre buttons
-  const levelDesc = $derived(
-    tikangaState.level === 'beginner'
-      ? 'I am learning about marae and tikanga for the first time.'
-      : 'I have seen or learned some marae tikanga before.'
-  )
-
-  const readText = $derived(
-    `Kia ora! I am visiting a marae. Choose your visit level. ${levelDesc}`
-  )
+  // Read to me speaks exactly what is on screen.
+  const readText =
+    `${bubbleText} Choose your visit level. ` +
+    'Beginner Level: I am learning about marae and tikanga for the first time. ' +
+    'Confident Level: I have seen or learned some marae tikanga before. Start Visit.'
 
   function selectLevel(l: LearnerLevel) {
     tikangaState.setLevel(l)
@@ -106,7 +101,7 @@
   </button>
 
   <!-- ⑥ Bottom-left: Read to me -->
-  <nav class="bottom-left-nav">
+  <nav class="rtm-nav">
     <ReadToMe text={readText} />
   </nav>
 
@@ -186,7 +181,7 @@
     pointer-events: none;
   }
 
-  /* ③ Map block — bottom-right, smaller */
+  /* ③ Map block */
   .map-block {
     position: absolute;
     bottom: 10%;
@@ -324,8 +319,8 @@
     50%       { transform: translateX(-50%) scale(1.05); filter: drop-shadow(0 10px 24px rgba(20,150,80,0.8)); }
   }
 
-  /* ⑥ Bottom-left nav */
-  .bottom-left-nav {
+  /* ⑥ Read to me — bottom-right */
+  .rtm-nav {
     position: absolute;
     bottom: 2%;
     left: 2%;

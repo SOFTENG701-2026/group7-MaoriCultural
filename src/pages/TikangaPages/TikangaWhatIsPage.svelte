@@ -1,6 +1,6 @@
 <!-- Tikanga Module — Page 2: What is Tikanga? -->
 <script lang="ts">
-  import bgImg     from '../../assets/tikanga/p1 background.png'
+  import bgImg     from '../../assets/tikanga/p2 background.png'
   import goalsImg  from '../../assets/tikanga/p2 goals.png'
   import goal1Img  from '../../assets/tikanga/p2 goal 1 listen first (1).png'
   import goal2Img  from '../../assets/tikanga/p2 goal 2.png'
@@ -12,6 +12,7 @@
   import { tikangaState } from '../../lib/tikangaState.svelte'
   import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
+  import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
 
   interface Props {
     onNext: () => void
@@ -20,10 +21,10 @@
   let { onNext, onBack }: Props = $props()
 
   const goals = [
-    { img: goal1Img, label: 'Listen carefully', text: 'Listen carefully to learn tikanga.' },
-    { img: goal2Img, label: 'Watch and learn',  text: 'Watch and learn from others at the marae.' },
-    { img: goal3Img, label: 'Follow the rules', text: 'Follow the tikanga rules to show respect.' },
-    { img: goal4Img, label: 'Show respect',     text: 'Show respect for people, places, and customs.' },
+    { img: goal1Img, label: '👂 Listen first',       text: 'Listen first.' },
+    { img: goal2Img, label: '👀 Watch and wait',     text: 'Watch and wait.' },
+    { img: goal3Img, label: '🏠 Stay calm inside',   text: 'Stay calm inside.' },
+    { img: goal4Img, label: '🍽️🌿 Share kai and care', text: 'Share kai and care.' },
   ]
 
   let clicked = $state<Set<number>>(new Set())
@@ -33,7 +34,8 @@
   const showTangataCard = $derived(tikangaState.level === 'confident' && clicked.size >= 2)
   const canProceed = $derived(tikangaState.level === 'beginner' ? allClicked : clicked.size >= 2)
 
-  const readText = 'What is Tikanga? Tikanga are Māori ways of doing things right. Listen carefully, watch and learn, follow the rules, and show respect.'
+  // Read to me speaks exactly what is on screen: title + the four goals.
+  const readText = `What is Tikanga? ${goals.map(g => g.text).join(' ')}`
 
   function clickGoal(i: number) {
     clicked = new Set([...clicked, i])
@@ -46,10 +48,17 @@
 <div class="stage" style="background-image:url({bgImg})">
 
   <!-- Back button — top-left -->
-  <button class="btn-back" onclick={onBack}>← Back</button>
+  <button class="map-btn" onclick={onBack} aria-label="Back to map">
+    <img src={backToMapImg} alt="Back to Map" />
+  </button>
 
   <!-- Page title -->
   <h1 class="page-title">What is Tikanga?</h1>
+
+  <!-- Beginner progress hint — under the title -->
+  {#if tikangaState.level === 'beginner' && !allClicked}
+    <p class="hint-text">Tap all 4 goals to continue ({clicked.size}/4)</p>
+  {/if}
 
   <!-- goals-banner wrapper: position:relative so goal-btn children can be absolutely placed on it -->
   <div class="goals-banner">
@@ -84,11 +93,6 @@
     </div>
   {/if}
 
-  <!-- Beginner progress hint -->
-  {#if tikangaState.level === 'beginner' && !allClicked}
-    <p class="hint-text">Tap all 4 goals to continue ({clicked.size}/4)</p>
-  {/if}
-
   <!-- Next button image — bottom-centre -->
   <button
     class="next-img-btn"
@@ -101,7 +105,7 @@
   </button>
 
   <!-- Read to me — bottom-left -->
-  <nav class="bottom-left-nav">
+  <nav class="rtm-nav">
     <ReadToMe text={readText} />
   </nav>
 
@@ -125,25 +129,26 @@
     user-select: none;
   }
 
-  /* Back pill — fixed top-left */
-  .btn-back {
+  /* Back-to-map image button — fixed top-left */
+  .map-btn {
     position: fixed;
-    top: 16px;
-    left: 16px;
+    top: 12px;
+    left: 12px;
     z-index: 50;
-    background: #fff;
-    color: #333;
+    background: none;
     border: none;
-    border-radius: 100px;
-    padding: 12px 28px;
-    font-family: inherit;
-    font-size: 16px;
-    font-weight: 700;
+    padding: 0;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,.22);
-    transition: transform .12s, box-shadow .12s;
+    transition: transform 0.12s ease;
   }
-  .btn-back:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+  .map-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .map-btn:active { transform: scale(0.97); }
+  .map-btn img {
+    width: min(160px, 16vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
+  }
 
   /* Page title */
   .page-title {
@@ -257,11 +262,18 @@
 
   /* Progress hint */
   .hint-text {
+    position: fixed;
+    top: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
     margin: 0;
     color: rgba(255,255,255,.95);
     font-size: 16px;
     font-weight: 800;
     text-shadow: 0 2px 6px rgba(0,0,0,.4);
+    white-space: nowrap;
+    pointer-events: none;
   }
 
   /* Next image button — fixed bottom-centre */
@@ -298,8 +310,8 @@
   .next-img-btn[aria-disabled='true'] { cursor: not-allowed; opacity: .85; }
   .next-img-btn[aria-disabled='true']:hover { transform: translateX(-50%); }
 
-  /* Read to me — fixed bottom-left */
-  .bottom-left-nav {
+  /* Read to me — fixed bottom-right */
+  .rtm-nav {
     position: fixed;
     bottom: 18px;
     left: 18px;
