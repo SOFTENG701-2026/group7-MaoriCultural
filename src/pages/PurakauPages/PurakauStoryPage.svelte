@@ -185,7 +185,7 @@
   .big-cta:hover { transform: translateY(-3px); }
   .big-cta:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
-  .seq-step { width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 96px; }
+  .seq-step { width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 44px; }
 
   .bottom-nav {
     position: fixed;
@@ -201,7 +201,7 @@
   }
   .locked-note {
     position: fixed;
-    bottom: 74px;
+    bottom: 70px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 30;

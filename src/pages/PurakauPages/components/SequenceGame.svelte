@@ -250,11 +250,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     width: 100%;
   }
   .sign {
-    width: min(360px, 60%);
+    width: min(290px, 46%);
     height: auto;
     filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.3));
     animation: drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -274,21 +274,30 @@
     list-style: none;
     margin: 0;
     padding: 0 4px;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    /* Flex-wrap (not grid) so a partial final row centres instead of
+       left-aligning — e.g. the 6th/7th cards sit under the middle of row 1. */
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 6px;
     width: 100%;
-    max-width: none;
     box-sizing: border-box;
   }
+
+  .slot-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: calc((100% - 28px) / 5); /* 5 per row; any leftover row centres */
+  }
   @media (max-width: 760px) {
-    .slots { grid-template-columns: repeat(3, 1fr); }
+    .slot-wrap { width: calc((100% - 16px) / 3); }
   }
   @media (max-width: 480px) {
-    .slots { grid-template-columns: repeat(2, 1fr); }
+    .slot-wrap { width: calc((100% - 10px) / 2); }
   }
-
-  .slot-wrap { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 
   .num {
     width: 30px;
@@ -334,17 +343,22 @@
   .card.placed { border-color: #4caf50; }
   .slots.solved .card { cursor: default; }
 
+  /* After solving, float to the top-right corner so the cards + button all fit
+     on screen without the page having to scroll. */
   .solved-row {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 40;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 8px;
-    width: 100%;
-    margin-top: 8px;
+    gap: 10px;
+    width: auto;
     animation: rise 0.4s ease both;
   }
   .solved-row :global(.kiki) {
-    justify-content: center;
+    justify-content: flex-end;
     width: auto;
   }
 
@@ -386,9 +400,9 @@
   .watch-btn {
     border: none;
     border-radius: 999px;
-    padding: 16px 40px;
+    padding: 12px 24px;
     font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 800;
     color: #2c1600;
     background: linear-gradient(180deg, #ffd24a, #f5a623);

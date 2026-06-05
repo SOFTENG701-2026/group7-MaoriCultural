@@ -80,8 +80,8 @@
 
   .choice-options {
     position: fixed;
-    left: 50%;
-    top: 20%;
+    left: 52%;
+    top: 19%;
     transform: translate(-50%, -50%);
     z-index: 4;
     display: flex;
@@ -94,10 +94,10 @@
 
   .option {
     flex: 0 1 auto;
-    width: clamp(120px, 20vw, 170px);
+    width: clamp(98px, 14vw, 132px);
     border: 2.5px solid rgba(255, 255, 255, 0.18);
     border-radius: 16px;
-    padding: 12px 12px;
+    padding: 12px 9px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -118,15 +118,14 @@
   }
   .option:focus-visible { outline: 3px solid #ffd24a; outline-offset: 2px; }
   .option:disabled { cursor: default; }
-  /* Correct = sun-gold highlight, kept bright and crisp (dark text on gold). */
+  /* Correct = sun-gold highlight, but translucent so it keeps the frosted feel
+     of the other cards (white text stays crisp on the dark-amber tint). */
   .option.correct {
-    border-color: #f5a623;
-    background: linear-gradient(180deg, rgba(255, 222, 120, 0.96), rgba(245, 176, 40, 0.96));
-    box-shadow: 0 8px 26px rgba(245, 176, 40, 0.6);
+    border-color: #ffcf66;
+    background: linear-gradient(180deg, rgba(255, 200, 90, 0.4), rgba(240, 168, 40, 0.46));
+    box-shadow: 0 8px 22px rgba(245, 176, 40, 0.4);
     opacity: 1;
   }
-  .option.correct .text { color: #3a2400; text-shadow: none; }
-  .option.correct .emoji { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)); }
   .option.wrong {
     border-color: #f5a623;
     background: rgba(96, 64, 16, 0.7);
