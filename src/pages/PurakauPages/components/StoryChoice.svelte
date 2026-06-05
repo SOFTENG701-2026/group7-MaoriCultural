@@ -81,7 +81,7 @@
   .choice-options {
     position: fixed;
     left: 50%;
-    top: 52%;
+    top: 20%;
     transform: translate(-50%, -50%);
     z-index: 4;
     display: flex;

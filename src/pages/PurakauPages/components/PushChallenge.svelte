@@ -113,8 +113,8 @@
 
   .push-control {
     position: absolute;
-    left: 50%;
-    top: 52%;
+    left: 41%;
+    top: 43%;
     transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
