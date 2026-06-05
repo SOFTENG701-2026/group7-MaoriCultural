@@ -10,6 +10,7 @@
     active    = false,
     completed = false,
     locked    = false,   // NEW — true when prerequisite module not yet complete
+    unlocking = false,   // NEW — brief golden glow when this module just unlocked
     onpick,
   }: {
     loc:       Loc
@@ -17,6 +18,7 @@
     active?:   boolean
     completed?: boolean
     locked?:   boolean
+    unlocking?: boolean
     onpick:    (loc: Loc) => void
   } = $props()
 </script>
@@ -26,6 +28,7 @@
   class:active
   class:completed
   class:locked
+  class:unlocking
   style="left:{loc.icon.x}%; top:{loc.icon.y}%; width:{loc.w}%; --i:{index}"
   onclick={() => onpick(loc)}
   aria-label={locked
@@ -88,6 +91,26 @@
       drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
   }
 
+  /* ── Just unlocked: a bright pulsing golden glow to draw the eye ── */
+  .marker.unlocking { z-index: 14; }
+  .marker.unlocking img {
+    animation: float 4.5s ease-in-out infinite, unlockGlow 2.8s ease-in-out infinite;
+  }
+  @keyframes unlockGlow {
+    0%, 100% {
+      filter:
+        drop-shadow(0 0 6px rgba(255, 226, 140, 0.7))
+        drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+    }
+    50% {
+      filter:
+        drop-shadow(0 0 18px rgba(255, 238, 160, 1))
+        drop-shadow(0 0 34px rgba(255, 206, 90, 0.85))
+        drop-shadow(0 0 52px rgba(255, 206, 90, 0.5))
+        drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+    }
+  }
+
   /* ── Locked: greyed, no hover lift ── */
   .marker.locked               { cursor: default; }
   .marker.locked img           {
@@ -127,6 +150,7 @@
   @media (prefers-reduced-motion: reduce) {
     .marker img,
     .marker.active img,
-    .marker.locked img { animation: none !important; }
+    .marker.locked img,
+    .marker.unlocking img { animation: none !important; }
   }
 </style>
