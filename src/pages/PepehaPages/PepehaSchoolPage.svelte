@@ -190,7 +190,9 @@
   </div>
 
   <!-- Confident-level cultural-safety check (must pass before Find Maunga) -->
-  {#if !isBeginner && selectedId && showQuiz && !quizPassed}
+  <!-- Keep the overlay up briefly after passing so the ✓ Correct badge is visible
+       (it is dismissed by the showQuiz timeout in checkAnswer). -->
+  {#if !isBeginner && selectedId && showQuiz}
     <div class="quiz-overlay" role="dialog" aria-modal="true" aria-label={QUIZ.question}>
       <div class="quiz-card">
         <p class="quiz-q">{QUIZ.question}</p>

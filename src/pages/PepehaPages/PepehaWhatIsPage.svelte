@@ -31,6 +31,7 @@
   import { pepehaState } from '../../lib/pepehaState.svelte'
   import { speak, settings } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
+  import AnswerStateBadge from './AnswerStateBadge.svelte'
 
   interface Props {
     onNext: () => void
@@ -88,6 +89,7 @@
   const MATCH_QS = [1, 2]
   let matchStep = $state(0)
   let wiggleIdx = $state<number | null>(null)
+  let correctIdx = $state<number | null>(null)
   let matchFeedback = $state('')
 
   // What the learner hears / sees for a given part in the match exercise.
@@ -115,9 +117,11 @@
   function tapMatch(iconIndex: number) {
     if (iconIndex === MATCH_QS[matchStep]) {
       wiggleIdx = null
+      correctIdx = iconIndex
       matchFeedback = `Correct. ${PARTS[iconIndex].maori}.`
       speak('Ka pai!')
-      matchStep += 1
+      // Keep the ✓ Correct badge visible briefly before moving to the next item.
+      setTimeout(() => { correctIdx = null; matchStep += 1 }, 800)
     } else {
       wiggleIdx = iconIndex
       matchFeedback = `Incorrect. ${PARTS[iconIndex].maori}. Listen again.`
@@ -209,12 +213,16 @@
             <button
               class="match-icon"
               class:wiggle={wiggleIdx === i}
+              class:correct={correctIdx === i}
               onclick={() => tapMatch(i)}
-              aria-label={`${p.maori}${wiggleIdx === i ? ', incorrect answer, listen again' : ''}`}
+              disabled={correctIdx !== null}
+              aria-label={`${p.maori}${correctIdx === i ? ', correct answer' : wiggleIdx === i ? ', incorrect answer, listen again' : ''}`}
             >
               <img src={p.icon} alt={p.maori} />
-              {#if wiggleIdx === i}
-                <span class="match-state" aria-hidden="true"><b>×</b> Try again</span>
+              {#if correctIdx === i}
+                <AnswerStateBadge state="correct" />
+              {:else if wiggleIdx === i}
+                <AnswerStateBadge state="wrong" />
               {/if}
             </button>
           {/each}
@@ -541,27 +549,9 @@
   .match-icon:hover  { transform: translateY(-3px); border-color: #F5A623; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
   .match-icon:active { transform: translateY(0); }
   .match-icon img { width: clamp(48px, 7vw, 84px); height: auto; display: block; }
-  .match-icon.wiggle { animation: wiggle 0.5s ease; border: 4px dashed #7b2018; }
-  .match-state {
-    position: absolute;
-    right: 2px;
-    bottom: 2px;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: 3px 6px;
-    border: 2px dashed #7b2018;
-    border-radius: 999px;
-    background: #fff;
-    color: #7b2018;
-    font-size: clamp(9px, 0.9vw, 12px);
-    font-weight: 900;
-    white-space: nowrap;
-  }
-  .match-state b {
-    font-size: 15px;
-    line-height: 1;
-  }
+  .match-icon.wiggle  { animation: wiggle 0.5s ease; border: 4px dashed #7b2018; }
+  .match-icon.correct { border: 4px solid #145a24; }
+  .match-icon:disabled { cursor: default; }
   @keyframes wiggle {
     0%, 100% { transform: translateX(0); }
     20% { transform: translateX(-6px); }

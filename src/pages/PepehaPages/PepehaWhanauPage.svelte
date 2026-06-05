@@ -186,7 +186,10 @@
 
   <!-- Kiki + speech bubble — left -->
   <div class="kiki-block">
-    <div class="bubble"><p>{kikiLine}</p></div>
+    <div class="bubble">
+      <p>{kikiLine}</p>
+      <p class="bubble-hint">🎯 Choose Kiki's whānau, and collect the whānau stickers.</p>
+    </div>
     <img src={kikiImg} alt="Kiki the kiwi" class="kiki-img" />
   </div>
 
@@ -383,7 +386,7 @@
   /* Kiki + bubble — left */
   .kiki-block {
     position: absolute;
-    top: 40%;
+    top: 30%;
     left: 14%;
     z-index: 25;
     display: flex;
@@ -416,6 +419,10 @@
     color: #5a3a14;
     line-height: 1.35;
     text-align: center;
+  }
+  .bubble-hint {
+    margin-top: 6px !important;
+    color: #c2521a !important;
   }
   .kiki-img {
     width: min(250px, 22vw);
