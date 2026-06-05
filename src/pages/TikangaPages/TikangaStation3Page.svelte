@@ -10,8 +10,10 @@
   import miniMapImg from '../../assets/tikanga/p5 map 3 亮.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
+  import { settings } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
   import backToMapImg from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
+  import settingsImg  from '../../assets/settings.png'
 
   interface Props {
     onNext: () => void
@@ -164,6 +166,11 @@
   <!-- Mini-map top-right -->
   <img src={miniMapImg} alt="Marae Visit Map — Station 3 lit" class="mini-map" />
 
+  <!-- Settings — left of the mini-map -->
+  <button class="settings-btn" onclick={() => (settings.open = true)} aria-label="Settings">
+    <img src={settingsImg} alt="Settings" />
+  </button>
+
   <!-- Back button -->
   <button class="map-btn" onclick={onBack} aria-label="Back to map">
     <img src={backToMapImg} alt="Back to Map" />
@@ -255,6 +262,27 @@
     width: min(140px, 18vw);
     height: auto;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
+  }
+
+  /* Settings — left of the mini-map */
+  .settings-btn {
+    position: fixed;
+    top: 14px;
+    right: calc(16px + min(140px, 18vw) + 12px);
+    z-index: 50;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .settings-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .settings-btn:active { transform: scale(0.97); }
+  .settings-btn img {
+    width: min(72px, 9vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
   .map-btn {

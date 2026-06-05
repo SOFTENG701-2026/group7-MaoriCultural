@@ -5,9 +5,11 @@
   import confidentBadge from '../../assets/tikanga/p8 tikanga badge for confident.png'
   import backToMap      from '../../assets/quiz-page/badgebacktomap.png'
   import backToMapImg   from '../../assets/pepeha/transparent_ui_assets/button_back_to_map.png'
+  import settingsImg    from '../../assets/settings.png'
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
   import { progress } from '../../lib/progress.svelte'
+  import { settings } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
 
   interface Props {
@@ -62,7 +64,11 @@
   <button class="map-btn" onclick={goToMap} aria-label="Back to home map">
     <img src={backToMapImg} alt="Back to Map" />
   </button>
-  <div class="deco" aria-hidden="true">🌿 ✨ 🎉 ⭐</div>
+
+  <!-- Settings — top-right corner (matches Pepeha) -->
+  <button class="settings-btn" onclick={() => (settings.open = true)} aria-label="Settings">
+    <img src={settingsImg} alt="Settings" />
+  </button>
 
   <!-- Two-card layout -->
   <div class="cards-row">
@@ -157,14 +163,25 @@
     filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
-  .deco {
+  /* Settings — top-right corner (matches Pepeha) */
+  .settings-btn {
     position: fixed;
-    top: 20px;
-    right: 24px;
-    z-index: 40;
-    font-size: 28px;
-    letter-spacing: 8px;
-    opacity: .85;
+    top: 3%;
+    right: 2%;
+    z-index: 50;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .settings-btn:hover  { transform: translateY(-3px) scale(1.04); }
+  .settings-btn:active { transform: scale(0.97); }
+  .settings-btn img {
+    width: min(90px, 11.25vw);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 5px 14px rgba(0,0,0,0.28));
   }
 
   .cards-row {
