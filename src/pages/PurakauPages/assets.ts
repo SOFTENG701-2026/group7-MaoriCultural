@@ -2,6 +2,8 @@
 // and component imports its art from a single categorised module instead of
 // reaching into ../../assets on its own (mirrors NavPage/assets.ts).
 
+import type { SceneImage } from './stories'
+
 // ── Kiki the kiwi — guide poses (shared app-wide kiwi family) ────────────────
 export { default as kikiHello } from '../../assets/kiwihello.png'
 export { default as kikiYes } from '../../assets/kiwiyes.png'
@@ -29,6 +31,23 @@ export { default as openBook } from '../../assets/ui_purakau/ui_assets_real_alph
 export { default as woodTable } from '../../assets/ui_purakau/ui_assets_real_alpha/wood_tabletop_background.png'
 export { default as arrowLeft } from '../../assets/ui_purakau/ui_assets_real_alpha/left_button_alpha.png'
 export { default as arrowRight } from '../../assets/ui_purakau/ui_assets_real_alpha/right_button_alpha.png'
+
+// ── Story scene images (Story 1: Māui and the Giant Fish, 5 illustrations) ───
+import fishImg1 from '../../assets/ui_purakau/true_alpha_ui_assets/1.png'
+import fishImg2 from '../../assets/ui_purakau/true_alpha_ui_assets/2.png'
+import fishImg3 from '../../assets/ui_purakau/true_alpha_ui_assets/3.png'
+import fishImg4 from '../../assets/ui_purakau/true_alpha_ui_assets/4.png'
+import fishImg5 from '../../assets/ui_purakau/true_alpha_ui_assets/5.png'
+export { fishImg1, fishImg2, fishImg3, fishImg4, fishImg5 }
+
+/** Resolve a SceneImage key to the actual PNG URL for use in SceneArt. */
+export const SCENE_IMAGES: Record<SceneImage, string> = {
+  'img-1': fishImg1,
+  'img-2': fishImg2,
+  'img-3': fishImg3,
+  'img-4': fishImg4,
+  'img-5': fishImg5,
+}
 
 // ── Decorations & the story badge (green pounamu hei matau) ──────────────────
 export { default as heiMatau } from '../../assets/ui_purakau/ui_assets_real_alpha/green_fish_hook_alpha.png'

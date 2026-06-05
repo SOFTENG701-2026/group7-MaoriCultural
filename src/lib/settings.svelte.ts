@@ -80,3 +80,19 @@ export function stopSpeaking(): void {
     window.speechSynthesis.cancel()
   }
 }
+
+export function narrate(text: string) {
+  if (typeof window === 'undefined') return;
+  if (!text || !text.trim()) return;
+
+  const synth = window.speechSynthesis;
+  synth.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-NZ';
+  utterance.rate = 0.85;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  synth.speak(utterance);
+}

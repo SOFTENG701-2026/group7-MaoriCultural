@@ -5,20 +5,21 @@
   //   Step 3  scenes    — interactive, narrated storytelling (StoryScenes)
   //   Step 4  sequence  — drag the scenes back into order (SequenceGame)
   //   Step 5  quiz      — Māori-word questions + Fun Facts (StoryQuiz)
-  //   Step 6  celebrate — wrap-up; tapping through returns to the storybook,
-  //                       where the finished cover fills with colour.
+  // After the quiz, the player navigates to /purakau/reward — the dedicated
+  // PurakauRewardPage which combines the green Hei Matau badge, Kiki's
+  // congratulations, stats, and the Tikanga-style badge-ceremony modal.
   import { onMount } from 'svelte'
   import { push } from 'svelte-spa-router'
   import { storyById } from './stories'
   import { purakauState } from '../../lib/purakauState.svelte'
   import { narrate } from '../../lib/settings.svelte'
-  import { beachScene, heiMatau } from './assets'
+  import { beachScene } from './assets'
   import KiwiGuide from './components/KiwiGuide.svelte'
   import StoryScenes from './components/StoryScenes.svelte'
   import SequenceGame from './components/SequenceGame.svelte'
   import StoryQuiz from './components/StoryQuiz.svelte'
 
-  type Step = 'intro' | 'scenes' | 'sequence' | 'quiz' | 'celebrate'
+  type Step = 'intro' | 'scenes' | 'sequence' | 'quiz'
 
   // Captured once: a refresh of /purakau/play has no active story, so we bounce
   // back to the bookshelf rather than render an empty player.
@@ -45,21 +46,17 @@
   }
 
   function finish() {
-    // Record completion now (robust even if they leave on the wrap-up screen):
-    // marks the story done, lights the map medal, and arms the colour reveal.
+    // Record story completion in purakauState (so the storybook can play the
+    // colour-reveal animation on return). Module-level progress + badge is
+    // handled by the dedicated PurakauRewardPage (Tikanga pattern).
     purakauState.completeActiveStory()
-    step = 'celebrate'
-    narrate(
-      'Ka rawe! You read the whole story, put it in order, and answered every question. You are a true storyteller! Tap to see your storybook.',
-    )
+    push('/purakau/reward')
   }
 </script>
 
 {#if story}
   <div class="player">
     <div class="bg" style:background-image="url({beachScene})" aria-hidden="true"></div>
-    <div class="scrim" aria-hidden="true"></div>
-
     <button class="pill btn-book" onclick={() => push('/purakau')}>← Book</button>
 
     <main class="stage">
@@ -93,15 +90,9 @@
           {/if}
         </div>
       {:else if step === 'quiz'}
-        <!-- Step 5 — Quiz + Fun Facts -->
+        <!-- Step 5 — Quiz + Fun Facts.
+             onComplete navigates to /purakau/reward for the badge ceremony. -->
         <StoryQuiz quiz={story.quiz} onComplete={finish} />
-      {:else if step === 'celebrate'}
-        <!-- Step 6 — Wrap-up, then back to the storybook to colour the page -->
-        <div class="celebrate fade-in">
-          <KiwiGuide pose="yes" text="Ka rawe! You finished the whole pūrākau!" size="md" />
-          <img class="big-badge" src={heiMatau} alt="Hei Matau badge" />
-          <button class="big-cta" onclick={() => push('/purakau')}>See my storybook →</button>
-        </div>
       {/if}
     </main>
   </div>
@@ -117,7 +108,6 @@
     flex-direction: column;
     align-items: center;
     font-family: 'Nunito', 'Fredoka', system-ui, sans-serif;
-    overflow: hidden;
   }
   .bg {
     position: fixed;
@@ -127,13 +117,6 @@
     background-position: center;
     background-repeat: no-repeat;
   }
-  .scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    background: linear-gradient(180deg, rgba(20, 40, 60, 0.42), rgba(20, 40, 60, 0.62));
-  }
-
   .btn-book {
     position: fixed;
     top: 16px;
@@ -146,10 +129,9 @@
   .stage {
     position: relative;
     z-index: 10;
-    width: 94%;
-    max-width: 1000px;
+    width: 100%;
     margin: 0 auto;
-    padding: 54px 6px 8px;
+    padding: 38px 0 0;
     flex: 1;
     min-height: 0; /* allow children to fit/shrink instead of growing the page */
     display: flex;
@@ -177,29 +159,6 @@
     width: min(720px, 92vw);
     box-sizing: border-box;
   }
-
-  /* Celebrate (Step 6 wrap-up) — height-fit so "See my storybook" is always
-     fully visible; badge is sized by HEIGHT (the hook art is tall) so it can't
-     balloon and push the button off-screen. */
-  .celebrate {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(10px, 2.4vh, 22px);
-    width: min(720px, 92vw);
-    overflow: hidden;
-  }
-  .big-badge {
-    height: clamp(72px, 13vh, 132px);
-    width: auto;
-    flex: 0 0 auto;
-    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.4));
-    animation: badgePop 0.6s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
-  @keyframes badgePop { from { opacity: 0; transform: scale(0) rotate(-30deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
 
   .big-cta {
     flex: 0 0 auto;
@@ -269,5 +228,5 @@
   .cta:disabled { background: #d3cbbe; color: #7c7468; cursor: not-allowed; transform: none; box-shadow: none; }
 
   @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-  @media (prefers-reduced-motion: reduce) { .big-cta, .big-badge { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .big-cta { animation: none !important; } }
 </style>

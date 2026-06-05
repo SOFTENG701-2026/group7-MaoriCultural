@@ -8,7 +8,6 @@
 
   import { tikangaState } from '../../lib/tikangaState.svelte'
   import { progress } from '../../lib/progress.svelte'
-  import { speak } from '../../lib/settings.svelte'
   import ReadToMe from '../../lib/ReadToMe.svelte'
 
   interface Props {
@@ -40,12 +39,19 @@
   )
 
   function handleDone() {
-    progress.markComplete('tikanga')
-    tikangaState.reset()
     showModal = true
   }
 
+  // Returning to the map is what actually activates the Kōrero Award badge:
+  // record completion + the learner's level so the map's AwardPanel unlocks it.
   function goToMap() {
+    progress.markComplete('tikanga')
+    try {
+      sessionStorage.setItem('mca-tikanga-badge', tikangaState.level)
+    } catch {
+      // storage unavailable — badge simply won't persist
+    }
+    tikangaState.reset()
     onMap()
   }
 </script>
