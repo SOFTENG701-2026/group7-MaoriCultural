@@ -26,19 +26,15 @@
   import kiwiYes from '../../../assets/quiz-page/kiwiyes.png'
   import kiwiTryAgain from '../../../assets/quiz-page/kiwitryagain.png'
 
-  interface Props {
-    level?: string
-    completed?: boolean
-    onBack?: () => void
-    onNext?: () => void
-  }
-
   const {
     level = 'beginner',
-    completed = false,
     onBack = () => push('/'),
     onNext = () => push('/'),
-  }: Props = $props()
+  } = $props<{
+    level?: string
+    onBack?: () => void
+    onNext?: () => void
+  }>()
 
   type SongLine = {
     maori: string
@@ -545,4 +541,81 @@
   .btn-next-sub { font-size: 11px; font-weight: 700; opacity: 0.85; }
   .btn-next:disabled { cursor: not-allowed; }
   @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+
+  /* ── Responsive: narrow / short screens ── */
+  @media (max-width: 700px), (max-height: 700px) {
+
+    /* Top bar: stack line-progress below back button to avoid clash */
+    .top-map {
+      font-size: 11px;
+      padding: 6px 10px;
+      top: 2% !important;
+      left: 2% !important;
+      z-index: 50;
+    }
+    .line-progress {
+      top: 8% !important;           /* move below Back to Map button */
+      gap: clamp(4px, 1vw, 8px);
+      padding: 4px clamp(6px, 1.2vw, 12px);
+      font-size: clamp(10px, 1.3vmin, 13px);
+    }
+    .line-progress button { width: 26px; height: 26px; font-size: 12px; }
+    .level-badge {
+      font-size: clamp(9px, 1.2vh, 12px);
+      padding: 5px 8px;
+      top: 8% !important;           /* align with line-progress */
+      right: 1% !important;
+    }
+    /* Push main card down to make room */
+    .main-card { top: 16vh !important; }
+
+    /* Kiki bubble: anchor top-left beside main card, above action buttons */
+    .kiki-group {
+      left: 1vw !important;
+      bottom: auto !important;
+      top: 22vh !important;
+      width: clamp(110px, 16vw, 160px) !important;
+    }
+    .kiki-bubble { width: 130px; padding: 6px 8px; }
+    .kiki-bubble strong { font-size: 12px; margin-bottom: 2px; }
+    .kiki-bubble span   { font-size: 10px; }
+
+    /* Main card: fill more width, shorter */
+    .main-card {
+      left: 50% !important;
+      width: clamp(200px, 60vw, 420px) !important;
+      height: 42vh !important;
+      top: 12vh !important;
+    }
+    .main-card h1 { font-size: clamp(22px, 4vh, 40px); }
+    .main-card h2 { font-size: clamp(14px, 2.2vh, 22px); }
+    .colour-box   { width: clamp(50px, 9vh, 100px); height: clamp(50px, 9vh, 100px); }
+
+    /* Action buttons row: fit to screen width */
+    .action-layout-container {
+      width: 94vw !important;
+      left: 50% !important;
+      top: 56vh !important;
+      gap: 0.8vh;
+    }
+
+    /* Try Singing / Pass button smaller */
+    .try-sing-img   { height: 46px; }
+    .try-sing-btn   { width: 100% !important; }
+
+    /* Need Help button smaller */
+    .need-help-img  { height: 46px; }
+    .need-help-button { max-width: 180px; }
+
+    /* Feedback/hint bar smaller */
+    .action-row { gap: 6px; }
+
+    /* Bottom nav: shrink buttons */
+    .bottom-bar  { padding: 10px 12px 16px; height: auto; }
+    .btn-secondary { width: 90px;  font-size: 12px; }
+    .btn-next      { width: 110px; }
+    .btn-next-text { font-size: 13px; }
+    .btn-next-sub  { font-size: 10px; }
+  }
+
 </style>

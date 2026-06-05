@@ -4,41 +4,41 @@
   import { push } from 'svelte-spa-router'
   import { progress } from '../../../lib/progress.svelte'
   import { settings } from '../../../lib/settings.svelte'
-
+ 
   import waiataCard from '../../../assets/waiata_badge_card.png'
   import badgeBackToMap from '../../../assets/quiz-page/badgebacktomap.png'
   import beginnerBadge from '../../../assets/badges/waiata badge for beginners.png'
   import confidentBadge from '../../../assets/badges/waiata badge for confident.png'
-
+ 
   interface Props {
     level?: string
     onMap?: () => void
   }
-
-  const { level = 'beginner', onMap = () => push('/') }: Props = $props()
-
+ 
+  const { level = 'beginner', onMap = () => push('/') } = $props<Props>()
+ 
   let lvl = $derived(level)
   let isConfident = $derived(lvl === 'confident' || lvl === 'hard')
-
+ 
   let CONTENT = $derived.by(() => ({
     title: 'Waiata Complete!',
-
+ 
     kikiSays: isConfident
       ? 'Ka pai! You listened and tried Te Aroha.'
       : 'Ka pai! You listened and tried the colour song.',
-
+ 
     badgeLabel: isConfident
       ? 'Waiata Navigator Badge'
       : 'Waiata Explorer Badge',
-
+ 
     badgeImg: isConfident
       ? confidentBadge
       : beginnerBadge,
-
+ 
     levelTag: isConfident
       ? '🌺 Confident Level completed!'
       : '🌿 Beginner Level completed!',
-
+ 
     summary: isConfident
       ? [
           'aroha = love',
@@ -54,9 +54,9 @@
           'You completed the colour word and meaning checks',
         ],
   }))
-
+ 
   const BADGE_KEY = 'mca-waiata-badge'
-
+ 
   function getSavedBadge() {
     try {
       return localStorage.getItem(BADGE_KEY)
@@ -64,112 +64,119 @@
       return null
     }
   }
-
+ 
   function saveBadge(t: string) {
     try {
       sessionStorage.setItem(BADGE_KEY, t)
-
+ 
       const current = getSavedBadge()
       if (current === 'confident' && t === 'beginner') return
-
+ 
       localStorage.setItem(BADGE_KEY, t)
     } catch {}
   }
-
+ 
   let isUpgrade = $state(false)
   let showModal = $state(false)
-
+ 
   function handleDone() {
     speechSynthesis.cancel()
-
+ 
     progress.markComplete('waiata')
-
+ 
     const badgeType = isConfident ? 'confident' : 'beginner'
     isUpgrade = getSavedBadge() === 'beginner' && badgeType === 'confident'
-
+ 
     saveBadge(badgeType)
-
+ 
     console.log(`[Dev D] awardBadge('waiata', '${badgeType}')`)
-
+ 
+    // Clear singing progress for both levels so next attempt starts from line 1
+    try {
+      sessionStorage.removeItem('waiata-sing-progress-beginner')
+      sessionStorage.removeItem('waiata-sing-progress-confident')
+    } catch {}
+ 
     showModal = true
   }
-
+ 
   function goToMap() {
     speechSynthesis.cancel()
     onMap()
     push('/')
   }
-
+ 
   function readToMe() {
     if (!soundIsOn()) return
-
+ 
     speechSynthesis.cancel()
-
+ 
     const text = `${CONTENT.title}. ${CONTENT.kikiSays}. You learned: ${CONTENT.summary.join('. ')}. ${CONTENT.badgeLabel} unlocked!`
-
+ 
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'en-NZ'
     u.rate = getSpeechRate()
-
+ 
     speechSynthesis.speak(u)
   }
-
+ 
   function soundIsOn() {
     const s: any = settings
-
+ 
     if (s.sound === 'off') return false
     if (s.sound === false) return false
     if (s.soundOn === false) return false
     if (s.muted === true) return false
-
+ 
     return true
   }
-
+ 
   function getSpeechRate() {
     const s: any = settings
     const volume = s.volume ?? s.volumeLevel ?? 'medium'
-
+ 
     if (volume === 'low') return 0.8
     if (volume === 'high') return 0.9
     return 0.85
   }
-
+ 
   onDestroy(() => {
     speechSynthesis.cancel()
   })
 </script>
-
+ 
 <div class="page">
   <div class="bg" aria-hidden="true"></div>
-
+ 
   <button class="btn-corner" onclick={goToMap}>← Back to Map</button>
-
+ 
   <div class="cards-row">
     <div class="left-wrap">
       <div class="reward-banner">🎉 Reward time!</div>
-
+ 
       <div class="left-card">
-        <img src={waiataCard} alt="Waiata badge card" class="youdidit-img" />
-
-        <!-- Badge now sits inside the big coin/circle area on the certificate -->
-        <img
-          src={CONTENT.badgeImg}
-          alt={CONTENT.badgeLabel}
-          class="coin-badge"
-          class:glow={isConfident}
-        />
+        <!-- cert-wrapper ties badge position to the image, not the card -->
+        <div class="cert-wrapper">
+          <img src={waiataCard} alt="Waiata badge card" class="youdidit-img" />
+          <img
+            src={CONTENT.badgeImg}
+            alt={CONTENT.badgeLabel}
+            class="coin-badge"
+            class:glow={isConfident}
+          />
+        </div>
       </div>
     </div>
-
+ 
     <div class="right-card">
       <div class="level-tag">{CONTENT.levelTag}</div>
-
+ 
       <h1>{CONTENT.title}</h1>
-
+ 
       <p class="kiki-says">{CONTENT.kikiSays}</p>
-
+ 
       <p class="learned-title">You learned:</p>
-
+ 
       <div class="stats">
         {#each CONTENT.summary as item, i}
           <div class="stat-row" style:animation-delay="{i * 0.1}s">
@@ -177,24 +184,24 @@
           </div>
         {/each}
       </div>
-
+ 
       <div class="badge-pill">
         🏅 {CONTENT.badgeLabel} unlocked!
       </div>
-
+ 
       <div class="hint-box">
         <b>Next step:</b> Tap Done to collect your {CONTENT.badgeLabel}.
       </div>
     </div>
   </div>
-
+ 
   <nav class="bottom-nav">
     <button class="pill btn-read" onclick={readToMe}>🔊 Read to me</button>
     <button class="pill btn-show" onclick={handleDone}>Show Badge</button>
     <button class="pill btn-done" onclick={handleDone}>Done →</button>
   </nav>
 </div>
-
+ 
 {#if showModal}
   <div
     class="modal-overlay"
@@ -213,22 +220,22 @@
       >
         ×
       </button>
-
+ 
       <p class="modal-title">
         {isUpgrade ? '⬆️ Badge Upgraded!' : 'Ka rawe! 🎉'}
       </p>
-
+ 
       <p class="modal-badge-name">
         {CONTENT.badgeLabel} unlocked!
       </p>
-
+ 
       <img
         src={CONTENT.badgeImg}
         alt={CONTENT.badgeLabel}
         class="modal-badge"
         class:shimmer={isConfident}
       />
-
+ 
       <p class="modal-desc">
         {#if isUpgrade}
           ✨ You completed the Confident level — your Waiata badge has been upgraded to Navigator!
@@ -238,7 +245,7 @@
           🌿 You earned the Waiata Explorer Badge for completing the colour waiata!
         {/if}
       </p>
-
+ 
       <button class="back-map-btn" onclick={goToMap}>
         <img src={badgeBackToMap} alt="Back to the map" class="back-map-img" />
       </button>
@@ -350,27 +357,32 @@
     overflow: hidden;
   }
 
-  .youdidit-img {
+  /* cert-wrapper: always matches the certificate image dimensions */
+  .cert-wrapper {
+    position: relative;
     width: 100%;
-    max-width: 780px;
-    height: auto;
-    object-fit: contain;
-    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    line-height: 0; /* remove inline gap below image */
   }
 
-  /* Updated: badge is inside the big coin/circle area */
-.coin-badge {
-  position: absolute;
-  top: 12%;
-  left: 40%;
-  transform: translate(-50%, 0);
-  width: clamp(155px, 15vw, 220px);
-  height: auto;
-  border-radius: 50%;
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.28));
-  animation: popIn 0.6s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  z-index: 30;
-}
+  .youdidit-img {
+    width: 100%;
+    display: block;
+    height: auto;
+  }
+
+  /* Badge locked to the coin circle — % relative to cert-wrapper = % of image */
+  .coin-badge {
+    position: absolute;
+    top: 13%;        /* coin circle vertical center in the image */
+    left: 40%;       /* coin circle horizontal center in the image */
+    transform: translate(-50%, -50%);
+    width: 34%;      /* badge is ~34% of the image width */
+    height: auto;
+    border-radius: 50%;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.28));
+    animation: popIn 0.6s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    z-index: 30;
+  }
 
   .coin-badge.glow {
     animation:
@@ -681,4 +693,56 @@
       box-shadow: 0 8px 24px rgba(245, 166, 35, 0.6);
     }
   }
+
+  /* ── Responsive: stack to single column on narrow / short screens ── */
+  @media (max-width: 860px), (max-height: 650px) {
+    /* Stack vertically so full certificate is always visible */
+    .cards-row {
+      flex-direction: column;
+      height: auto;
+      overflow-y: auto;
+      margin-top: 24px;
+      gap: 16px;
+      width: 96%;
+      padding-bottom: 100px;
+      box-sizing: border-box;
+    }
+    .left-wrap { width: 100%; }
+
+    /* Let the card grow naturally with the image — no fixed height */
+    .left-card {
+      min-height: 0;
+      height: auto;
+      overflow: visible;
+    }
+
+    /* Certificate image fills the card width, shows fully */
+    .youdidit-img {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .reward-banner {
+      font-size: clamp(16px, 3vw, 22px);
+      padding: 10px 24px;
+      margin-bottom: -16px;
+    }
+
+    /* Summary card full width, scrollable */
+    .right-card {
+      width: 100%;
+      flex: none;
+      max-height: none;
+      margin-top: 0;
+      padding: 18px 20px;
+      box-sizing: border-box;
+    }
+    h1 { font-size: clamp(20px, 5vw, 30px); }
+    .kiki-says { font-size: clamp(14px, 3vw, 18px); }
+    .stat-label { font-size: clamp(13px, 3vw, 17px); }
+    .badge-pill { font-size: clamp(13px, 3vw, 17px); }
+  }
+
 </style>

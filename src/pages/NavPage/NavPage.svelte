@@ -10,6 +10,7 @@
   import OnboardingSpotlight from './components/OnboardingSpotlight.svelte'
   import GuideTour from './components/GuideTour.svelte'
 
+
   import { settings } from '../../lib/settings.svelte'
   import { progress } from '../../lib/progress.svelte'
 
@@ -59,11 +60,11 @@
   function dismissOnboarding() {
     _dismissedThisLoad = true
     showOnboarding = false
-    // Only show guide if they haven't seen it before
-    if (!hasSeenGuide()) showGuide = true
+    // Show guide after onboarding for all new users
+    if (!hasSeenGuide()) { setTimeout(() => { showGuide = true }, 300) }
   }
 
-  const GUIDE_KEY = 'mca-guide-seen'
+  const GUIDE_KEY = 'mca-guide-seen-v2'  // v2 = new full onboarding tour
 
   function hasSeenGuide(): boolean {
     try {
@@ -79,7 +80,7 @@
     } catch {}
   }
 
-  let showGuide = $state(!_needsOnboarding && !hasSeenGuide())
+  let showGuide = $state(false)  // Phase 3: kiki banner
 
   const GUIDE_LINES = [
     'Kia ora! Welcome to Kiwi’s big adventure!',
@@ -372,16 +373,16 @@ const TRAIL_PTS = ORDERED_LOCATIONS.map((l) => l.icon)
       </div>
     {/if}
 
-    {#if showGuide}
-      <GuideTour lines={GUIDE_LINES} onfinish={() => { showGuide = false; markGuideSeen() }} />
-    {/if}
-
     {#if showOnboarding}
       <OnboardingSpotlight
         waiataIcon={waiataLoc.icon}
         waiataW={waiataLoc.w}
         onDismiss={dismissOnboarding}
       />
+    {/if}
+
+    {#if showGuide}
+      <GuideTour lines={GUIDE_LINES} onfinish={() => { showGuide = false; markGuideSeen() }} />
     {/if}
   </div>
 </div>

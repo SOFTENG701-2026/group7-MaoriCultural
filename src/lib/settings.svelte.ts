@@ -59,101 +59,20 @@ class Settings {
 
 export const settings = new Settings()
 
-// ── Voice selection ──────────────────────────────────────────────────────────
-// The default speechSynthesis voice is often a harsh "screen-reader" voice. We
-// pick the warmest, most natural English voice the device offers, preferring
-// cloud-quality "Natural"/Google voices and NZ/AU/GB accents (closest to this
-// app's setting) before falling back to decent local voices like Samantha.
-
-// Cloud / neural voices that sound markedly more human when present.
-const NATURAL_HINTS = ['natural', 'google', 'siri', 'premium', 'enhanced', 'neural']
-// Good-quality built-in voices by name (macOS / Windows), in rough preference.
-const NICE_NAMES = ['Samantha', 'Karen', 'Catherine', 'Serena', 'Moira', 'Tessa', 'Fiona', 'Daniel', 'Aria', 'Jenny', 'Libby', 'Sonia']
-
-let chosenVoice: SpeechSynthesisVoice | null = null
-
-function scoreVoice(v: SpeechSynthesisVoice): number {
-  const name = v.name.toLowerCase()
-  const lang = v.lang.replace('_', '-').toLowerCase()
-  let s = 0
-  // Accent dominates — the app is set in Aotearoa, so a New Zealand voice wins
-  // outright; the Australian accent is the closest stand-in, then British.
-  if (lang.startsWith('en-nz') || name.includes('new zealand') || name.includes('aotearoa')) s += 200
-  else if (lang.startsWith('en-au') || name.includes('australia')) s += 120
-  else if (lang.startsWith('en-gb') || name.includes('british') || name.includes('united kingdom')) s += 45
-  else if (lang.startsWith('en')) s += 25
-  // Quality — cloud / neural / enhanced voices sound far more human.
-  if (NATURAL_HINTS.some((h) => name.includes(h))) s += 60
-  const ni = NICE_NAMES.findIndex((n) => v.name.includes(n))
-  if (ni >= 0) s += 24 - ni
-  if (v.localService) s += 2 // tie-breaker: offline voices are reliable
-  return s
-}
-
-function refreshVoice(): void {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-  try {
-    const voices = window.speechSynthesis.getVoices()
-    if (!voices.length) return
-    const english = voices.filter((v) => /^en/i.test(v.lang))
-    const pool = english.length ? english : voices
-    const best = pool.reduce((b, v) => (scoreVoice(v) > scoreVoice(b) ? v : b), pool[0])
-    if (best && best.name !== chosenVoice?.name) {
-      chosenVoice = best
-      // Surface the pick so you can see which accent/voice you're hearing.
-      console.info(`[speak] voice → ${best.name} (${best.lang})`)
-    }
-  } catch {
-    /* getVoices unavailable — fall back to the engine default */
-  }
-}
-
-if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-  refreshVoice()
-  // Voices often load asynchronously; refresh when the engine reports them.
-  try {
-    window.speechSynthesis.addEventListener('voiceschanged', refreshVoice)
-  } catch {
-    /* older engines: getVoices() was already populated above */
-  }
-}
-
 /**
- * Speak a line of text, honouring the sound + volume settings. Uses the nicest
- * available voice with warm, child-friendly pacing. Never throws — speech is
- * non-essential, so a TTS failure must never break the caller's flow. Returns
- * the utterance (so callers can hook `onend`) or `undefined`.
+ * Speak a line of text, honouring the sound + volume settings. Returns the
+ * utterance (so callers can hook `onend`) or `undefined` when sound is off or
+ * speech synthesis is unavailable.
  */
 export function speak(text: string): SpeechSynthesisUtterance | undefined {
   if (!settings.soundOn) return
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-  try {
-    window.speechSynthesis.cancel()
-    if (!chosenVoice) refreshVoice()
-    const u = new SpeechSynthesisUtterance(text)
-    if (chosenVoice) {
-      u.voice = chosenVoice
-      u.lang = chosenVoice.lang
-    }
-    u.rate = 0.95 // a touch slower for young readers
-    u.pitch = 1.12 // a little brighter / friendlier (Kiki)
-    u.volume = settings.volumeLevel
-    window.speechSynthesis.speak(u)
-    return u
-  } catch {
-    return undefined
-  }
-}
-
-/**
- * Speak automatically ONLY when the learner has chosen "Out loud" mode
- * (readMode === 'auto'). Used for narration / hints / cheers so that, by
- * default (readMode === 'tap'), nothing is voiced unless the child taps a
- * "Read to me" / 🔊 button — those call `speak()` directly and always sound.
- */
-export function narrate(text: string): SpeechSynthesisUtterance | undefined {
-  if (settings.readMode !== 'auto') return
-  return speak(text)
+  window.speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(text)
+  u.rate = 0.9
+  u.volume = settings.volumeLevel
+  window.speechSynthesis.speak(u)
+  return u
 }
 
 export function stopSpeaking(): void {
