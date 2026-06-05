@@ -9,7 +9,6 @@
   import { push } from 'svelte-spa-router'
   import { settings } from '../../../lib/settings.svelte'
   import bgImg from '../../../assets/p3_background.png'
-  import kiwiImg from '../../../assets/kiwihello.png'
   import rtmImg from '../../../assets/read_to_me.png'
 
   import easySong from '../../../assets/song-page/merged_song.mp3'
@@ -112,6 +111,7 @@ function soundIsOn() {
   let hasPlayedOnce = $state(false)
   let currentMaori = $state('')
   let currentEng = $state('')
+  let showSoundHint = $state(false)   // shown when the user taps Play while sound is off
 
   function stopAudio() {
     audio.pause()
@@ -162,7 +162,7 @@ function togglePlay() {
   if (!soundIsOn()) {
     audio.pause()
     playing = false
-    hasPlayedOnce = true
+    showSoundHint = true   // sound is off — prompt the user to turn it on
     return
   }
 
@@ -175,6 +175,11 @@ function togglePlay() {
     playing = true
     hasPlayedOnce = true
   }
+}
+
+function openSoundSettings() {
+  showSoundHint = false
+  settings.open = true
 }
 
   function handleBack() {
@@ -221,11 +226,11 @@ function readToMe() {
   <div class="stage" style="background-image: url({bgImg})">
     <button class="btn-map-corner" onclick={goToMap}>← Back to Map</button>
 
-    <div class="kiki-instruction" style="position:absolute;top:10%;left:3%;z-index:20;">
-      <img src={kiwiImg} alt="Kiki" class="kiki-small" draggable="false" />
-      <div class="kiki-speech">
-        <p class="speech-main">Listen first.</p>
-        <p class="speech-sub">Then we will try it together.</p>
+    <!-- Kiki greeting — same bubble style as page 1 -->
+    <div class="kiki-block">
+      <div class="bubble">
+        <p class="bubble-greeting">Listen first.</p>
+        <p class="bubble-mission">Then we will try it together.</p>
       </div>
     </div>
 
@@ -261,18 +266,17 @@ function readToMe() {
       {/each}
     </div>
 
+    <!-- Play + Read-to-me live at stage top-level so nothing can block their clicks -->
+    <button class="btn-play" class:playing onclick={togglePlay}>
+      {playing ? '⏹ Stop' : '▶ Play'}
+    </button>
+
+    <button class="btn-rtm" onclick={readToMe} aria-label="Read to me">
+      <img src={rtmImg} alt="Read to me" class="rtm-img" />
+    </button>
+
     <div class="bottom-bar">
       <button class="btn-secondary" onclick={handleBack}>← Back</button>
-
-      <div class="center-btns">
-        <button class="btn-play" class:playing onclick={togglePlay}>
-          {playing ? '⏹ Stop' : '▶ Play'}
-        </button>
-
-        <button class="btn-rtm" onclick={readToMe} aria-label="Read to me">
-          <img src={rtmImg} alt="Read to me" class="rtm-img" />
-        </button>
-      </div>
 
       <button
         class="btn-next"
@@ -285,6 +289,26 @@ function readToMe() {
     </div>
 
     <p class="copyright">🎵 Educational use only.</p>
+
+    <!-- Sound-off prompt — shown when Play is tapped while sound is muted -->
+    {#if showSoundHint}
+      <div class="sound-hint-overlay">
+        <button
+          class="sound-hint-backdrop"
+          aria-label="Close"
+          onclick={() => (showSoundHint = false)}
+        ></button>
+        <div class="sound-hint-card" role="dialog" aria-modal="true" aria-label="Sound is off" tabindex="-1">
+          <span class="sound-hint-icon">🔇</span>
+          <h2 class="sound-hint-title">Sound is off</h2>
+          <p class="sound-hint-text">Please turn on Sound to play the music.</p>
+          <div class="sound-hint-actions">
+            <button class="sound-hint-btn primary" onclick={openSoundSettings}>Open Settings</button>
+            <button class="sound-hint-btn" onclick={() => (showSoundHint = false)}>OK</button>
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -329,6 +353,7 @@ function readToMe() {
     gap: 8px;
     padding: 18px 24px;
     text-align: center;
+    pointer-events: none;   /* display only — never block button clicks */
   }
 
   .lyric-maori {
@@ -433,14 +458,22 @@ function readToMe() {
     box-sizing: border-box;
   }
 
-  .center-btns {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 16px;
+  /* Play and Read-to-me are positioned independently (not bound together).
+     They sit at stage top-level with a high z-index so no layer blocks clicks. */
+  .btn-play {
     position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 150px;            /* vertical position of Play */
+    left: 51%;               /* horizontal position of Play */
+    transform: translateX(-50%) scale(1.1);   /* enlarged 10% */
+    animation: playBreathe 2s ease-in-out infinite;
+    z-index: 35;
+  }
+
+  .btn-rtm {
+    position: absolute;
+    bottom: 19px;            /* vertical position of Read to me */
+    left: 45%;               /* horizontal position of Read to me */
+    z-index: 35;
   }
 
   .btn-secondary,
@@ -463,8 +496,7 @@ function readToMe() {
   }
 
   .btn-secondary:hover,
-  .btn-next:not(:disabled):hover,
-  .btn-play:hover {
+  .btn-next:not(:disabled):hover {
     transform: translateY(-2px);
   }
 
@@ -550,43 +582,49 @@ function readToMe() {
     transform: translateY(-2px);
   }
 
-  .kiki-instruction {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    animation: slideDown .4s cubic-bezier(.34,1.56,.64,1) both;
-  }
-
-  .kiki-small {
-    width: clamp(50px, 7vmin, 80px);
-    height: auto;
-    flex-shrink: 0;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,.3));
-  }
-
-  .kiki-speech {
-    background: rgba(255,255,255,.95);
-    border-radius: 14px;
-    padding: 8px 14px;
-    box-shadow: 0 4px 16px rgba(0,0,0,.18);
-    max-width: clamp(160px, 22vw, 260px);
+  /* ── Kiki greeting bubble (same style as page 1) ── */
+  .kiki-block {
+    position: absolute;
+    top: 20%;
+    left: 7%;
+    z-index: 20;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    width: min(300px, 28vw);
+    animation: slideDown .4s cubic-bezier(.34,1.56,.64,1) both;
   }
-
-  .speech-main {
-    margin: 0;
-    font-size: clamp(13px, 1.8vmin, 18px);
+  .bubble {
+    position: relative;
+    background: #ffffff;
+    border: 3px solid #F5A623;
+    border-radius: 22px;
+    padding: 14px 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    margin-bottom: 8px;
+  }
+  .bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 40px;
+    border-width: 14px 12px 0 12px;
+    border-style: solid;
+    border-color: #F5A623 transparent transparent transparent;
+  }
+  .bubble-greeting {
+    margin: 0 0 8px;
+    font-size: clamp(15px, 1.7vw, 19px);
     font-weight: 900;
-    color: #1a3a0f;
+    color: #1a5c00;
+    line-height: 1.4;
   }
-
-  .speech-sub {
+  .bubble-mission {
     margin: 0;
-    font-size: clamp(11px, 1.4vmin, 14px);
-    font-weight: 600;
-    color: #4b5563;
+    font-size: clamp(14px, 1.5vw, 17px);
+    font-weight: 800;
+    color: #c2521a;
+    line-height: 1.4;
   }
 
   .kw-emoji {
@@ -598,10 +636,12 @@ function readToMe() {
 
   .copyright {
     position: absolute;
-    top: 2%;
-    right: 2%;
+    top: 58%;
+    left: 51%;
+    transform: translateX(-50%);
     z-index: 10;
     margin: 0;
+    pointer-events: none;   /* display only — never block button clicks */
     font-size: 10px;
     font-weight: 600;
     color: rgba(255,255,255,.85);
@@ -623,18 +663,15 @@ function readToMe() {
     }
   }
 
+  /* Idle breathing — keeps the translateX(-50%) centring and the 10% enlargement */
+  @keyframes playBreathe {
+    0%, 100% { transform: translateX(-50%) scale(1.1); }
+    50%      { transform: translateX(-50%) scale(1.18); }
+  }
+
   @keyframes playPulse {
-    0% {
-      transform: scale(1);
-    }
-
-    50% {
-      transform: scale(1.04);
-    }
-
-    100% {
-      transform: scale(1);
-    }
+    0%, 100% { transform: translateX(-50%) scale(1.1); }
+    50%      { transform: translateX(-50%) scale(1.18); }
   }
 
   @keyframes nextPulse {
@@ -649,5 +686,94 @@ function readToMe() {
     100% {
       transform: scale(1);
     }
+  }
+
+  /* ── Sound-off prompt ── */
+  .sound-hint-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: hintFade .18s ease-out both;
+  }
+
+  .sound-hint-backdrop {
+    position: absolute;
+    inset: 0;
+    border: none;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+  }
+
+  .sound-hint-card {
+    position: relative;
+    z-index: 1;
+    width: min(360px, 80vw);
+    background: #ffffff;
+    border-radius: 22px;
+    border: 3px solid #F5A623;
+    padding: 24px 26px 20px;
+    text-align: center;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+    animation: hintPop .22s cubic-bezier(.34,1.56,.64,1) both;
+  }
+
+  .sound-hint-icon {
+    font-size: 44px;
+    line-height: 1;
+  }
+
+  .sound-hint-title {
+    margin: 10px 0 6px;
+    font-size: clamp(20px, 2.6vmin, 26px);
+    font-weight: 900;
+    color: #1a3a0f;
+  }
+
+  .sound-hint-text {
+    margin: 0 0 18px;
+    font-size: clamp(14px, 1.9vmin, 18px);
+    font-weight: 700;
+    color: #4b5563;
+    line-height: 1.45;
+  }
+
+  .sound-hint-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .sound-hint-btn {
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: clamp(14px, 1.8vmin, 17px);
+    padding: 11px 22px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.08);
+    color: #374151;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .sound-hint-btn:hover { transform: translateY(-2px); }
+
+  .sound-hint-btn.primary {
+    background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+    color: #fff;
+    box-shadow: 0 4px 0 #15803d, 0 5px 14px rgba(0, 0, 0, 0.2);
+  }
+
+  @keyframes hintFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes hintPop {
+    0%   { opacity: 0; transform: scale(.9); }
+    100% { opacity: 1; transform: scale(1); }
   }
 </style>

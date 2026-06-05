@@ -1,7 +1,8 @@
 <script lang="ts">
-  import bgImg   from '../../../assets/p2_goal_background2.png'
-  import kiwiImg from '../../../assets/kiwihello.png'
-  import rtmImg  from '../../../assets/read_to_me.png'
+  import bgImg        from '../../../assets/p2_goal_background2.png'
+  import rtmImg       from '../../../assets/read_to_me.png'
+  import beginnerImg  from '../../../assets/beginner level.png'
+  import confidentImg from '../../../assets/confident level.png'
   import { onDestroy } from 'svelte'
   import { push } from 'svelte-spa-router'
   
@@ -50,8 +51,8 @@ function handleBackToMap() {
     const text = `Waiata Time! Kia ora! Let's learn a waiata together.
       Listen, try singing, and answer two questions.
       Choose your song level:
-      Beginner Level — practise the colour song.
-      Confident Level — practise Te Aroha.`
+      Beginner Level — learn the colour song.
+      Confident Level — learn Te Aroha.`
     const u = new SpeechSynthesisUtterance(text)
   u.lang = 'en-NZ'
   u.rate = getSpeechRate()
@@ -77,12 +78,11 @@ onDestroy(() => {
 
 
 
-    <!-- Kiki greeting — top left (image 3 style) -->
-    <div class="top-badge">
-      <img src={kiwiImg} alt="Kiki" class="kiki-small" />
-      <div class="kiki-bubble">
-        <p class="bubble-kiki">💬 Kia ora! Let's learn a waiata together.</p>
-        <p class="bubble-goal">🎯 Listen, try singing, and answer two questions.</p>
+    <!-- Kiki greeting — top left (Tikanga/Pepeha bubble style) -->
+    <div class="kiki-block">
+      <div class="bubble">
+        <p class="bubble-greeting">💬 Kia ora! Let's learn a waiata together.</p>
+        <p class="bubble-mission">🎯 Listen, try singing, and answer two questions.</p>
       </div>
     </div>
 
@@ -92,31 +92,29 @@ onDestroy(() => {
       <div class="level-cards">
 
         <button
-          class="level-card beginner-card"
+          class="level-card"
           class:selected={selectedLevel === 'beginner'}
           onclick={() => selectedLevel = 'beginner'}
           aria-pressed={selectedLevel === 'beginner'}
         >
-          <span class="level-icon">🌿</span>
-          <span class="level-name beginner-name">Beginner Level</span>
-          <span class="level-desc">I want to practise the colour song.</span>
-          {#if selectedLevel === 'beginner'}
-            <span class="selected-tick beginner-tick">✓</span>
-          {/if}
+          <div class="card-top">
+            <span class="card-icon">⭐</span>
+            <p class="card-desc">I want to learn the colour song.</p>
+          </div>
+          <img src={beginnerImg} alt="Beginner Level" class="card-img" />
         </button>
 
         <button
-          class="level-card confident-card"
+          class="level-card"
           class:selected={selectedLevel === 'confident'}
           onclick={() => selectedLevel = 'confident'}
           aria-pressed={selectedLevel === 'confident'}
         >
-          <span class="level-icon">🌺</span>
-          <span class="level-name confident-name">Confident Level</span>
-          <span class="level-desc">I want to practise Te Aroha.</span>
-          {#if selectedLevel === 'confident'}
-            <span class="selected-tick confident-tick">✓</span>
-          {/if}
+          <div class="card-top">
+            <span class="card-icon">🌟</span>
+            <p class="card-desc">I want to learn Te Aroha.</p>
+          </div>
+          <img src={confidentImg} alt="Confident Level" class="card-img" />
         </button>
 
       </div>
@@ -197,37 +195,48 @@ onDestroy(() => {
     overflow: hidden;
   }
 
-  /* ── Top-left Kiki greeting (image 3 style) ── */
-  .top-badge {
+  /* ── Top-left Kiki greeting (Tikanga/Pepeha bubble style) ── */
+  .kiki-block {
     position: absolute;
-    top: 4%; left: 3%;
-    display: flex; align-items: flex-start; gap: 12px;
+    top: 14%; left: 3%;
     z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(300px, 28vw);
     animation: slideDown .4s cubic-bezier(.34,1.56,.64,1) both;
   }
-  .kiki-small {
-    width: clamp(56px, 8vmin, 90px);
-    height: auto;
-    filter: drop-shadow(0 4px 10px rgba(0,0,0,.3));
-    flex-shrink: 0;
+  .bubble {
+    position: relative;
+    background: #ffffff;
+    border: 3px solid #F5A623;
+    border-radius: 22px;
+    padding: 14px 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    margin-bottom: 8px;
   }
-  .kiki-bubble {
-    background: rgba(255,255,255,.96);
-    border-radius: 16px;
-    padding: 12px 18px;
-    box-shadow: 0 6px 20px rgba(0,0,0,.18);
-    max-width: clamp(180px, 26vw, 320px);
-    display: flex; flex-direction: column; gap: 3px;
+  .bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 40px;
+    border-width: 14px 12px 0 12px;
+    border-style: solid;
+    border-color: #F5A623 transparent transparent transparent;
   }
-  .bubble-kiki {
+  .bubble-greeting {
+    margin: 0 0 8px;
+    font-size: clamp(15px, 1.7vw, 19px);
+    font-weight: 900;
+    color: #1a5c00;
+    line-height: 1.4;
+  }
+  .bubble-mission {
     margin: 0;
-    font-size: clamp(11px, 1.6vmin, 16px);
-    font-weight: 700; color: #374151; line-height: 1.3;
-  }
-  .bubble-goal {
-    margin: 0;
-    font-size: clamp(10px, 1.3vmin, 14px);
-    font-weight: 600; color: #6b7280; line-height: 1.3;
+    font-size: clamp(14px, 1.5vw, 17px);
+    font-weight: 800;
+    color: #c2521a;
+    line-height: 1.4;
   }
   @keyframes slideDown {
     from { opacity: 0; transform: translateY(-12px); }
@@ -250,78 +259,73 @@ onDestroy(() => {
 
   .level-cards {
     display: flex;
-    gap: clamp(12px, 2.5vw, 24px);
+    gap: 24px;
     width: 100%;
     justify-content: center;
+    align-items: stretch;
   }
 
+  /* Tikanga-style level card */
   .level-card {
-    flex: 1;
-    max-width: 340px;
-     min-height: 190px;
-    display: flex; flex-direction: column; align-items: center;
-    gap: clamp(6px, 1vmin, 12px);
-    padding: clamp(18px, 3vmin, 30px) clamp(14px, 2vmin, 24px);
-    background: rgba(255,255,255,.97);
-    border: 4px solid transparent;
+    width: min(270px, 27vw);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 18px 16px;
     border-radius: 24px;
+    border: 3px solid rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.45);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.14);
     cursor: pointer;
-    position: relative;
-    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s ease;
-    box-shadow: 0 8px 28px rgba(0,0,0,.18);
+    outline: none;
+    font-family: inherit;
+    transition: transform 0.15s ease, background 0.2s ease,
+                border-color 0.2s ease, box-shadow 0.2s ease;
   }
-  .level-card:hover   { transform: translateY(-5px); box-shadow: 0 14px 36px rgba(0,0,0,.22); }
-  .level-card.selected { transform: translateY(-4px); }
-
-  /* Beginner — green */
-  .beginner-card          { border-color: #22c55e; box-shadow: 0 8px 28px rgba(34,197,94,.25); }
-  .beginner-card:hover    { box-shadow: 0 14px 36px rgba(34,197,94,.35); }
-  .beginner-card.selected { box-shadow: 0 0 0 4px rgba(34,197,94,.4), 0 8px 28px rgba(34,197,94,.3); }
-  .beginner-name          { color: #16a34a !important; }
-  .beginner-tick          { background: #16a34a !important; }
-
-  /* Confident — purple */
-  .confident-card          { border-color: #a855f7; box-shadow: 0 8px 28px rgba(168,85,247,.25); }
-  .confident-card:hover    { box-shadow: 0 14px 36px rgba(168,85,247,.35); }
-  .confident-card.selected { box-shadow: 0 0 0 4px rgba(168,85,247,.4), 0 8px 28px rgba(168,85,247,.3); }
-  .confident-name          { color: #9333ea !important; }
-  .confident-tick          { background: #9333ea !important; }
   .level-card:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 0 16px 36px rgba(0,0,0,.22);
+    transform: translateY(-6px);
+    background: rgba(255,255,255,0.65);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.2);
   }
   .level-card.selected {
-    border-color: #16a34a;
-    box-shadow: 0 0 0 4px rgba(22,163,74,.3), 0 12px 28px rgba(0,0,0,.2);
-    animation: cardPop .25s cubic-bezier(.34,1.56,.64,1);
+    background: #ffffff;
+    border-color: #F5A623;
+    box-shadow: 0 0 0 5px rgba(245,166,35,0.4), 0 12px 32px rgba(0,0,0,0.2);
+    transform: translateY(-4px);
   }
-  @keyframes cardPop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.07) translateY(-5px); }
-    100% { transform: scale(1)   translateY(-6px); }
+  .level-card:focus-visible {
+    outline: 3px solid #F5A623;
+    outline-offset: 4px;
   }
 
-  .level-icon { font-size: clamp(32px, 5.5vmin, 52px); }
-  .level-name {
-    font-size: clamp(20px, 3vmin, 30px);
-    font-weight: 900;
-    color: #1a3a0f;
+  .card-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
   }
-  .level-desc {
-    font-size: clamp(11px, 1.5vmin, 15px);
-    font-weight: 600;
-    color: #4b5563;
+  .card-icon {
+    font-size: clamp(24px, 3vw, 34px);
+    line-height: 1;
+  }
+  .card-desc {
+    margin: 0;
+    font-size: clamp(14px, 1.6vw, 18px);
+    font-weight: 700;
+    color: #1a3000;
     text-align: center;
-    line-height: 1.4;
+    line-height: 1.5;
   }
-
-  .selected-tick {
-    position: absolute; top: 10px; right: 14px;
-    width: 26px; height: 26px;
-    background: #16a34a; color: #fff;
-    border-radius: 50%;
-    font-size: 14px; font-weight: 900;
-    display: flex; align-items: center; justify-content: center;
+  .card-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 14px;
+    flex-shrink: 0;
   }
 
   /* ── Bottom bar ── */
