@@ -7,8 +7,7 @@
   import ReadAloudButton from './components/ReadAloudButton.svelte'
   import LocationInfoModal from './components/LocationInfoModal.svelte'
   import AwardPanel from './components/AwardPanel.svelte'
-  import OnboardingSpotlight from './components/OnboardingSpotlight.svelte'
-  import GuideTour from './components/GuideTour.svelte'
+  import MapOnboarding from './components/MapOnboarding.svelte'
 
   import { settings } from '../../lib/settings.svelte'
   import { progress } from '../../lib/progress.svelte'
@@ -48,49 +47,30 @@
     return prereqLoc?.label ?? prereqId
   }
 
-  let _dismissedThisLoad = false
-  const _needsOnboarding = !progress.isComplete('waiata')
-  let showOnboarding = $state(_needsOnboarding && !_dismissedThisLoad)
+ const ONBOARDING_SESSION_KEY = 'mca-map-onboarding-seen-this-session'
 
-  $effect(() => {
-    if (progress.isComplete('waiata')) showOnboarding = false
-  })
-
-  function dismissOnboarding() {
-    _dismissedThisLoad = true
-    showOnboarding = false
-    // Only show guide if they haven't seen it before
-    if (!hasSeenGuide()) showGuide = true
+function hasSeenOnboardingThisSession(): boolean {
+  try {
+    return sessionStorage.getItem(ONBOARDING_SESSION_KEY) === '1'
+  } catch {
+    return false
   }
+}
 
-  const GUIDE_KEY = 'mca-guide-seen'
-
-  function hasSeenGuide(): boolean {
-    try {
-      return !!localStorage.getItem(GUIDE_KEY)
-    } catch {
-      return false
-    }
+function markOnboardingSeenThisSession(): void {
+  try {
+    sessionStorage.setItem(ONBOARDING_SESSION_KEY, '1')
+  } catch {
+    // If sessionStorage is unavailable, the tour can safely show again.
   }
+}
 
-  function markGuideSeen(): void {
-    try {
-      localStorage.setItem(GUIDE_KEY, '1')
-    } catch {}
-  }
+let showOnboarding = $state(!hasSeenOnboardingThisSession())
 
-  let showGuide = $state(!_needsOnboarding && !hasSeenGuide())
-
-  const GUIDE_LINES = [
-    'Kia ora! Welcome to Kiwi’s big adventure!',
-    'This is a map of Aotearoa, my home.',
-    'Tap a place and I will walk there.',
-    'Or use the arrow keys to move me.',
-    'Tap the place again to play and learn.',
-    'Now let’s go, explorer!'
-  ]
-
-  const waiataLoc = LOCATIONS.find((l) => l.id === 'waiata')!
+function finishOnboarding() {
+  markOnboardingSeenThisSession()
+  showOnboarding = false
+}
 
   let unlockingId = $state<string | null>(null)
 
@@ -366,24 +346,25 @@ const TRAIL_PTS = ORDERED_LOCATIONS.map((l) => l.icon)
       <AwardPanel onclose={() => (showAwards = false)} />
     {/if}
 
-    {#if hinted && !showOnboarding && !showGuide}
+    {#if hinted && !showOnboarding}
       <div class="hint" aria-hidden="true">
         Tap a place — or use the arrow keys — to walk Kiwi
       </div>
     {/if}
 
-    {#if showGuide}
-      <GuideTour lines={GUIDE_LINES} onfinish={() => { showGuide = false; markGuideSeen() }} />
-    {/if}
+    
 
     {#if showOnboarding}
-      <OnboardingSpotlight
-        waiataIcon={waiataLoc.icon}
-        waiataW={waiataLoc.w}
-        onDismiss={dismissOnboarding}
-      />
-    {/if}
-  </div>
+  <MapOnboarding
+    locations={LOCATIONS}
+    order={UNLOCK_ORDER}
+    onfinish={finishOnboarding}
+    onopenreward={() => (showAwards = true)}
+    onclosereward={() => (showAwards = false)}
+    onopensettings={() => (settings.open = true)}
+  />
+{/if}
+</div>
 </div>
 
 <style>
