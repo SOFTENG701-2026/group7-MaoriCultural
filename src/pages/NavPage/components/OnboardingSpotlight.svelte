@@ -140,25 +140,17 @@
     onkeydown={handleKeydown}
   ></button>
 
-  <svg class="mask" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-    <defs>
-      <radialGradient id="spot-fade" cx="50%" cy="50%" r="50%">
-        <stop offset="72%" stop-color="black" stop-opacity="1" />
-        <stop offset="100%" stop-color="black" stop-opacity="0" />
-      </radialGradient>
+  <!-- Darkened backdrop with a TRUE circular hole punched out at the spot -->
+  <div
+    class="mask"
+    style="background: radial-gradient(circle at {current.cx}% {current.cy}%, transparent {current.r}vw, rgba(5,13,23,0.7) {current.r * 1.35}vw);"
+    aria-hidden="true"
+  ></div>
 
-      <mask id="spotlight-mask">
-        <rect width="100" height="100" fill="white" />
-        <circle cx={current.cx} cy={current.cy} r={current.r} fill="url(#spot-fade)" />
-      </mask>
-    </defs>
-
-    <rect width="100" height="100" fill="rgba(5,15,25,0.52)" mask="url(#spotlight-mask)" />
-
-    <circle cx={current.cx} cy={current.cy} r={current.r} class="pulse-ring" />
-    <circle cx={current.cx} cy={current.cy} r={current.r} class="pulse-ring pulse-ring--delay" />
-    <circle cx={current.cx} cy={current.cy} r={current.r} class="clear-ring" />
-  </svg>
+  <!-- Circular highlight rings around the spotlight -->
+  <span class="ring pulse-ring" style="left:{current.cx}%; top:{current.cy}%; width:{current.r * 2}vw; height:{current.r * 2}vw;" aria-hidden="true"></span>
+  <span class="ring pulse-ring pulse-ring--delay" style="left:{current.cx}%; top:{current.cy}%; width:{current.r * 2}vw; height:{current.r * 2}vw;" aria-hidden="true"></span>
+  <span class="ring clear-ring" style="left:{current.cx}%; top:{current.cy}%; width:{current.r * 2}vw; height:{current.r * 2}vw;" aria-hidden="true"></span>
 
   <div
     class:final-bubble={current.final}
@@ -248,33 +240,38 @@
     z-index: 81;
   }
 
+  /* Circular highlight rings */
+  .ring {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 82;
+    box-sizing: border-box;
+  }
+
   .pulse-ring {
-    fill: none;
-    stroke: rgba(255, 220, 80, 0.75);
-    stroke-width: 0.45;
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: pulseOut 2s ease-out infinite;
+    border: 2px solid rgba(255, 226, 138, 0.55);
+    animation: pulseOut 2.2s ease-out infinite;
   }
 
   .pulse-ring--delay {
-    animation-delay: 1s;
+    animation-delay: 1.1s;
   }
 
   .clear-ring {
-    fill: none;
-    stroke: rgba(255, 220, 80, 0.95);
-    stroke-width: 0.5;
+    border: 2.5px solid rgba(255, 233, 168, 0.9);
+    box-shadow: 0 0 10px rgba(255, 220, 120, 0.6);
   }
 
   @keyframes pulseOut {
     0% {
-      transform: scale(1);
+      transform: translate(-50%, -50%) scale(1);
       opacity: 0.9;
     }
 
     100% {
-      transform: scale(1.7);
+      transform: translate(-50%, -50%) scale(1.55);
       opacity: 0;
     }
   }
@@ -283,54 +280,58 @@
     position: absolute;
     z-index: 84;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    width: min(340px, 30vw);
-    min-width: 220px;
-    padding: 10px 14px;
-    border-radius: 16px;
-    background: linear-gradient(180deg, #fffdf2 0%, #fff6d7 100%);
-    border: 2.5px solid #f0be3d;
+    align-items: flex-start;
+    gap: 12px;
+    width: min(360px, 32vw);
+    min-width: 230px;
+    padding: 16px 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.9);
     box-shadow:
-      0 10px 24px rgba(0, 0, 0, 0.22),
-      inset 0 1px 0 rgba(255, 255, 255, 0.75);
+      0 18px 44px rgba(15, 30, 50, 0.32),
+      0 2px 8px rgba(15, 30, 50, 0.18);
+    backdrop-filter: blur(4px);
     pointer-events: none;
-    animation: bubbleIn 0.35s ease both;
+    animation: bubbleIn 0.32s cubic-bezier(0.34, 1.4, 0.64, 1) both;
   }
 
   .bubble-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: #fff3c4;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(160deg, #ffe7a6 0%, #ffce5e 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 22px;
     flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(230, 160, 30, 0.3);
   }
 
   .bubble-content {
     flex: 1;
+    padding-top: 1px;
   }
 
   .bubble-content strong {
     display: block;
     font-family: 'Baloo 2', system-ui, sans-serif;
-    font-size: clamp(18px, 2.2vmin, 24px);
-    font-weight: 900;
-    color: #6e3c10;
-    margin-bottom: 4px;
+    font-size: clamp(17px, 2.1vmin, 22px);
+    font-weight: 800;
+    color: #2a2118;
+    margin-bottom: 3px;
     line-height: 1.2;
+    letter-spacing: -0.2px;
   }
 
   .bubble-content p {
     margin: 0;
     font-family: 'Baloo 2', system-ui, sans-serif;
-    font-size: clamp(14px, 1.8vmin, 18px);
-    font-weight: 700;
-    color: #8c5b1b;
-    line-height: 1.35;
+    font-size: clamp(13px, 1.7vmin, 16px);
+    font-weight: 600;
+    color: #6b6157;
+    line-height: 1.4;
   }
 
   .final-bubble {
@@ -357,14 +358,14 @@
 
   .balloon {
     position: relative;
-    background: linear-gradient(160deg, #fffef0 0%, #fff8d6 100%);
-    border: 2.5px solid rgba(255, 200, 60, 0.8);
-    border-radius: 16px;
-    padding: clamp(12px, 2.2vmin, 20px) clamp(14px, 2.5vmin, 24px);
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: clamp(14px, 2.4vmin, 22px) clamp(16px, 2.6vmin, 26px);
     box-shadow:
-      0 12px 36px rgba(0, 0, 0, 0.45),
-      0 2px 0 rgba(255, 255, 255, 0.7) inset;
-    max-width: clamp(200px, 28vmin, 320px);
+      0 22px 50px rgba(15, 30, 50, 0.4),
+      0 3px 10px rgba(15, 30, 50, 0.2);
+    max-width: clamp(220px, 30vmin, 340px);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -372,59 +373,49 @@
 
   .balloon-tip {
     position: absolute;
-    bottom: 18px;
-    left: -14px;
+    bottom: 22px;
+    left: -12px;
     width: 0;
     height: 0;
-    border-top: 8px solid transparent;
-    border-bottom: 8px solid transparent;
-    border-right: 14px solid rgba(255, 200, 60, 0.8);
-  }
-
-  .balloon-tip::after {
-    content: '';
-    position: absolute;
-    top: -6px;
-    left: 3px;
-    width: 0;
-    height: 0;
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-    border-right: 11px solid #fffef0;
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-right: 13px solid rgba(255, 255, 255, 0.98);
+    filter: drop-shadow(-2px 2px 3px rgba(15, 30, 50, 0.12));
   }
 
   .balloon-text {
     margin: 0;
     font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
-    font-size: clamp(17px, 2.8vmin, 26px);
+    font-size: clamp(18px, 2.8vmin, 26px);
     font-weight: 800;
-    color: #6b3a0f;
+    color: #2a2118;
     line-height: 1.15;
+    letter-spacing: -0.3px;
     white-space: nowrap;
   }
 
   .balloon-sub {
     margin: 0;
     font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
-    font-size: clamp(12px, 1.8vmin, 17px);
+    font-size: clamp(13px, 1.8vmin, 17px);
     font-weight: 600;
-    color: #8a5a1a;
-    line-height: 1.35;
+    color: #6b6157;
+    line-height: 1.4;
   }
 
   .start-btn {
-    margin-top: 4px;
+    margin-top: 8px;
     align-self: flex-start;
-    padding: 0.5em 1.2em;
+    padding: 0.6em 1.4em;
     border: 0;
     border-radius: 999px;
     cursor: pointer;
     font-family: inherit;
-    font-size: clamp(12px, 1.7vmin, 16px);
+    font-size: clamp(13px, 1.7vmin, 16px);
     font-weight: 800;
     color: #fff;
-    background: linear-gradient(180deg, #f5c842, #e09010);
-    box-shadow: 0 4px 12px rgba(224, 144, 16, 0.55);
+    background: linear-gradient(180deg, #ffc83e 0%, #f29a13 100%);
+    box-shadow: 0 6px 16px rgba(224, 144, 16, 0.45);
     transition:
       transform 0.14s ease,
       box-shadow 0.14s ease;
@@ -434,7 +425,7 @@
 
   .start-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 7px 18px rgba(224, 144, 16, 0.65);
+    box-shadow: 0 9px 22px rgba(224, 144, 16, 0.55);
     animation: none;
   }
 
@@ -463,12 +454,17 @@
   .footer {
     position: absolute;
     left: 50%;
-    bottom: 3%;
+    bottom: 3.5%;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     z-index: 85;
+    padding: 9px 9px 9px 18px;
+    border-radius: 999px;
+    background: rgba(18, 28, 40, 0.55);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
 
   .dots {
@@ -478,69 +474,77 @@
   }
 
   .dots span {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.45);
-    transition: all 0.18s ease;
+    background: rgba(255, 255, 255, 0.35);
+    transition: all 0.2s ease;
   }
 
   .dots span.active {
-    background: white;
-    transform: scale(1.2);
+    width: 22px;
+    background: #ffd86b;
   }
 
   .skip-btn {
     border: none;
     border-radius: 999px;
-    padding: 9px 18px;
-    background: rgba(255, 255, 255, 0.22);
-    color: white;
+    padding: 8px 16px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.78);
     font-family: 'Baloo 2', system-ui, sans-serif;
-    font-weight: 900;
-    font-size: 16px;
+    font-weight: 700;
+    font-size: 15px;
     cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .skip-btn:hover {
+    color: #fff;
   }
 
   .next-btn {
     border: none;
     border-radius: 999px;
-    padding: 11px 24px;
-    background: linear-gradient(180deg, #75efc0 0%, #20c997 100%);
-    color: #084c39;
+    padding: 10px 22px;
+    background: linear-gradient(180deg, #5fe7b4 0%, #1fc592 100%);
+    color: #06402f;
     font-family: 'Baloo 2', system-ui, sans-serif;
-    font-weight: 900;
-    font-size: 17px;
+    font-weight: 800;
+    font-size: 16px;
     cursor: pointer;
-    box-shadow:
-      0 4px 0 #108a68,
-      0 6px 14px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 5px 14px rgba(31, 197, 146, 0.45);
+    transition:
+      transform 0.14s ease,
+      box-shadow 0.14s ease;
   }
 
   .next-btn.final-btn {
     background: linear-gradient(180deg, #ffd86b 0%, #f4b126 100%);
     color: #6f4200;
-    box-shadow:
-      0 4px 0 #d18c12,
-      0 6px 14px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 5px 14px rgba(244, 177, 38, 0.5);
   }
 
-  .skip-btn:hover,
   .next-btn:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(31, 197, 146, 0.55);
+  }
+
+  .next-btn.final-btn:hover {
+    box-shadow: 0 8px 20px rgba(244, 177, 38, 0.6);
   }
 
   .skip-hint {
     position: absolute;
-    bottom: 8%;
+    bottom: 10.5%;
     left: 50%;
     z-index: 84;
     transform: translateX(-50%);
     margin: 0;
     font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
-    font-size: clamp(10px, 1.5vmin, 14px);
+    font-size: clamp(10px, 1.5vmin, 13px);
     font-weight: 600;
-    color: rgba(255, 240, 180, 0.72);
+    color: rgba(255, 245, 210, 0.6);
     white-space: nowrap;
     pointer-events: none;
     animation: floatHint 2.8s ease-in-out infinite;
