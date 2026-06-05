@@ -46,12 +46,12 @@
   {/each}
 </div>
 
-<!-- Prompt / cheer from Kiki, floating top-centre -->
+<!-- Prompt / cheer from Kiki, floating top-right (out of the way of the art) -->
 <div class="spots-kiki">
   {#if solved}
-    <KiwiGuide pose="yes" text={interaction.cheer} size="sm" />
+    <KiwiGuide pose="yes" text={interaction.cheer} size="sm" flip dark fit />
   {:else}
-    <KiwiGuide pose="think" text={interaction.prompt} size="sm" />
+    <KiwiGuide pose="think" text={interaction.prompt} size="sm" flip dark fit />
   {/if}
 </div>
 
@@ -85,18 +85,25 @@
   }
   .spot .mark {
     position: relative;
-    font-size: clamp(22px, 3.4vw, 34px);
+    font-size: clamp(28px, 4.4vw, 46px);
     opacity: 0;
     transform: scale(0.4);
-    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    filter: drop-shadow(0 0 8px rgba(255, 240, 180, 0.9));
+    transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: drop-shadow(0 0 6px rgba(255, 245, 200, 0.95));
   }
   .spot:hover:not(:disabled) { transform: translate(-50%, -50%) scale(1.12); }
   .spot:focus-visible { outline: 3px solid #fff; outline-offset: 3px; border-radius: 50%; }
   .spot.lit .glow {
     animation: burst 0.5s ease both, twinkle 1.8s ease-in-out 0.5s infinite;
   }
-  .spot.lit .mark { opacity: 1; transform: scale(1); }
+  /* Clicked star pops bigger and glows brightly so it clearly reads as "lit". */
+  .spot.lit .mark {
+    opacity: 1;
+    transform: scale(1.4);
+    filter: drop-shadow(0 0 8px rgba(255, 250, 225, 1))
+      drop-shadow(0 0 18px rgba(255, 212, 120, 0.9))
+      drop-shadow(0 0 32px rgba(255, 200, 100, 0.55));
+  }
 
   @keyframes twinkle {
     0%, 100% { opacity: 0.5; transform: scale(0.92); }
@@ -110,14 +117,15 @@
 
   .spots-kiki {
     position: fixed;
-    top: 30px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 24px;
+    right: 12px;
+    left: auto;
+    transform: none;
     z-index: 5;
-    width: min(92vw, 640px);
+    max-width: 52vw;
     animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
-  @keyframes popIn { from { opacity: 0; transform: translateX(-50%) scale(0.85); } to { opacity: 1; transform: translateX(-50%) scale(1); } }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
 
   @media (prefers-reduced-motion: reduce) {
     .spot .glow, .spot.lit .glow, .spots-kiki { animation: none !important; }

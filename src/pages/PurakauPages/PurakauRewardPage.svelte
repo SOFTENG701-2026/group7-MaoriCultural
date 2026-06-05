@@ -7,6 +7,7 @@
   import { purakauState } from '../../lib/purakauState.svelte'
   import { progress } from '../../lib/progress.svelte'
   import { STORIES, storyById } from './stories'
+  import { SCENE_IMAGES } from './assets'
   import ReadToMe from '../../lib/ReadToMe.svelte'
 
   import beginnerBadge  from '../../assets/badges/Purakau badge for beginners.png'
@@ -38,6 +39,9 @@
   // The story just finished (set by completeActiveStory, not yet consumed by the
   // storybook) so the per-story counts are accurate for any pūrākau.
   const lastStory = $derived(storyById(purakauState.justColoredStoryId))
+  // Story-themed backdrop (Story 2 → the Te Kore void), with a dark scrim so the
+  // cards and text stay legible. Falls back to the CSS gradient when unset.
+  const bgUrl = $derived(lastStory?.bgImage ? SCENE_IMAGES[lastStory.bgImage] : null)
 
   const stats = $derived([
     { label: 'Stories completed', value: `${purakauState.completedCount} / ${totalCount}` },
@@ -71,7 +75,15 @@
 </script>
 
 <div class="page">
-  <div class="bg" aria-hidden="true"></div>
+  <div
+    class="bg"
+    aria-hidden="true"
+    style:background-image={bgUrl
+      ? `linear-gradient(rgba(8,10,24,0.45), rgba(8,10,24,0.6)), url(${bgUrl})`
+      : undefined}
+    style:background-size="cover"
+    style:background-position="center"
+  ></div>
 
   <!-- Top-left: back to map (matches Tikanga's map-btn) -->
   <button class="map-btn" onclick={goToMap} aria-label="Back to home map">

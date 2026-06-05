@@ -150,6 +150,9 @@ export interface Story {
   teReo: string // te reo Māori title shown as the eyebrow
   summary: string // suspenseful one-liner for the storybook page
   coverImage: SceneImage
+  // Optional full-screen backdrop for the intro + reward pages. Defaults to the
+  // shared beach scene when omitted (Story 1). Story 2 themes these to its art.
+  bgImage?: SceneImage
   // No content authored yet — shown in the book as "Coming soon", never playable
   // regardless of progress. (Distinct from the sequential gate below.)
   comingSoon?: boolean
@@ -287,6 +290,7 @@ const separationOfEarthAndSky: Story = {
   summary:
     'The Sky Father and Earth Mother hold each other so tightly that their children live squashed in the dark. Who is strong enough to set the world free? Tap to find out…',
   coverImage: 'sky-2',
+  bgImage: 'sky-1', // intro + reward backdrop themed to the Te Kore void
   scenes: [
     {
       id: 'void',
@@ -410,12 +414,12 @@ const separationOfEarthAndSky: Story = {
         cheer:
           'Beautiful! Now Ranginui shines, even far from Papatūānuku. And so creation carried on — through life, knowledge, and the stars above.',
         spots: [
-          { id: 't1', x: 18, y: 22, emoji: '⭐' },
-          { id: 't2', x: 33, y: 14, emoji: '✨' },
-          { id: 't3', x: 50, y: 24, emoji: '🌙' },
-          { id: 't4', x: 66, y: 15, emoji: '✨' },
-          { id: 't5', x: 80, y: 28, emoji: '⭐' },
-          { id: 't6', x: 45, y: 40, emoji: '✨' },
+          { id: 't1', x: 18, y: 14, emoji: '⭐' },
+          { id: 't2', x: 33, y: 8, emoji: '✨' },
+          { id: 't3', x: 50, y: 16, emoji: '🌙' },
+          { id: 't4', x: 66, y: 9, emoji: '✨' },
+          { id: 't5', x: 80, y: 18, emoji: '⭐' },
+          { id: 't6', x: 45, y: 28, emoji: '✨' },
         ],
       },
     },
@@ -472,11 +476,13 @@ const separationOfEarthAndSky: Story = {
 // ── Story 3: Māui and the Sun (coming soon — needs illustration assets) ──────
 const mauiAndTheSun: Story = {
   id: 'maui-sun',
-  title: 'How Māui Caught the Sun',
-  teReo: 'Māui me Te Rā',
+  title: 'A New Pūrākau',
+  teReo: 'He pūrākau hou',
   summary:
-    'The sun zooms across the sky so fast that the days are far too short! Can Māui and his brothers catch Te Rā and teach it to slow down? Coming soon…',
-  coverImage: 'img-1', // placeholder — will be updated when assets arrive
+    'Ssh… can you feel it? A new story is stirring in the dark, not yet ready to be told. Kiki is still weaving this pūrākau by firelight. Come back soon — a mysterious new tale is waiting to begin…',
+  // No illustration yet — the storybook shows a dark mask for coming-soon tales,
+  // so this placeholder key is never actually rendered.
+  coverImage: 'img-1',
   comingSoon: true,
   scenes: [],
   quiz: [],

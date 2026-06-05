@@ -1,9 +1,9 @@
 <script lang="ts">
   // Story 2 climax (Step 3) — push the Sky away from the Earth. The child taps
-  // the big button over and over; with every push a beam of light grows
-  // brighter and wider across the middle of the scene, until earth and sky
-  // break open and the world fills with light (Te Ao Mārama). Mirrors Story 1's
-  // tap-to-pull mechanic, but with its own light-reveal effect and layout.
+  // the big centre button over and over; with every push a soft, feathered glow
+  // of daylight grows across the scene. The moment earth and sky break open it
+  // flares once and clears, leaving the illustration sharp and bright (Te Ao
+  // Mārama). Mirrors Story 1's tap-to-pull mechanic with its own light effect.
   import type { Interaction } from '../stories'
   import { narrate } from '../../../lib/settings.svelte'
   import KiwiGuide from './KiwiGuide.svelte'
@@ -16,7 +16,7 @@
   let { interaction, solved, onSolved }: Props = $props()
 
   let presses = $state(0)
-  const progress = $derived(solved ? 1 : Math.min(presses / interaction.target, 1))
+  const progress = $derived(Math.min(presses / interaction.target, 1))
   const pips = $derived(Array.from({ length: interaction.target }, (_, i) => i))
 
   function push() {
@@ -29,23 +29,19 @@
   }
 </script>
 
-<!-- Light beam that grows with each push; sits over the art, under the UI. -->
-<div
-  class="light-band"
-  class:open={solved}
-  style:--p={progress}
-  aria-hidden="true"
-></div>
+<!-- Soft daylight that grows with each push; feathered (no hard edge) and
+     fades fully clear once solved so the illustration stays sharp. -->
+<div class="push-glow" style:opacity={solved ? 0 : progress} aria-hidden="true"></div>
 {#if solved}
-  <div class="sun-burst" aria-hidden="true"></div>
+  <div class="push-flash" aria-hidden="true"></div>
 {/if}
 
 <div class="push-area">
   <div class="push-kiki">
     {#if solved}
-      <KiwiGuide pose="yes" text={interaction.cheer} size="sm" />
+      <KiwiGuide pose="yes" text={interaction.cheer} size="sm" dark />
     {:else}
-      <KiwiGuide pose="go" text={interaction.prompt} size="sm" />
+      <KiwiGuide pose="go" text={interaction.prompt} size="sm" dark />
     {/if}
   </div>
 
@@ -70,45 +66,34 @@
 </div>
 
 <style>
-  /* Growing band of daylight between earth and sky. --p is 0→1. */
-  .light-band {
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    height: calc(8% + var(--p) * 70%);
-    z-index: 1;
-    pointer-events: none;
-    background: radial-gradient(
-      120% 100% at 50% 50%,
-      rgba(255, 247, 214, calc(0.15 + var(--p) * 0.7)),
-      rgba(255, 213, 110, calc(var(--p) * 0.45)) 45%,
-      transparent 75%
-    );
-    mix-blend-mode: screen;
-    transition: height 0.18s ease, opacity 0.4s ease;
-  }
-  .light-band.open {
-    animation: dawn 0.9s ease both;
-  }
-  @keyframes dawn {
-    0% { opacity: 0.8; }
-    50% { opacity: 1; }
-    100% { opacity: 0.9; }
-  }
-  .sun-burst {
+  /* Growing daylight — soft, fully feathered to transparent so there is no
+     visible band edge; fades out (opacity → 0) the instant the scene is solved. */
+  .push-glow {
     position: fixed;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: radial-gradient(40% 40% at 50% 50%, rgba(255, 255, 240, 0.55), transparent 70%);
-    animation: flash 1s ease both;
+    background: radial-gradient(
+      62% 58% at 50% 50%,
+      rgba(255, 247, 214, 0.6),
+      rgba(255, 214, 120, 0.22) 45%,
+      transparent 72%
+    );
+    transition: opacity 0.55s ease;
   }
-  @keyframes flash {
+  /* One celebratory flare on success that resolves to fully transparent. */
+  .push-flash {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(46% 46% at 50% 50%, rgba(255, 255, 245, 0.7), transparent 72%);
+    animation: pushFlash 0.9s ease forwards;
+  }
+  @keyframes pushFlash {
     0% { opacity: 0; transform: scale(0.6); }
-    40% { opacity: 1; }
-    100% { opacity: 0; transform: scale(1.3); }
+    35% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.5); }
   }
 
   .push-area {
@@ -120,23 +105,23 @@
   .push-kiki {
     position: absolute;
     left: 8px;
-    top: 4vh;
-    max-width: 56vw;
+    top: 11vh;
+    max-width: 52vw;
     pointer-events: auto;
     animation: popIn 0.4s 0.05s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
   .push-control {
     position: absolute;
-    right: 8vw;
-    top: 46%;
-    transform: translateY(-50%);
+    left: 50%;
+    top: 52%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
     pointer-events: auto;
-    animation: bounceIn 0.5s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation: bounceInC 0.5s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   .push-btn {
     border: none;
@@ -184,13 +169,13 @@
     50% { transform: scale(1.05); box-shadow: 0 14px 34px rgba(255, 213, 110, 0.6); }
   }
   @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
-  @keyframes bounceIn {
-    0% { opacity: 0; transform: translateY(-50%) scale(0.3); }
-    60% { transform: translateY(-50%) scale(1.06); }
-    100% { opacity: 1; transform: translateY(-50%) scale(1); }
+  @keyframes bounceInC {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    60% { transform: translate(-50%, -50%) scale(1.06); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .light-band, .sun-burst, .push-btn, .push-kiki, .push-control { animation: none !important; }
+    .push-glow, .push-flash, .push-btn, .push-kiki, .push-control { animation: none !important; }
   }
 </style>

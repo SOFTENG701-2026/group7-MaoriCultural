@@ -81,9 +81,19 @@ export function stopSpeaking(): void {
   }
 }
 
+/**
+ * Automatic narration (read on entry / on a new line). Unlike `speak()` — which
+ * is the manual "Read to me" button and only needs sound to be on — this is the
+ * *hands-off* reader, so it must ALSO respect the "Read to me" mode: it speaks
+ * only in "Out loud" mode (readMode === 'auto'). In the default "On tap" mode
+ * nothing auto-reads, and the child uses the Read-to-me button instead. Any new
+ * narration (or stopSpeaking) cancels speech in progress, so flipping pages,
+ * going back, or leaving interrupts the voice.
+ */
 export function narrate(text: string) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   if (!text || !text.trim()) return;
+  if (!settings.soundOn || settings.readMode !== 'auto') return;
 
   const synth = window.speechSynthesis;
   synth.cancel();
@@ -92,7 +102,7 @@ export function narrate(text: string) {
   utterance.lang = 'en-NZ';
   utterance.rate = 0.85;
   utterance.pitch = 1;
-  utterance.volume = 1;
+  utterance.volume = settings.volumeLevel;
 
   synth.speak(utterance);
 }

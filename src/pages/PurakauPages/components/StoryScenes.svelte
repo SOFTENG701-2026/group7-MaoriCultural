@@ -5,7 +5,7 @@
   // visible at maximum size.
   import type { Scene } from '../stories'
   import { SCENE_IMAGES } from '../assets'
-  import { narrate } from '../../../lib/settings.svelte'
+  import { narrate, stopSpeaking } from '../../../lib/settings.svelte'
   import KiwiGuide from './KiwiGuide.svelte'
   import PropPicker from './PropPicker.svelte'
   import PushChallenge from './PushChallenge.svelte'
@@ -52,6 +52,10 @@
     idx
     pulls = 0
   })
+
+  // Stop any in-progress narration when leaving the scenes step (to the
+  // sequencing game or back to the book) so the voice never bleeds across pages.
+  $effect(() => () => stopSpeaking())
 
   function markSolved() {
     solved = { ...solved, [scene.id]: true }
@@ -162,9 +166,7 @@
   {:else if hotspotsI}
     <Hotspots interaction={hotspotsI} solved={!!solved[scene.id]} onSolved={markSolved} />
   {:else if choiceI}
-    <div class="interaction-area">
-      <StoryChoice interaction={choiceI} solved={!!solved[scene.id]} onSolved={markSolved} />
-    </div>
+    <StoryChoice interaction={choiceI} solved={!!solved[scene.id]} onSolved={markSolved} />
   {/if}
 
   {#if needsSolve && (propI || tapI)}
