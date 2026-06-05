@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, untrack } from 'svelte'
 
   import { bg, titleImg, explorerImg, settingImg, rewardImg } from './assets'
   import { LOCATIONS, type Pt, type Loc } from './locations'
@@ -29,14 +29,22 @@
 
   const UNLOCK_ORDER = ['waiata', 'purakau', 'pepeha', 'tikanga']
 
+  // Linear progression, matching UNLOCK_ORDER + the unlock-glow logic:
+  // waiata → purakau → pepeha → tikanga. (tikanga depends on pepeha, NOT purakau
+  // — otherwise finishing purakau would unlock pepeha AND tikanga at once.)
   const PREREQUISITES: Record<string, string | null> = {
     waiata: null,
     purakau: 'waiata',
     pepeha: 'purakau',
-    tikanga: 'purakau'
+    tikanga: 'pepeha'
   }
 
   function isLocked(id: string): boolean {
+    // An already-completed module is never locked — even if its prerequisite is
+    // incomplete (e.g. progress was reset, or the module was opened directly).
+    // Without this, finishing purākau unlocks the modules that depend on it yet
+    // leaves purākau itself showing locked because waiata wasn't completed.
+    if (progress.isComplete(id)) return false
     const prereqId = PREREQUISITES[id]
     if (!prereqId) return false
     return !progress.isComplete(prereqId)
@@ -114,26 +122,32 @@
   const waiataLoc = LOCATIONS.find((l) => l.id === 'waiata')!
 
   let unlockingId = $state<string | null>(null)
+  // Modules whose unlock glow has already been armed (plain Set, not reactive)
+  // so it arms exactly once per newly-unlocked module instead of looping.
+  const unlockShown = new Set<string>()
 
+  // React ONLY to completion changes. Everything else (unlockingId, the
+  // shown-set) is read/written inside untrack so it doesn't re-trigger this
+  // effect. The glow keeps breathing until the child taps that station — it is
+  // cleared in selectLocation, not on a timer.
   $effect(() => {
     const completedSnap = [...progress.completed]
 
-    for (const completedId of completedSnap) {
-      const idx = UNLOCK_ORDER.indexOf(completedId)
-      const nextId = UNLOCK_ORDER[idx + 1]
+    untrack(() => {
+      for (const completedId of completedSnap) {
+        const idx = UNLOCK_ORDER.indexOf(completedId)
+        const nextId = UNLOCK_ORDER[idx + 1]
 
-      if (nextId && !progress.isComplete(nextId) && !isLocked(nextId)) {
-        if (unlockingId !== nextId) {
-          unlockingId = nextId
+        if (nextId && !progress.isComplete(nextId) && !isLocked(nextId)) {
+          if (!unlockShown.has(nextId)) {
+            unlockShown.add(nextId)
+            unlockingId = nextId
+          }
 
-          setTimeout(() => {
-            unlockingId = null
-          }, 2400)
+          break
         }
-
-        break
       }
-    }
+    })
   })
 
   let lockedToast = $state<string | null>(null)
@@ -162,6 +176,9 @@
 
   function selectLocation(loc: Loc) {
     hinted = false
+
+    // Tapping the freshly-unlocked station stops its breathing glow.
+    if (unlockingId === loc.id) unlockingId = null
 
     if (isLocked(loc.id)) {
       clearTimeout(toastTimer)
@@ -341,19 +358,10 @@
         active={active === loc.id}
         completed={progress.isComplete(loc.id)}
         locked={isLocked(loc.id)}
+        unlocking={unlockingId === loc.id}
         onpick={selectLocation}
       />
     {/each}
-
-    {#if unlockingId}
-      {@const ul = LOCATIONS.find((l) => l.id === unlockingId)}
-
-      {#if ul}
-        <div class="unlock-burst" style="left:{ul.icon.x}%; top:{ul.icon.y}%" aria-hidden="true">
-          🎉
-        </div>
-      {/if}
-    {/if}
 
     {#if dest}
       <span class="ring" style="left:{dest.x}%; top:{dest.y}%" aria-hidden="true"></span>
@@ -638,15 +646,6 @@
     animation: toastIn 0.22s ease-out both, toastOut 0.28s 1.9s ease-in forwards;
   }
 
-  .unlock-burst {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    z-index: 45;
-    font-size: clamp(20px, 4vmin, 36px);
-    pointer-events: none;
-    animation: burstPop 2.2s ease-out forwards;
-  }
-
   @keyframes ripple {
     0% {
       transform: translate(-50%, -50%) scale(0.5);
@@ -701,32 +700,9 @@
     }
   }
 
-  @keyframes burstPop {
-    0% {
-      opacity: 0;
-      transform: translate(-50%, -50%) scale(0.4);
-    }
-
-    18% {
-      opacity: 1;
-      transform: translate(-50%, -80%) scale(1.3);
-    }
-
-    55% {
-      opacity: 1;
-      transform: translate(-50%, -100%) scale(1);
-    }
-
-    100% {
-      opacity: 0;
-      transform: translate(-50%, -130%) scale(0.8);
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .ring,
-    .hint,
-    .unlock-burst {
+    .hint {
       animation: none !important;
     }
 

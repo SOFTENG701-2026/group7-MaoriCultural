@@ -437,7 +437,7 @@
 
   .complete-banner {
     position: fixed;
-    bottom: 22px;
+    bottom: 12px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 40;
