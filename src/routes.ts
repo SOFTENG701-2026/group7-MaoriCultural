@@ -1,16 +1,17 @@
 import { push } from 'svelte-spa-router';
 import { wrap } from 'svelte-spa-router/wrap';
 
-// When the child taps a module on the map, route into the correct flow.
 const onMapNavigate = (id: string) => {
   if (id === 'waiata') push('/song');
-  if (id === 'tikanga') push('/tikanga');
-  if (id === 'pepeha') push('/pepeha');
-  if (id === 'purakau') push('/purakau');
+
+  // Purākau, Pepeha, Tikanga are other modules
+  else if (id === 'purakau' || id === 'pepeha' || id === 'tikanga') {
+    push(`/${id}`);
+  }
 };
 
 const onSongFinish = () => push('/quiz');
-const onBackToMap  = () => push('/');
+const onBackToMap = () => push('/');
 
 const routes = {
   '/': wrap({
@@ -22,65 +23,48 @@ const routes = {
   '/song': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/IntroductionPage/IntroductionPage.svelte').then(m => m.default),
-    props: { onback: onBackToMap },
+    props: { onstart: () => push('/song/select'), onback: onBackToMap },
   }),
 
-  // Dev D fix: extract :level from route params and pass it as a prop
-  '/song/play/:level': wrap({
+  '/song/select': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/PlayMusicPage/PlayMusicPage.svelte').then(m => m.default),
-    props: ((detail: { params: { level?: string } }) => ({
-      level:  detail.params?.level ?? 'easy',
-      onBack: () => push('/song/select'),
-      // Pass level forward so QuizPage and RewardPage can use it
-      onNext: () => push(`/sing/${detail.params?.level ?? 'easy'}`),
-    })) as any,
+    props: { onBack: () => push('/song'), onNext: () => push('/song/play/easy') },
   }),
 
-  '/song/learn': wrap({
-    asyncComponent: () =>
-      import('./pages/SongPages/LearningSongWithAIPage/LearningSongWithAIPage.svelte')
-        .then(m => m.default),
-    props: { onback: () => push('/song'), onfinish: onSongFinish },
-  }),
-
-  // Dev D: singing practice page (after PlayMusicPage, before QuizPage)
-  '/sing/:level': wrap({
+  '/song/play/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/SingAlongPage/SingAlongPage.svelte').then(m => m.default),
-    props: ((detail: { params: { level?: string } }) => ({
-      level:  detail.params?.level ?? 'easy',
-      onBack: () => push(`/song/play/${detail.params?.level ?? 'easy'}`),
-      onNext: () => push(`/quiz/${detail.params?.level ?? 'easy'}`),
-    })) as any,
+    props: ((detail: any) => {
+      const level = typeof detail?.params?.level === 'string' ? detail.params.level : 'easy';
+
+      return {
+        level,
+        onBack: () => push('/song/select'),
+        onFinish: () => push(`/reward/${level}`),
+      };
+    }) as any,
   }),
 
-  // Dev D: level-aware quiz route
-  '/quiz/:level': wrap({
-    asyncComponent: () =>
-      import('./pages/SongPages/QuizPage/QuizPage.svelte').then(m => m.default),
-    props: ((detail: { params: { level?: string } }) => ({
-      level:    detail.params?.level ?? 'easy',
-      onBack:   () => push('/song/select'),
-      onMap:    onBackToMap,
-      onFinish: () => push(`/reward/${detail.params?.level ?? 'easy'}`),
-    })) as any,
-  }),
-
-  // Keep original /quiz route as fallback (for any existing links)
   '/quiz': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/QuizPage/QuizPage.svelte').then(m => m.default),
-    props: { level: 'easy', onBack: () => push('/song/select'), onMap: onBackToMap, onFinish: () => push('/reward/easy') },
+    props: {
+      level: 'easy',
+      onBack: () => push('/song/select'),
+      onMap: onBackToMap,
+      onFinish: () => push('/reward/easy'),
+    },
   }),
 
-  // Dev D: level-aware reward route
   '/reward/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
-    props: ((detail: { params: { level?: string } }) => ({
-      level: detail.params?.level ?? 'easy',
-    })) as any,
+    props: ((detail: any) => {
+      const level = typeof detail?.params?.level === 'string' ? detail.params.level : 'easy';
+
+      return { level };
+    }) as any,
   }),
 
   '/reward': wrap({
@@ -94,7 +78,7 @@ const routes = {
       import('./lib/ComingSoon.svelte').then(m => m.default),
   }),
 
-  // ── Tikanga module (8 pages) ──────────────────────────────────────────────
+  // ── Tikanga module ──────────────────────────────────────────────
   '/tikanga': wrap({
     asyncComponent: () =>
       import('./pages/TikangaPages/TikangaStartPage.svelte').then(m => m.default),
@@ -143,7 +127,7 @@ const routes = {
     props: { onMap: onBackToMap },
   }),
 
-  // ── Pepeha module (10 pages) ──────────────────────────────────────────────
+  // ── Pepeha module ──────────────────────────────────────────────
   '/pepeha': wrap({
     asyncComponent: () =>
       import('./pages/PepehaPages/PepehaStartPage.svelte').then(m => m.default),
@@ -202,30 +186,25 @@ const routes = {
     props: { onMap: onBackToMap, onBack: () => push('/pepeha/quiz') },
   }),
 
-  // ── Purākau module (story-based learning) ─────────────────────────────────
-  // Step 1 — the flippable storybook hub (also where the finished cover is
-  // coloured in on return). Step 6 happens here too.
+  // ── Purākau module ──────────────────────────────────────────────
   '/purakau': wrap({
     asyncComponent: () =>
       import('./pages/PurakauPages/PurakauStorybookPage.svelte').then(m => m.default),
     props: { onMap: onBackToMap },
   }),
 
-  // Steps 2–6 — the story player (Kiki intro → interactive scenes → sequencing
-  // → quiz → wrap-up). The active story is read from purakauState.
   '/purakau/play': wrap({
     asyncComponent: () =>
       import('./pages/PurakauPages/PurakauStoryPage.svelte').then(m => m.default),
   }),
 
-  // Step 6 — reward page (badge ceremony, mirrors TikangaRewardPage pattern).
   '/purakau/reward': wrap({
     asyncComponent: () =>
       import('./pages/PurakauPages/PurakauRewardPage.svelte').then(m => m.default),
     props: { onMap: onBackToMap },
   }),
 
-  // Fallback: unknown paths return to the home map.
+  // Fallback: unknown paths return to map
   '*': wrap({
     asyncComponent: () =>
       import('./pages/NavPage/NavPage.svelte').then(m => m.default),
