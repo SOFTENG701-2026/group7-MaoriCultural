@@ -6,7 +6,7 @@
   import { push } from 'svelte-spa-router'
   import { purakauState } from '../../lib/purakauState.svelte'
   import { progress } from '../../lib/progress.svelte'
-  import { STORIES } from './stories'
+  import { STORIES, storyById } from './stories'
   import ReadToMe from '../../lib/ReadToMe.svelte'
 
   import beginnerBadge  from '../../assets/badges/Purakau badge for beginners.png'
@@ -35,10 +35,14 @@
       : 'Explorer Badge'
   )
 
+  // The story just finished (set by completeActiveStory, not yet consumed by the
+  // storybook) so the per-story counts are accurate for any pūrākau.
+  const lastStory = $derived(storyById(purakauState.justColoredStoryId))
+
   const stats = $derived([
     { label: 'Stories completed', value: `${purakauState.completedCount} / ${totalCount}` },
-    { label: 'Scenes explored',   value: '5'  },
-    { label: 'Quiz answered',     value: '3'  },
+    { label: 'Scenes explored',   value: `${lastStory?.scenes.length ?? 5}` },
+    { label: 'Quiz answered',     value: `${lastStory?.quiz.length ?? 3}`  },
   ])
 
   const readText = $derived(
