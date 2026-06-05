@@ -8,12 +8,12 @@
   // After the quiz, the player navigates to /purakau/reward — the dedicated
   // PurakauRewardPage which combines the green Hei Matau badge, Kiki's
   // congratulations, stats, and the Tikanga-style badge-ceremony modal.
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { push } from 'svelte-spa-router'
   import { storyById } from './stories'
   import { purakauState } from '../../lib/purakauState.svelte'
-  import { narrate } from '../../lib/settings.svelte'
-  import { beachScene } from './assets'
+  import { narrate, stopSpeaking } from '../../lib/settings.svelte'
+  import { beachScene, SCENE_IMAGES } from './assets'
   import KiwiGuide from './components/KiwiGuide.svelte'
   import StoryScenes from './components/StoryScenes.svelte'
   import SequenceGame from './components/SequenceGame.svelte'
@@ -24,6 +24,10 @@
   // Captured once: a refresh of /purakau/play has no active story, so we bounce
   // back to the bookshelf rather than render an empty player.
   const story = storyById(purakauState.activeStoryId)
+
+  // Full-screen backdrop for the intro + sequence steps. Stories may theme this
+  // to their own art (Story 2 → the Te Kore void); otherwise the beach scene.
+  const bg = story?.bgImage ? SCENE_IMAGES[story.bgImage] : beachScene
 
   let step = $state<Step>('intro')
   let seqSolved = $state(false)
@@ -39,6 +43,9 @@
     }
     narrate(introText)
   })
+
+  // Leaving the player (to the book or the reward page) silences the narrator.
+  onDestroy(() => stopSpeaking())
 
   function goSequence() {
     seqSolved = false
@@ -56,7 +63,7 @@
 
 {#if story}
   <div class="player">
-    <div class="bg" style:background-image="url({beachScene})" aria-hidden="true"></div>
+    <div class="bg" style:background-image="url({bg})" aria-hidden="true"></div>
     <button class="pill btn-book" onclick={() => push('/purakau')}>← Book</button>
 
     <main class="stage">
@@ -178,7 +185,7 @@
   .big-cta:hover { transform: translateY(-3px); }
   .big-cta:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
-  .seq-step { width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 96px; }
+  .seq-step { width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 44px; }
 
   .bottom-nav {
     position: fixed;
@@ -194,7 +201,7 @@
   }
   .locked-note {
     position: fixed;
-    bottom: 74px;
+    bottom: 70px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 30;

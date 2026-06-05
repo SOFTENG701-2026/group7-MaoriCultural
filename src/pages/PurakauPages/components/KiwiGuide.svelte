@@ -14,6 +14,8 @@
     autoSpeak?: boolean
     flip?: boolean // kiwi on the right, bubble on the left
     size?: 'sm' | 'md' | 'lg'
+    dark?: boolean // softer glow + frosted dark bubble for dark-art scenes
+    fit?: boolean // bubble hugs its text instead of stretching to fill
   }
   let {
     pose = 'hello',
@@ -21,6 +23,8 @@
     autoSpeak = false,
     flip = false,
     size = 'md',
+    dark = false,
+    fit = false,
   }: Props = $props()
 
   const POSE_IMG: Record<KikiPose, string> = {
@@ -39,7 +43,7 @@
   })
 </script>
 
-<div class="kiki size-{size}" class:flip>
+<div class="kiki size-{size}" class:flip class:dark class:fit>
   <img class="kiwi" src={img} alt="Kiki the kiwi" draggable="false" />
   {#if text}
     <div class="bubble">
@@ -58,6 +62,11 @@
   .kiki.flip {
     flex-direction: row-reverse;
   }
+  /* Hug the content (used at the top corners) instead of filling the row. */
+  .kiki.fit {
+    width: auto;
+    gap: 10px;
+  }
 
   .kiwi {
     flex-shrink: 0;
@@ -65,6 +74,10 @@
     object-fit: contain;
     animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 14px rgba(255, 255, 200, 0.8)) drop-shadow(0 0 28px rgba(255, 255, 150, 0.55)) drop-shadow(0 0 42px rgba(255, 255, 200, 0.3)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+  }
+  /* Dark-art scenes: a soft warm rim instead of the bright white halo. */
+  .kiki.dark .kiwi {
+    filter: drop-shadow(0 0 7px rgba(255, 232, 180, 0.45)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
   }
   .size-sm .kiwi { width: clamp(70px, 12vw, 110px); }
   .size-md .kiwi { width: clamp(110px, 18vw, 180px); }
@@ -107,6 +120,30 @@
     font-size: clamp(14px, 1.6vw, 18px);
     font-weight: 600;
     line-height: 1.5;
+  }
+
+  /* Fit: shrink the bubble to its text (capped) instead of filling the row. */
+  .kiki.fit .bubble {
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: min(300px, 44vw);
+    padding: 12px 16px;
+  }
+
+  /* Dark-art scenes: frosted dark bubble with light text, softer than the
+     bright white default so it sits naturally over dark illustrations. */
+  .kiki.dark .bubble {
+    background: rgba(18, 22, 38, 0.6);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+  .kiki.dark .bubble .lead {
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+  .kiki.dark .bubble::before { border-right-color: rgba(18, 22, 38, 0.6); }
+  .kiki.dark.flip .bubble::before {
+    border-right-color: transparent;
+    border-left-color: rgba(18, 22, 38, 0.6);
   }
 
   @keyframes pop {

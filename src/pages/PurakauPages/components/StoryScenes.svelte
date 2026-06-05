@@ -5,9 +5,12 @@
   // visible at maximum size.
   import type { Scene } from '../stories'
   import { SCENE_IMAGES } from '../assets'
-  import { narrate } from '../../../lib/settings.svelte'
+  import { narrate, stopSpeaking } from '../../../lib/settings.svelte'
   import KiwiGuide from './KiwiGuide.svelte'
   import PropPicker from './PropPicker.svelte'
+  import PushChallenge from './PushChallenge.svelte'
+  import Hotspots from './Hotspots.svelte'
+  import StoryChoice from './StoryChoice.svelte'
   import ReadToMe from '../../../lib/ReadToMe.svelte'
 
   interface Props {
@@ -28,6 +31,13 @@
     scene.interaction?.kind === 'prop' ? scene.interaction : null,
   )
   const tapI = $derived(scene.interaction?.kind === 'tap' ? scene.interaction : null)
+  const pushI = $derived(scene.interaction?.kind === 'push' ? scene.interaction : null)
+  const hotspotsI = $derived(
+    scene.interaction?.kind === 'hotspots' ? scene.interaction : null,
+  )
+  const choiceI = $derived(
+    scene.interaction?.kind === 'choice' ? scene.interaction : null,
+  )
   const needsSolve = $derived(!!scene.interaction && !solved[scene.id])
   const narration = $derived(scene.narration.join(' '))
   const tugPips = $derived(tapI ? Array.from({ length: tapI.target }, (_, i) => i) : [])
@@ -42,6 +52,10 @@
     idx
     pulls = 0
   })
+
+  // Stop any in-progress narration when leaving the scenes step (to the
+  // sequencing game or back to the book) so the voice never bleeds across pages.
+  $effect(() => () => stopSpeaking())
 
   function markSolved() {
     solved = { ...solved, [scene.id]: true }
@@ -74,6 +88,26 @@
     {#key scene.id}
       <img class="full-img" src={image} alt="" draggable="false" />
     {/key}
+    <!-- Ambient particle layer (immersion only, no input) -->
+    {#if scene.ambient === 'stars'}
+      <div class="ambient stars" aria-hidden="true">
+        {#each Array(28) as _, i (i)}
+          <span
+            style:left="{(i * 37) % 100}%"
+            style:top="{(i * 53) % 95}%"
+            style:animation-delay="{i * -0.21}s"
+          ></span>
+        {/each}
+      </div>
+    {:else if scene.ambient === 'rain'}
+      <div class="ambient rain" aria-hidden="true">
+        {#each Array(40) as _, i (i)}
+          <span style:left="{(i * 41) % 100}%" style:animation-delay="{i * -0.12}s"></span>
+        {/each}
+      </div>
+    {:else if scene.ambient === 'light'}
+      <div class="ambient light" aria-hidden="true"></div>
+    {/if}
   </div>
 
   <!-- Progress pips float at top -->
@@ -127,9 +161,15 @@
         </div>
       </div>
     {/if}
+  {:else if pushI}
+    <PushChallenge interaction={pushI} solved={!!solved[scene.id]} onSolved={markSolved} />
+  {:else if hotspotsI}
+    <Hotspots interaction={hotspotsI} solved={!!solved[scene.id]} onSolved={markSolved} />
+  {:else if choiceI}
+    <StoryChoice interaction={choiceI} solved={!!solved[scene.id]} onSolved={markSolved} />
   {/if}
 
-  {#if needsSolve}
+  {#if needsSolve && (propI || tapI)}
     <p class="locked-note">Help Kiki finish this part to keep reading.</p>
   {/if}
 
@@ -165,6 +205,52 @@
     animation: fadeIn 0.5s ease both;
   }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ── Ambient particle overlays (immersion only) ── */
+  .ambient {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  /* Twinkling stars — positions derived from --i so they spread across. */
+  .ambient.stars span {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 6px 1px rgba(255, 247, 220, 0.9);
+    opacity: 0.2;
+    animation: starTwinkle 3s ease-in-out infinite;
+  }
+  @keyframes starTwinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.8); }
+    50% { opacity: 0.95; transform: scale(1.25); }
+  }
+  /* Falling rain streaks for the storm scene. */
+  .ambient.rain span {
+    position: absolute;
+    top: -12%;
+    width: 2px;
+    height: 64px;
+    background: linear-gradient(to bottom, transparent, rgba(200, 225, 255, 0.55));
+    transform: rotate(14deg);
+    animation: rainFall 0.9s linear infinite;
+  }
+  @keyframes rainFall {
+    from { transform: translate(0, -20vh) rotate(14deg); opacity: 0; }
+    10% { opacity: 1; }
+    to { transform: translate(-12vh, 120vh) rotate(14deg); opacity: 0.4; }
+  }
+  /* Soft daylight glow for the separation scene. */
+  .ambient.light {
+    background: radial-gradient(60% 45% at 50% 48%, rgba(255, 244, 200, 0.22), transparent 70%);
+    animation: glowPulse 4s ease-in-out infinite;
+  }
+  @keyframes glowPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.9; } }
+
   @keyframes popIn {
     from { opacity: 0; transform: scale(0.75); }
     to { opacity: 1; transform: scale(1); }
@@ -411,6 +497,7 @@
   .cta:disabled { background: rgba(180, 175, 160, 0.8); color: #7c7468; cursor: not-allowed; transform: none; box-shadow: none; }
 
   @media (prefers-reduced-motion: reduce) {
-    .full-img, .narration-overlay, .interaction-area, .pull-target.tug { animation: none !important; }
+    .full-img, .narration-overlay, .interaction-area, .pull-target.tug,
+    .ambient.stars span, .ambient.rain span, .ambient.light { animation: none !important; }
   }
 </style>

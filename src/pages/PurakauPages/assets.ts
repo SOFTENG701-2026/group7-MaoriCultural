@@ -40,6 +40,15 @@ import fishImg4 from '../../assets/ui_purakau/true_alpha_ui_assets/4.png'
 import fishImg5 from '../../assets/ui_purakau/true_alpha_ui_assets/5.png'
 export { fishImg1, fishImg2, fishImg3, fishImg4, fishImg5 }
 
+// ── Story scene images (Story 2: The Separation of Earth and Sky, 7) ─────────
+import skyImg1 from '../../assets/ui_purakau/story_2/purakau-01-te-kore-v2.png'
+import skyImg2 from '../../assets/ui_purakau/story_2/purakau-02-ranginui-papatuanuku-v2.png'
+import skyImg3 from '../../assets/ui_purakau/story_2/purakau-03-children-debate-v2.png'
+import skyImg4 from '../../assets/ui_purakau/story_2/purakau-04-tane-separates-sky-earth-v2.png'
+import skyImg5 from '../../assets/ui_purakau/story_2/purakau-05-tawhirimatea-storm-v2.png'
+import skyImg6 from '../../assets/ui_purakau/story_2/purakau-06-humanity-and-nature-v2.png'
+import skyImg7 from '../../assets/ui_purakau/story_2/purakau-07-creation-continues-v2.png'
+
 /** Resolve a SceneImage key to the actual PNG URL for use in SceneArt. */
 export const SCENE_IMAGES: Record<SceneImage, string> = {
   'img-1': fishImg1,
@@ -47,6 +56,13 @@ export const SCENE_IMAGES: Record<SceneImage, string> = {
   'img-3': fishImg3,
   'img-4': fishImg4,
   'img-5': fishImg5,
+  'sky-1': skyImg1,
+  'sky-2': skyImg2,
+  'sky-3': skyImg3,
+  'sky-4': skyImg4,
+  'sky-5': skyImg5,
+  'sky-6': skyImg6,
+  'sky-7': skyImg7,
 }
 
 // ── Decorations & the story badge (green pounamu hei matau) ──────────────────

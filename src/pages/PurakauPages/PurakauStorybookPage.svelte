@@ -43,7 +43,10 @@
   let revealOn = $state(false)
 
   const story = $derived(STORIES[bookIdx])
-  const done = $derived(purakauState.isComplete(story.id))
+  // A coming-soon story has no content and can never be "done" — guard against
+  // stale completion ids in localStorage (e.g. a story that was once playable),
+  // which would otherwise show a colour cover + green dot for a locked story.
+  const done = $derived(purakauState.isComplete(story.id) && !story.comingSoon)
   // The just-finished cover starts grey then turns colour when revealOn flips.
   const coverColored = $derived(done && !(story.id === justColored && !revealOn))
   const celebrating = $derived(justColored !== null && story.id === justColored)
@@ -104,7 +107,12 @@
           <!-- Left page: the cover illustration (B&W until finished) -->
           <div class="left-page">
             <div class="cover-frame" class:colored={coverColored}>
-              <SceneArt image={SCENE_IMAGES[story.coverImage]} colored={coverColored} animate={coverColored} />
+              {#if story.comingSoon}
+                <!-- No illustration yet — a plain dark mask keeps the tale a secret -->
+                <div class="cover-blank" aria-hidden="true"></div>
+              {:else}
+                <SceneArt image={SCENE_IMAGES[story.coverImage]} colored={coverColored} animate={coverColored} />
+              {/if}
               {#if storyLocked}
                 <div class="lock-veil"><span class="lock">🔒</span></div>
               {/if}
@@ -164,7 +172,7 @@
       <button
         class="dot"
         class:on={i === bookIdx}
-        class:complete={purakauState.isComplete(s.id)}
+        class:complete={purakauState.isComplete(s.id) && !s.comingSoon}
         onclick={() => flip(i - bookIdx)}
         aria-label={`Go to ${s.title}`}
         aria-selected={i === bookIdx}
@@ -319,6 +327,14 @@
     transition: border-color 1.1s ease, box-shadow 1.1s ease;
   }
   .cover-frame.colored { border-color: #4caf50; box-shadow: 0 8px 22px rgba(76, 175, 80, 0.4); }
+
+  /* Dark grey mask for a not-yet-illustrated (coming-soon) cover. */
+  .cover-blank {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: 8px;
+    background: linear-gradient(160deg, #3a3a40, #232327);
+  }
 
   .lock-veil {
     position: absolute;
