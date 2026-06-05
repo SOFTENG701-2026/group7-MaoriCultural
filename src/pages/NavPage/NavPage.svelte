@@ -37,6 +37,11 @@
   }
 
   function isLocked(id: string): boolean {
+    // An already-completed module is never locked — even if its prerequisite is
+    // incomplete (e.g. progress was reset, or the module was opened directly).
+    // Without this, finishing purākau unlocks the modules that depend on it yet
+    // leaves purākau itself showing locked because waiata wasn't completed.
+    if (progress.isComplete(id)) return false
     const prereqId = PREREQUISITES[id]
     if (!prereqId) return false
     return !progress.isComplete(prereqId)
