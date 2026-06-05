@@ -15,7 +15,7 @@
     onMap?: () => void
   }
  
-  const { level = 'beginner', onMap = () => push('/') } = $props<Props>()
+  const { level = 'beginner', onMap = () => push('/') }: Props = $props()
  
   let lvl = $derived(level)
   let isConfident = $derived(lvl === 'confident' || lvl === 'hard')

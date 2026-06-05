@@ -152,8 +152,7 @@ onDestroy(() => {
 {#if page === 'sing'}
   <SingAlongPage
     level={selectedLevel ?? 'beginner'}
-    completed={singingCompleted}
-    onBack={() => { page = 'play' }}
+      onBack={() => { page = 'play' }}
     onNext={() => {
       singingCompleted = true
       page = 'quiz'
