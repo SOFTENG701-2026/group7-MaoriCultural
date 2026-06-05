@@ -33,10 +33,16 @@
   // The Next button only unlocks once all four goals have been tapped.
   const canProceed = $derived(allClicked)
 
+  // Sequential unlock: the first goal is open; each one unlocks the next.
+  function isUnlocked(i: number): boolean {
+    return i === 0 || clicked.has(i - 1)
+  }
+
   // Read to me speaks exactly what is on screen: title + the four goals.
   const readText = `What is Tikanga? ${goals.map(g => g.text).join(' ')}`
 
   function clickGoal(i: number) {
+    if (!isUnlocked(i)) return        // locked goals can't be opened yet
     clicked = new Set([...clicked, i])
     glowing = i
     speak(goals[i].text)
@@ -71,13 +77,17 @@
           data-index={i}
           class:done={clicked.has(i)}
           class:glow={glowing === i}
+          class:locked={!isUnlocked(i)}
           onclick={() => clickGoal(i)}
+          disabled={!isUnlocked(i)}
           aria-pressed={clicked.has(i)}
-          aria-label={g.label}
+          aria-label={isUnlocked(i) ? g.label : `${g.label} (locked)`}
         >
           <img src={g.img} alt={g.label} class="goal-img" />
           {#if clicked.has(i)}
             <span class="done-tick" aria-hidden="true">✓</span>
+          {:else if !isUnlocked(i)}
+            <span class="lock-tick" aria-hidden="true">🔒</span>
           {/if}
         </button>
       {/each}
@@ -190,12 +200,19 @@
     transition: transform .15s ease, filter .15s ease;
     border-radius: 16px;
   }
-  .goal-btn:hover { transform: translateY(-5px) scale(1.04); }
-  .goal-btn:active { transform: scale(0.97); }
+  .goal-btn:hover:not(:disabled) { transform: translateY(-5px) scale(1.04); }
+  .goal-btn:active:not(:disabled) { transform: scale(0.97); }
   .goal-btn.done {
     outline: 5px solid #4caf50;
     outline-offset: 3px;
     filter: brightness(1.08) drop-shadow(0 0 14px rgba(76,175,80,.9));
+  }
+  /* Locked goals — greyed out, not clickable until the previous one is done */
+  .goal-btn.locked {
+    cursor: not-allowed;
+  }
+  .goal-btn.locked .goal-img {
+    filter: grayscale(1) brightness(.7) drop-shadow(0 4px 12px rgba(0,0,0,.25));
   }
 
   .goal-img {
@@ -224,6 +241,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /* Lock overlay on a locked goal */
+  .lock-tick {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,.5));
   }
 
   /* Progress hint */
