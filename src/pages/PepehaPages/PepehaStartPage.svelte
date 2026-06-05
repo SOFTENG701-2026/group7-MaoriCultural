@@ -95,6 +95,15 @@
       </button>
 
     </div>
+
+    <!-- Hint box — shows guidance for the selected level -->
+    <div class="level-hint" role="status">
+      {#if isBeginner}
+        For students who are just starting to learn about Māori culture.
+      {:else}
+        For students who have already studied Māori culture, or are very familiar with it.
+      {/if}
+    </div>
   </section>
 
   <!-- ④ Start Adventure — bottom-center -->
@@ -311,6 +320,22 @@
     display: block;
     border-radius: 14px;
     flex-shrink: 0;
+  }
+
+  /* Hint box — guidance for the selected level */
+  .level-hint {
+    max-width: min(560px, 70vw);
+    margin: 0;
+    padding: 12px 20px;
+    border-radius: 16px;
+    border: 2px solid #F5A623;
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+    font-size: clamp(14px, 1.6vw, 18px);
+    font-weight: 700;
+    color: #1a3000;
+    text-align: center;
+    line-height: 1.5;
   }
 
   /* ④ Start Adventure — bottom-center */

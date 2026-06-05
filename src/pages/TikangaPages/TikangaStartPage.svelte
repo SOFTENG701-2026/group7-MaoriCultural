@@ -3,8 +3,8 @@
   import bgImg        from '../../assets/tikanga/p1 background.png'
   import titleImg     from '../../assets/tikanga/p1 title.png'
   import mapTitleImg  from '../../assets/tikanga/p1 Marae visit map title.png'
-  import beginnerImg  from '../../assets/tikanga/beginner level.png'
-  import confidentImg from '../../assets/tikanga/confident level.png'
+  import beginnerImg  from '../../assets/beginner level.png'
+  import confidentImg from '../../assets/confident level.png'
   import greyMapImg   from '../../assets/tikanga/p1全灰小地图.png'
   import bubbleImg    from '../../assets/tikanga/p1 kiki word bubble.png'
   import startBtn     from '../../assets/tikanga/p1 start visit.png'
@@ -93,6 +93,17 @@
       </button>
 
     </div>
+
+    <!-- Hint box — shows guidance for the selected level -->
+    {#if tikangaState.level === 'beginner' || tikangaState.level === 'confident'}
+      <div class="level-hint" role="status">
+        {#if tikangaState.level === 'beginner'}
+          For students who are just starting to learn about Māori culture.
+        {:else}
+          For students who have already studied Māori culture, or are very familiar with it.
+        {/if}
+      </div>
+    {/if}
   </div>
 
   <!-- ⑤ Start Visit button — bottom-center -->
@@ -183,10 +194,10 @@
     border-radius: 12px;
   }
 
-  /* ④ Level selector — moved up 20px */
+  /* ④ Level selector — moved up 20px, then down 2% */
   .centre {
     position: absolute;
-    top: calc(52% - 20px);
+    top: calc(54% - 20px);
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 20;
@@ -279,10 +290,26 @@
     flex-shrink: 0;
   }
 
+  /* Hint box — guidance for the selected level */
+  .level-hint {
+    max-width: min(560px, 70vw);
+    margin: 0;
+    padding: 12px 20px;
+    border-radius: 16px;
+    border: 2px solid #F5A623;
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+    font-size: clamp(14px, 1.6vw, 18px);
+    font-weight: 700;
+    color: #1a3000;
+    text-align: center;
+    line-height: 1.5;
+  }
+
   /* ⑤ Start button — true bottom-center */
   .start-btn {
     position: absolute;
-    bottom: 6%;
+    bottom: 4%;
     left: 50%;
     transform: translateX(-50%);
     z-index: 30;
