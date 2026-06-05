@@ -35,16 +35,15 @@ const routes = {
   '/song/play/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/SingAlongPage/SingAlongPage.svelte').then(m => m.default),
-    props: (detail: Record<string, unknown>) => {
-      const params = detail.params as Record<string, unknown> | undefined;
-      const level = typeof params?.level === 'string' ? params.level : 'easy';
+    props: ((detail: any) => {
+      const level = typeof detail?.params?.level === 'string' ? detail.params.level : 'easy';
 
       return {
         level,
         onBack: () => push('/song/select'),
         onFinish: () => push(`/reward/${level}`),
       };
-    },
+    }) as any,
   }),
 
   '/quiz': wrap({
@@ -61,12 +60,11 @@ const routes = {
   '/reward/:level': wrap({
     asyncComponent: () =>
       import('./pages/SongPages/RewardPage/RewardPage.svelte').then(m => m.default),
-    props: (detail: Record<string, unknown>) => {
-      const params = detail.params as Record<string, unknown> | undefined;
-      const level = typeof params?.level === 'string' ? params.level : 'easy';
+    props: ((detail: any) => {
+      const level = typeof detail?.params?.level === 'string' ? detail.params.level : 'easy';
 
       return { level };
-    },
+    }) as any,
   }),
 
   '/reward': wrap({
