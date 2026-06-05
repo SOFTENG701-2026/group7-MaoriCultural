@@ -50,6 +50,7 @@
 
   import { pepehaState } from '../../lib/pepehaState.svelte'
   import { speak, settings } from '../../lib/settings.svelte'
+  import AnswerStateBadge from './AnswerStateBadge.svelte'
 
   interface Props {
     onNext: () => void
@@ -158,9 +159,11 @@
     quizChecked = true
     if (pickedOption === QUIZ.correctIndex) {
       quizPassed = true
-      showQuiz = false
       speak('Ka pai! Maunga should not be guessed.')
-      onNext()
+      setTimeout(() => {
+        showQuiz = false
+        onNext()
+      }, 900)
     } else {
       speak('Not quite — have another try.')
     }
@@ -214,9 +217,12 @@
             class:wrong={wrongHint && selectedCard === card.id}
             onclick={() => pickCard(card.id)}
             aria-pressed={selectedCard === card.id}
+            aria-label={`${card.alt}${found && card.id === 'mountain' ? ', correct answer' : wrongHint && selectedCard === card.id ? ', incorrect answer, try again' : ''}`}
           >
             {#if found && card.id === 'mountain'}
-              <span class="card-tick" aria-hidden="true">✓</span>
+              <AnswerStateBadge state="correct" />
+            {:else if wrongHint && selectedCard === card.id}
+              <AnswerStateBadge state="wrong" />
             {/if}
             <img src={card.img} alt={card.alt} />
           </button>
@@ -224,7 +230,7 @@
       {/each}
     </ul>
     {#if wrongHint}
-      <p class="hint">Try again. Maunga means mountain.</p>
+      <p class="hint" role="status" aria-live="polite">Try again. Maunga means mountain.</p>
     {/if}
 
     <!-- Action buttons sit directly below the option cards -->
@@ -274,23 +280,31 @@
             <button
               class="quiz-opt"
               class:picked={pickedOption === i}
+              class:correct={quizChecked && pickedOption === i && i === QUIZ.correctIndex}
               class:wrong={quizChecked && pickedOption === i && i !== QUIZ.correctIndex}
               onclick={() => pickOption(i)}
               aria-pressed={pickedOption === i}
+              disabled={quizPassed}
+              aria-label={`${opt}${quizChecked && pickedOption === i && i === QUIZ.correctIndex ? ', correct answer' : quizChecked && pickedOption === i && i !== QUIZ.correctIndex ? ', incorrect answer, try again' : ''}`}
             >
               {opt}
+              {#if quizChecked && pickedOption === i && i === QUIZ.correctIndex}
+                <AnswerStateBadge state="correct" />
+              {:else if quizChecked && pickedOption === i && i !== QUIZ.correctIndex}
+                <AnswerStateBadge state="wrong" />
+              {/if}
             </button>
           {/each}
         </div>
         {#if quizChecked && pickedOption !== QUIZ.correctIndex}
-          <p class="quiz-hint">Not quite — have another try.</p>
+          <p class="quiz-hint" role="status" aria-live="polite">Not quite. Have another try.</p>
         {/if}
         <div class="quiz-actions">
           <button class="quiz-cancel" onclick={() => (showQuiz = false)}>Back</button>
           <button class="quiz-play" onclick={() => speak(readText)} aria-label="Read to me">
             <img src={playImg} alt="" />
           </button>
-          <button class="check-btn" disabled={pickedOption === null} onclick={checkQuiz}>
+          <button class="check-btn" disabled={pickedOption === null || quizPassed} onclick={checkQuiz}>
             Check answer
           </button>
         </div>
@@ -512,29 +526,11 @@
     border-radius: 18px;
   }
   .card.correct { box-shadow: 0 0 0 4px #3fae45; }
-  .card.wrong { animation: wiggle 0.4s ease; }
+  .card.wrong { border: 4px dashed #c0392b; animation: wiggle 0.4s ease; }
   @keyframes wiggle {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-6px); }
     75% { transform: translateX(6px); }
-  }
-  .card-tick {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    width: clamp(26px, 3vw, 34px);
-    height: clamp(26px, 3vw, 34px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: #3fae45;
-    color: #fff;
-    font-size: clamp(15px, 1.8vw, 20px);
-    font-weight: 900;
-    border: 3px solid #fff;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.25);
-    z-index: 2;
   }
   .hint {
     margin: 0;
@@ -656,6 +652,7 @@
     gap: clamp(8px, 1.2vw, 12px);
   }
   .quiz-opt {
+    position: relative;
     font-family: inherit;
     font-size: clamp(15px, 1.7vw, 20px);
     font-weight: 800;
@@ -675,9 +672,15 @@
     box-shadow: 0 0 0 4px #ffd54a;
   }
   .quiz-opt.wrong {
+    border-style: dashed;
     border-color: #c0392b;
     background: #fdecea;
     animation: wiggle 0.4s ease;
+  }
+  .quiz-opt.correct {
+    border-style: solid;
+    border-color: #1f8b34;
+    background: #eafbe7;
   }
   .quiz-hint {
     margin: 0;

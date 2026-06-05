@@ -88,6 +88,7 @@
   const MATCH_QS = [1, 2]
   let matchStep = $state(0)
   let wiggleIdx = $state<number | null>(null)
+  let matchFeedback = $state('')
 
   // What the learner hears / sees for a given part in the match exercise.
   const matchAudio = (i: number) => (isBeginner ? PARTS[i].audioB : PARTS[i].sentence)
@@ -114,10 +115,12 @@
   function tapMatch(iconIndex: number) {
     if (iconIndex === MATCH_QS[matchStep]) {
       wiggleIdx = null
+      matchFeedback = `Correct. ${PARTS[iconIndex].maori}.`
       speak('Ka pai!')
       matchStep += 1
     } else {
       wiggleIdx = iconIndex
+      matchFeedback = `Incorrect. ${PARTS[iconIndex].maori}. Listen again.`
       speak('Listen again.')
       setTimeout(() => { if (wiggleIdx === iconIndex) wiggleIdx = null }, 600)
     }
@@ -207,13 +210,17 @@
               class="match-icon"
               class:wiggle={wiggleIdx === i}
               onclick={() => tapMatch(i)}
-              aria-label={p.maori}
+              aria-label={`${p.maori}${wiggleIdx === i ? ', incorrect answer, listen again' : ''}`}
             >
               <img src={p.icon} alt={p.maori} />
+              {#if wiggleIdx === i}
+                <span class="match-state" aria-hidden="true"><b>×</b> Try again</span>
+              {/if}
             </button>
           {/each}
         </div>
         <p class="match-progress">{matchStep + 1} / {MATCH_QS.length}</p>
+        <p class="sr-status" role="status" aria-live="polite">{matchFeedback}</p>
       </div>
     </div>
   {/if}
@@ -522,6 +529,7 @@
     gap: clamp(12px, 2vw, 22px);
   }
   .match-icon {
+    position: relative;
     padding: 8px;
     border: 3px solid transparent;
     border-radius: 18px;
@@ -533,7 +541,27 @@
   .match-icon:hover  { transform: translateY(-3px); border-color: #F5A623; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
   .match-icon:active { transform: translateY(0); }
   .match-icon img { width: clamp(48px, 7vw, 84px); height: auto; display: block; }
-  .match-icon.wiggle { animation: wiggle 0.5s ease; border-color: #e0533a; }
+  .match-icon.wiggle { animation: wiggle 0.5s ease; border: 4px dashed #7b2018; }
+  .match-state {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 6px;
+    border: 2px dashed #7b2018;
+    border-radius: 999px;
+    background: #fff;
+    color: #7b2018;
+    font-size: clamp(9px, 0.9vw, 12px);
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .match-state b {
+    font-size: 15px;
+    line-height: 1;
+  }
   @keyframes wiggle {
     0%, 100% { transform: translateX(0); }
     20% { transform: translateX(-6px); }
@@ -546,6 +574,17 @@
     font-size: clamp(13px, 1.5vw, 17px);
     font-weight: 800;
     color: #6b7a5e;
+  }
+  .sr-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   /* Confident feedback banner */
