@@ -41,6 +41,7 @@
 
   import { pepehaState } from '../../lib/pepehaState.svelte'
   import { speak, settings } from '../../lib/settings.svelte'
+  import AnswerStateBadge from './AnswerStateBadge.svelte'
 
   interface Props {
     onNext: () => void
@@ -152,9 +153,11 @@
     quizChecked = true
     if (pickedOption === QUIZ.correctIndex) {
       quizPassed = true
-      showQuiz = false
       speak('Ka pai! Kiki’s board is for practice. Your own pepeha may be different.')
-      onNext()
+      setTimeout(() => {
+        showQuiz = false
+        onNext()
+      }, 900)
     } else {
       speak('Not quite — have another try.')
     }
@@ -275,23 +278,31 @@
             <button
               class="quiz-opt"
               class:picked={pickedOption === i}
+              class:correct={quizChecked && pickedOption === i && i === QUIZ.correctIndex}
               class:wrong={quizChecked && pickedOption === i && i !== QUIZ.correctIndex}
               onclick={() => pickOption(i)}
               aria-pressed={pickedOption === i}
+              disabled={quizPassed}
+              aria-label={`${opt}${quizChecked && pickedOption === i && i === QUIZ.correctIndex ? ', correct answer' : quizChecked && pickedOption === i && i !== QUIZ.correctIndex ? ', incorrect answer, try again' : ''}`}
             >
               {opt}
+              {#if quizChecked && pickedOption === i && i === QUIZ.correctIndex}
+                <AnswerStateBadge state="correct" />
+              {:else if quizChecked && pickedOption === i && i !== QUIZ.correctIndex}
+                <AnswerStateBadge state="wrong" />
+              {/if}
             </button>
           {/each}
         </div>
         {#if quizChecked && pickedOption !== QUIZ.correctIndex}
-          <p class="quiz-hint">Not quite — have another try.</p>
+          <p class="quiz-hint" role="status" aria-live="polite">Not quite. Have another try.</p>
         {/if}
         <div class="quiz-actions">
           <button class="quiz-cancel" onclick={() => (showQuiz = false)}>Back</button>
           <button class="quiz-play" onclick={() => speak(readText)} aria-label="Read to me">
             <img src={playImg} alt="" />
           </button>
-          <button class="check-btn" disabled={pickedOption === null} onclick={checkQuiz}>
+          <button class="check-btn" disabled={pickedOption === null || quizPassed} onclick={checkQuiz}>
             Check answer
           </button>
         </div>
@@ -825,6 +836,7 @@
     gap: clamp(8px, 1.2vw, 12px);
   }
   .quiz-opt {
+    position: relative;
     font-family: inherit;
     font-size: clamp(15px, 1.7vw, 20px);
     font-weight: 800;
@@ -844,9 +856,15 @@
     box-shadow: 0 0 0 4px #ffd54a;
   }
   .quiz-opt.wrong {
+    border-style: dashed;
     border-color: #c0392b;
     background: #fdecea;
     animation: wiggle 0.4s ease;
+  }
+  .quiz-opt.correct {
+    border-style: solid;
+    border-color: #1f8b34;
+    background: #eafbe7;
   }
   @keyframes wiggle {
     0%, 100% { transform: translateX(0); }

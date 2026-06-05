@@ -37,6 +37,7 @@
 
   import { pepehaState } from '../../lib/pepehaState.svelte'
   import { speak, settings } from '../../lib/settings.svelte'
+  import AnswerStateBadge from './AnswerStateBadge.svelte'
 
   interface Props {
     onNext: () => void
@@ -240,8 +241,14 @@
               disabled={solved}
               onclick={() => pick(o.text)}
               aria-pressed={picked === o.text}
+              aria-label={`${o.text}${solved && o.text === q.answer ? ', correct answer' : !solved && picked === o.text ? ', incorrect answer, try again' : ''}`}
             >
               <span class="opt-card-text">{o.text}</span>
+              {#if solved && o.text === q.answer}
+                <AnswerStateBadge state="correct" />
+              {:else if !solved && picked === o.text}
+                <AnswerStateBadge state="wrong" />
+              {/if}
             </button>
           {:else}
             <button
@@ -251,8 +258,14 @@
               disabled={solved}
               onclick={() => pick(o.text)}
               aria-pressed={picked === o.text}
+              aria-label={`${o.text}${solved && o.text === q.answer ? ', correct answer' : !solved && picked === o.text ? ', incorrect answer, try again' : ''}`}
             >
               {o.text}
+              {#if solved && o.text === q.answer}
+                <AnswerStateBadge state="correct" />
+              {:else if !solved && picked === o.text}
+                <AnswerStateBadge state="wrong" />
+              {/if}
             </button>
           {/if}
         </li>
@@ -270,6 +283,10 @@
       </span>
     </div>
   {/if}
+
+  <p class="sr-status" role="status" aria-live="polite">
+    {solved ? `Correct. ${q.answer}.` : picked ? `Incorrect. ${picked}. Try again.` : ''}
+  </p>
 
   <!-- Bottom bar: Read to me (left), Need help? + Next/Finish (right) -->
   <div class="bottom-bar">
@@ -509,6 +526,7 @@
   .opts.text  { grid-template-columns: 1fr; gap: clamp(14px, 2.2vw, 26px); }
   .opts li { display: flex; }
   .opt {
+    position: relative;
     width: 100%;
     font-family: inherit;
     font-size: clamp(12px, 1.45vw, 18px);
@@ -543,6 +561,7 @@
 
   /* Wrong sticker wiggles and turns red, then can be retried */
   .opt.wrong {
+    border-style: dashed;
     border-color: #c0392b;
     background: #fdecea;
     color: #a5281b;
@@ -594,10 +613,24 @@
   }
   .opt-card.correct .opt-card-text { color: #1a6b2c; }
   .opt-card.wrong {
+    outline: 4px dashed #7b2018;
+    outline-offset: -4px;
     filter: drop-shadow(0 0 6px #c0392b) drop-shadow(0 0 12px rgba(192,57,43,0.55));
     animation: wiggle 0.4s ease;
   }
   .opt-card.wrong .opt-card-text { color: #a5281b; }
+
+  .sr-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     .opt.correct, .opt.wrong,

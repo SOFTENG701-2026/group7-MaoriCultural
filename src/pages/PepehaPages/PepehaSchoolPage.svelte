@@ -28,6 +28,7 @@
   import { SCHOOL_PROFILES } from './schools'
   import { pepehaState } from '../../lib/pepehaState.svelte'
   import { speak, settings } from '../../lib/settings.svelte'
+  import AnswerStateBadge from './AnswerStateBadge.svelte'
 
   interface Props {
     onNext: () => void
@@ -108,8 +109,8 @@
     checked = true
     if (pickedOption === QUIZ.correctIndex) {
       quizPassed = true
-      showQuiz = false
       speak("Ka pai! Kiki's example helps us learn without guessing our own pepeha.")
+      setTimeout(() => (showQuiz = false), 900)
     } else {
       speak('Not quite. We use a school example so Kiki can practise safely. Try again.')
     }
@@ -198,20 +199,28 @@
             <button
               class="quiz-opt"
               class:picked={pickedOption === i}
+              class:correct={checked && pickedOption === i && i === QUIZ.correctIndex}
               class:wrong={checked && pickedOption === i && i !== QUIZ.correctIndex}
               onclick={() => pickOption(i)}
               aria-pressed={pickedOption === i}
+              disabled={quizPassed}
+              aria-label={`${opt}${checked && pickedOption === i && i === QUIZ.correctIndex ? ', correct answer' : checked && pickedOption === i && i !== QUIZ.correctIndex ? ', incorrect answer, try again' : ''}`}
             >
               {opt}
+              {#if checked && pickedOption === i && i === QUIZ.correctIndex}
+                <AnswerStateBadge state="correct" />
+              {:else if checked && pickedOption === i && i !== QUIZ.correctIndex}
+                <AnswerStateBadge state="wrong" />
+              {/if}
             </button>
           {/each}
         </div>
         {#if checked && pickedOption !== QUIZ.correctIndex}
-          <p class="quiz-hint">Not quite — have another try.</p>
+          <p class="quiz-hint" role="status" aria-live="polite">Not quite. Have another try.</p>
         {/if}
         <div class="quiz-actions">
           <button class="text-btn" onclick={() => (showQuiz = false)}>Choose a different school</button>
-          <button class="check-btn" disabled={pickedOption === null} onclick={checkAnswer}>
+          <button class="check-btn" disabled={pickedOption === null || quizPassed} onclick={checkAnswer}>
             Check answer
           </button>
         </div>
@@ -529,6 +538,7 @@
     gap: clamp(8px, 1.2vw, 12px);
   }
   .quiz-opt {
+    position: relative;
     font-family: inherit;
     font-size: clamp(15px, 1.7vw, 20px);
     font-weight: 800;
@@ -548,9 +558,15 @@
     box-shadow: 0 0 0 4px #ffd54a;
   }
   .quiz-opt.wrong {
+    border-style: dashed;
     border-color: #c0392b;
     background: #fdecea;
     animation: wiggle 0.4s ease;
+  }
+  .quiz-opt.correct {
+    border-style: solid;
+    border-color: #1f8b34;
+    background: #eafbe7;
   }
   @keyframes wiggle {
     0%, 100% { transform: translateX(0); }
