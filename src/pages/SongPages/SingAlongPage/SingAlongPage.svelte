@@ -542,8 +542,8 @@
   .btn-next:disabled { cursor: not-allowed; }
   @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
-  /* ── Responsive: narrow / short screens ── */
-  @media (max-width: 700px), (max-height: 700px) {
+  /* ── Responsive: narrow screens only ── */
+  @media (max-width: 700px) {
 
     /* Top bar: stack line-progress below back button to avoid clash */
     .top-map {
