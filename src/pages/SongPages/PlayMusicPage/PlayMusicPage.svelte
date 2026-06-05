@@ -650,4 +650,48 @@ function readToMe() {
       transform: scale(1);
     }
   }
+
+  /* ── Responsive: narrow / short screens ── */
+  @media (max-width: 700px), (max-height: 600px) {
+
+    /* Kiki instruction: smaller bubble, won't overlap title */
+    .kiki-instruction {
+      top: 7% !important;
+      left: 2% !important;
+    }
+    .kiki-small { width: clamp(36px, 5vmin, 52px); }
+    .kiki-speech {
+      padding: 5px 10px;
+      max-width: clamp(120px, 35vw, 180px);
+    }
+    .speech-main { font-size: clamp(11px, 1.5vmin, 14px); }
+    .speech-sub  { font-size: clamp(9px,  1.2vmin, 12px); }
+
+    /* Key words panel: move to top-right, shrink so it clears the lyrics board */
+    .kw-panel {
+      top: 8% !important;
+      right: 1% !important;
+      transform: none !important;
+      max-width: clamp(130px, 32vw, 190px);
+      min-width: 0;
+      padding: 6px 8px;
+    }
+    .kw-header { margin-bottom: 6px; padding-bottom: 5px; }
+    .kw-title  { font-size: clamp(10px, 1.3vmin, 12px); }
+    .kw-row    { padding: 4px 5px; margin-bottom: 3px; gap: 5px; }
+    .kw-text   { font-size: clamp(9px, 1.3vmin, 12px); white-space: normal; }
+    .kw-dot    { width: 10px; height: 10px; }
+    .kw-emoji  { font-size: 13px; width: 16px; }
+
+    /* Bottom bar: shrink buttons to fit */
+    .bottom-bar {
+      padding: 10px 12px 16px;
+      height: auto;
+    }
+    .btn-secondary { width: 80px;  font-size: 12px; padding: 0 10px; }
+    .btn-next      { width: 90px;  font-size: 12px; padding: 0 10px; }
+    .btn-play      { padding: 0 20px; font-size: clamp(14px, 2vmin, 18px); }
+    .rtm-img       { height: 42px; }
+  }
+
 </style>

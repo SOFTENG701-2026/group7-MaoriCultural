@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
+
   import { bg, titleImg, explorerImg, settingImg, rewardImg } from './assets'
   import { LOCATIONS, type Pt, type Loc } from './locations'
 
@@ -48,22 +50,41 @@
     return prereqLoc?.label ?? prereqId
   }
 
-  let _dismissedThisLoad = false
-  const _needsOnboarding = !progress.isComplete('waiata')
-  let showOnboarding = $state(_needsOnboarding && !_dismissedThisLoad)
+  /*
+    Onboarding behaviour:
+    - Shows again after browser refresh because window.__mapOnboardingSeen resets.
+    - Does NOT show again when returning from Waiata because the flag stays in memory.
+    - Does not use localStorage, because localStorage would stay even after refresh.
+  */
+  let showOnboarding = $state(false)
+
+  onMount(() => {
+    const w = window as Window & { __mapOnboardingSeen?: boolean }
+
+    if (!progress.isComplete('waiata') && !w.__mapOnboardingSeen) {
+      showOnboarding = true
+    }
+  })
 
   $effect(() => {
     if (progress.isComplete('waiata')) showOnboarding = false
   })
 
   function dismissOnboarding() {
-    _dismissedThisLoad = true
+    const w = window as Window & { __mapOnboardingSeen?: boolean }
+    w.__mapOnboardingSeen = true
+
     showOnboarding = false
-    // Only show guide if they haven't seen it before
-    if (!hasSeenGuide()) showGuide = true
+
+    // Show guide after onboarding for all new users
+    if (!hasSeenGuide()) {
+      setTimeout(() => {
+        showGuide = true
+      }, 300)
+    }
   }
 
-  const GUIDE_KEY = 'mca-guide-seen'
+  const GUIDE_KEY = 'mca-guide-seen-v2'
 
   function hasSeenGuide(): boolean {
     try {
@@ -79,7 +100,7 @@
     } catch {}
   }
 
-  let showGuide = $state(!_needsOnboarding && !hasSeenGuide())
+  let showGuide = $state(false)
 
   const GUIDE_LINES = [
     'Kia ora! Welcome to Kiwi’s big adventure!',
@@ -220,11 +241,11 @@
 
   const activeLoc = $derived(LOCATIONS.find((l) => l.id === active) ?? null)
 
- const ORDERED_LOCATIONS = UNLOCK_ORDER
-  .map((id) => LOCATIONS.find((l) => l.id === id))
-  .filter(Boolean) as Loc[]
+  const ORDERED_LOCATIONS = UNLOCK_ORDER
+    .map((id) => LOCATIONS.find((l) => l.id === id))
+    .filter(Boolean) as Loc[]
 
-const TRAIL_PTS = ORDERED_LOCATIONS.map((l) => l.icon)
+  const TRAIL_PTS = ORDERED_LOCATIONS.map((l) => l.icon)
 
   function buildPath(pts: Pt[]): string {
     if (pts.length < 2) return ''
@@ -372,16 +393,16 @@ const TRAIL_PTS = ORDERED_LOCATIONS.map((l) => l.icon)
       </div>
     {/if}
 
-    {#if showGuide}
-      <GuideTour lines={GUIDE_LINES} onfinish={() => { showGuide = false; markGuideSeen() }} />
-    {/if}
-
     {#if showOnboarding}
       <OnboardingSpotlight
         waiataIcon={waiataLoc.icon}
         waiataW={waiataLoc.w}
         onDismiss={dismissOnboarding}
       />
+    {/if}
+
+    {#if showGuide}
+      <GuideTour lines={GUIDE_LINES} onfinish={() => { showGuide = false; markGuideSeen() }} />
     {/if}
   </div>
 </div>
